@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    // Config solo de tipado: cubre TODO `src`, tests incluidos, y no emite nada.
+    // `composite` y `declaration` se desactivan porque son incompatibles con `noEmit`.
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "incremental": false,
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts"]
+}

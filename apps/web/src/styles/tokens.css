@@ -1,0 +1,109 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOKENS — fuente única de verdad del diseño de apps/web
+   ═══════════════════════════════════════════════════════════════════════════
+
+   Nada de color, espaciado o tipografía se escribe a mano en un componente. Si un
+   componente necesita un valor nuevo, se añade AQUÍ y se documenta en
+   `docs/design-system.md`. Un componente con un `#hex` suelto es un componente que ha
+   empezado a divergir.
+
+   Por qué existe este archivo: el sistema se diseñó aplicando el criterio del skill
+   ui-ux-pro-max (checklist de entrega + tokens como fuente única), pero adaptado a un
+   CRM OPERATIVO y no a una landing. Un CRM vive de densidad, tablas y teclado; la
+   estética de captación que aquel catálogo propone lo empeoraría. Ver docs/design-system.md.
+
+   Reglas que estos tokens hacen cumplir:
+     · contraste de texto ≥ 4.5:1 sobre su fondo (anotado en cada valor)
+     · ningún estado se comunica SÓLO con color (siempre color + texto + icono)
+     · movimiento desactivable con `prefers-reduced-motion` (ver styles.css)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  color-scheme: light;
+
+  /* ── Superficies ───────────────────────────────────────────────────────── */
+  --c-bg: #f4f6f8;
+  --c-surface: #ffffff;
+  --c-surface-sunken: #eef1f5;
+  --c-border: #dde3ea;
+  --c-border-strong: #c3ccd6;
+
+  /* ── Texto ─────────────────────────────────────────────────────────────── */
+  --c-text: #131a22; /* 17.3:1 sobre --c-surface */
+  --c-text-muted: #5a6675; /*  5.5:1 sobre --c-surface */
+  --c-text-faint: #67717d; /*  4.8:1 sobre --c-surface — el mínimo permitido */
+
+  /* ── Navegación (oscura, para separarla del área de trabajo) ───────────── */
+  --c-nav-bg: #151d26;
+  --c-nav-text: #aab6c3; /*  8.3:1 sobre --c-nav-bg */
+  --c-nav-text-active: #ffffff;
+  --c-nav-active-bg: #1f2a36;
+  --c-nav-border: #26313d;
+  --c-nav-heading: #6f7d8c; /* etiquetas de grupo; decorativas, acompañan siempre a texto */
+
+  /* ── Acento ────────────────────────────────────────────────────────────── */
+  --c-accent: #0d7267;
+  --c-accent-hover: #0a5b52;
+  --c-accent-soft: #e6f2f0;
+  --c-accent-ring: rgba(13, 114, 103, 0.35);
+
+  /* ── Estados. Siempre color + texto: el color solo no es accesible ─────── */
+  --c-ok-bg: #e9f7ee;
+  --c-ok-fg: #14663a;
+  --c-ok-border: #b7e0c6;
+
+  --c-bad-bg: #fdeceb;
+  --c-bad-fg: #a5211b;
+  --c-bad-border: #f3c3c0;
+
+  --c-warn-bg: #fdf5e6;
+  --c-warn-fg: #8a5a12;
+  --c-warn-border: #eeddb5;
+
+  --c-idle-bg: #f0f2f5;
+  --c-idle-fg: #5a6675; /*  4.9:1 sobre --c-idle-bg */
+  --c-idle-border: #dde3ea;
+
+  /* ── Espaciado. Escala de 4: cualquier valor intermedio es un error ────── */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+
+  /* ── Radios ────────────────────────────────────────────────────────────── */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-pill: 999px;
+
+  /* ── Tipografía ────────────────────────────────────────────────────────── */
+  /* Pila del sistema a propósito: cero peticiones de red, cero FOUT, y funciona sin
+     conexión. Para una herramienta interna la ganancia de una webfont no compensa
+     añadir una dependencia externa al arranque. Ver docs/design-system.md. */
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Consolas, monospace;
+
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-base: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --fs-2xl: 26px;
+
+  --lh-tight: 1.25;
+  --lh-base: 1.5;
+
+  /* ── Sombras ───────────────────────────────────────────────────────────── */
+  --shadow-sm: 0 1px 2px rgba(16, 24, 32, 0.06);
+  --shadow-md: 0 2px 8px rgba(16, 24, 32, 0.08);
+
+  /* ── Medidas de layout ─────────────────────────────────────────────────── */
+  --nav-width: 264px;
+  --topbar-height: 56px;
+
+  /* ── Movimiento ────────────────────────────────────────────────────────── */
+  --t-fast: 120ms ease;
+}

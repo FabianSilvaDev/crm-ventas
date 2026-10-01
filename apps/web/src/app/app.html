@@ -1,0 +1,76 @@
+<a class="skip-link" href="#contenido">Saltar al contenido</a>
+
+<div class="shell">
+  <nav class="nav" [class.nav--open]="navOpen()" id="nav-principal" aria-label="Navegación principal">
+    <div class="nav__brand">
+      <!-- Icono SVG en línea: nada de emoji ni de fuente de iconos (ver docs/design-system.md). -->
+      <svg class="nav__mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M4 19V9m5 10V5m5 14v-7m5 7V8" />
+      </svg>
+      <span class="nav__brand-text">
+        <span class="nav__brand-name">CRM de Ventas</span>
+        <span class="nav__brand-sub">Plataforma interna</span>
+      </span>
+    </div>
+
+    <div class="nav__scroll">
+      @for (group of groups; track group.heading) {
+        <section class="nav__group">
+          <h2 class="nav__heading">{{ group.heading }}</h2>
+          <ul class="nav__list">
+            @for (item of group.items; track item.label) {
+              <li>
+                @if (item.path; as path) {
+                  <a class="nav__link" [routerLink]="path" routerLinkActive="nav__link--active">
+                    {{ item.label }}
+                  </a>
+                } @else {
+                  <span class="nav__link nav__link--pending">
+                    {{ item.label }}
+                    <span class="nav__tag">pendiente</span>
+                  </span>
+                }
+              </li>
+            }
+          </ul>
+        </section>
+      }
+
+      <section class="nav__group">
+        <h2 class="nav__heading">Sistema</h2>
+        <ul class="nav__list">
+          @for (item of systemNav; track item.label) {
+            <li>
+              @if (item.path; as path) {
+                <a class="nav__link" [routerLink]="path" routerLinkActive="nav__link--active">
+                  {{ item.label }}
+                </a>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+    </div>
+  </nav>
+
+  <div class="work">
+    <header class="topbar">
+      <button
+        type="button"
+        class="nav-toggle"
+        (click)="toggleNav()"
+        [attr.aria-expanded]="navOpen()"
+        aria-controls="nav-principal"
+      >
+        {{ navOpen() ? 'Cerrar menú' : 'Menú' }}
+      </button>
+
+      <span class="badge">Uso interno</span>
+      <span class="topbar__note">Marcado <code>noindex</code>: fuera de buscadores</span>
+    </header>
+
+    <main id="contenido" class="content" tabindex="-1">
+      <router-outlet />
+    </main>
+  </div>
+</div>

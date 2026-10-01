@@ -1,0 +1,55 @@
+# Dependencias
+node_modules/
+.pnpm-store/
+
+# Build
+dist/
+build/
+*.tsbuildinfo
+.vite/
+
+# Entorno — NUNCA se versiona. Ver .env.example
+.env
+.env.*
+!.env.example
+
+# Secretos y credenciales
+*.pem
+*.key
+*.p12
+secrets/
+
+# Test y cobertura
+coverage/
+.nyc_output/
+*.lcov
+
+# Angular
+.angular/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+logs/
+
+# Backups de base de datos
+backups/
+*.dump
+
+# Ollama / modelos locales
+models/
+
+# Editores y SO
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Temporales
+tmp/
+temp/
+*.tmp

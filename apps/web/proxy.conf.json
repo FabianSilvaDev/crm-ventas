@@ -1,0 +1,21 @@
+{
+  "$comment": [
+    "Proxy de desarrollo. La SPA llama a rutas RELATIVAS (/health/..., /api/v1/...) y el dev-server",
+    "las reenvía al API en :3000. Se hace así, y no llamando directo a http://localhost:3000, por",
+    "tres razones: no depende del CORS del API (que aunque está configurado, es una pieza más que",
+    "puede desajustarse), el código de la SPA es idéntico en desarrollo y en producción —donde el",
+    "reverse proxy sirve ambos bajo el mismo origen—, y evita tener una URL de API compilada dentro",
+    "del bundle. El destino coincide con WEB_ORIGIN/PORT de apps/api; si cambia el puerto del API,",
+    "cambia aquí también."
+  ],
+  "/health": {
+    "target": "http://localhost:3000",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/api": {
+    "target": "http://localhost:3000",
+    "secure": false,
+    "changeOrigin": true
+  }
+}

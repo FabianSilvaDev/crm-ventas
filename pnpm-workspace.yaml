@@ -1,0 +1,37 @@
+# Estructura del monorepo. Docs: docs/architecture-review.md §D
+#
+# apps/*      → procesos desplegables
+# packages/*  → código compartido. REGLA: apps/* puede depender de packages/*,
+#               nunca al revés (docs/architecture.md §4)
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# pnpm no ejecuta scripts de build de dependencias por defecto. Con `strictDepBuilds` activo
+# (el valor por defecto), un paquete con build script sin revisar hace fallar `pnpm install`
+# entero con ERR_PNPM_IGNORED_BUILDS — incluido en CI.
+#
+# OJO: `onlyBuiltDependencies` (lista) fue ELIMINADO en pnpm 11. Se sustituye por este mapa
+# `allowBuilds` con valores true/false. Un `onlyBuiltDependencies` presente se ignora **en
+# silencio**: la config parece correcta, `pnpm config get` la devuelve, y el install falla igual.
+#
+# Sin el build de esbuild, vitest falla de forma confusa.
+allowBuilds:
+  esbuild: true
+  # @nestjs/core trae un postinstall (aviso de soporte). Sin aprobarlo, añadir NestJS
+  # vuelve a romper el install por la misma vía.
+  '@nestjs/core': true
+
+  # Los tres siguientes entran con @angular/cli y son el MISMO patrón: un `install` que
+  # únicamente localiza el binario nativo precompilado de sus `optionalDependencies`
+  # (`node-gyp-build-optional-packages` / `build-from-source.js`), y solo compila si no
+  # existe. Los tres tienen ya resuelta su variante win32-x64, así que el script no compila
+  # nada aquí: no descarga código ni toca la red. Se aprueban para que `pnpm install` no
+  # falle en cada instalación limpia; si algún día se instala en otra plataforma sin
+  # prebuild, compilarán con node-gyp, que ya requiere toolchain nativo.
+  #   @parcel/watcher  → watcher de ng serve / ng build --watch
+  #   lmdb             → caché en disco de @angular/build
+  #   msgpackr-extract → acelerador nativo de msgpackr (lmdb); tiene fallback en JS
+  '@parcel/watcher': true
+  lmdb: true
+  msgpackr-extract: true

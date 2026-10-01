@@ -1,0 +1,33 @@
+/* Sólo lo propio de esta pantalla. Página, tabla, pistas, píldoras, avisos y la sección de origen
+   de los datos viven en `src/styles/components.css`. */
+
+:host {
+  display: block;
+}
+
+/* La tabla tiene 7 columnas: por debajo de este ancho se desplaza en horizontal (`.table-wrap`)
+   en vez de aplastar las columnas hasta hacerlas ilegibles. */
+.table {
+  min-width: 880px;
+}
+
+.lead__name {
+  color: var(--c-text);
+}
+
+/* El enlace a WhatsApp no saca al usuario del CRM: abre otra pestaña. Se pinta como un enlace
+   —con color y subrayado, no como un botón— porque un botón sugeriría una acción sobre el lead
+   que aquí no ocurre. */
+.lead__wa {
+  display: inline-block;
+  margin-top: var(--s-1);
+  border-bottom: 1px solid currentColor;
+  color: var(--c-accent);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.lead__wa:hover {
+  color: var(--c-accent-hover);
+}

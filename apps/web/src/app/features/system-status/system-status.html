@@ -1,0 +1,160 @@
+<section class="page">
+  <header class="page__head">
+    <div>
+      <h1 class="page__title">Estado del sistema</h1>
+      <p class="page__sub">
+        Consultas HTTP hechas desde tu navegador al API, en este momento. Son
+        <strong>datos reales</strong>, medidos aquí — no estimaciones.
+      </p>
+    </div>
+    <button type="button" class="btn" (click)="refresh()" [disabled]="loading()">
+      {{ loading() ? 'Comprobando…' : 'Volver a comprobar' }}
+    </button>
+  </header>
+
+  @if (checkedAt(); as at) {
+    <p class="page__stamp" role="status">Última comprobación: {{ at | date: 'HH:mm:ss' }}</p>
+  }
+
+  <div class="cards">
+    <!-- ── Liveness ──────────────────────────────────────────────────────── -->
+    <article class="card">
+      <header class="card__head">
+        <h2 class="card__title">Proceso del API</h2>
+        <span class="status" [class]="'status--' + liveStatus().tone">
+          <span class="status__dot" aria-hidden="true"></span>
+          {{ liveStatus().label }}
+        </span>
+      </header>
+
+      <p class="card__hint"><code>GET /health/live</code> — ¿está el proceso en pie?</p>
+
+      <dl class="kv">
+        <div class="kv__row">
+          <dt>Latencia</dt>
+          <dd>{{ liveLatency() }}</dd>
+        </div>
+        <div class="kv__row">
+          <dt>HTTP</dt>
+          <dd>{{ live()?.httpStatus ?? '—' }}</dd>
+        </div>
+        <div class="kv__row">
+          <dt>traceId</dt>
+          <dd><code class="mono">{{ live()?.traceId ?? '—' }}</code></dd>
+        </div>
+      </dl>
+
+      @if (live()?.problem; as problem) {
+        <div class="problem">
+          <p class="problem__title">{{ problem.title }}</p>
+          <p class="problem__meta"><code>{{ problem.code }}</code> · HTTP {{ problem.status }}</p>
+        </div>
+      }
+
+      @if (live()?.transportError; as err) {
+        <p class="alert alert--bad">{{ err }}</p>
+      }
+    </article>
+
+    <!-- ── Readiness ─────────────────────────────────────────────────────── -->
+    <article class="card">
+      <header class="card__head">
+        <h2 class="card__title">Capacidad de atender tráfico</h2>
+        <span class="status" [class]="'status--' + readyStatus().tone">
+          <span class="status__dot" aria-hidden="true"></span>
+          {{ readyStatus().label }}
+        </span>
+      </header>
+
+      <p class="card__hint"><code>GET /health/ready</code> — ¿podemos atender peticiones?</p>
+
+      @if (ready()?.body; as body) {
+        @if (body.checks.length > 0) {
+          <table class="table">
+            <caption class="visually-hidden">Dependencias comprobadas</caption>
+            <thead>
+              <tr>
+                <th scope="col">Dependencia</th>
+                <th scope="col">Estado</th>
+                <th scope="col" class="table__num">Tiempo</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (check of body.checks; track check.name) {
+                <tr>
+                  <th scope="row">{{ check.name }}</th>
+                  <td>
+                    <span class="status" [class]="'status--' + (check.status === 'up' ? 'ok' : 'bad')">
+                      <span class="status__dot" aria-hidden="true"></span>
+                      {{ check.status === 'up' ? 'Operativa' : 'Caída' }}
+                    </span>
+                  </td>
+                  <td class="table__num">{{ check.durationMs }} ms</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <p class="note note--warn">
+            <strong>Ese «Listo» no está respaldado por nada.</strong>
+            El API responde <code>ok</code>, pero todavía no tiene dependencias registradas
+            (<code>checks</code> viene vacío). Significa que el proceso está en pie, <em>no</em> que
+            Postgres o Redis funcionen. Se llenará cuando el API tenga indicadores de readiness.
+          </p>
+        }
+
+        <dl class="kv">
+          <div class="kv__row">
+            <dt>Latencia</dt>
+            <dd>{{ readyLatency() }}</dd>
+          </div>
+          <div class="kv__row">
+            <dt>HTTP</dt>
+            <dd>{{ ready()?.httpStatus ?? '—' }}</dd>
+          </div>
+          <div class="kv__row">
+            <dt>traceId</dt>
+            <dd><code class="mono">{{ ready()?.traceId ?? '—' }}</code></dd>
+          </div>
+          <div class="kv__row">
+            <dt>Marca de tiempo</dt>
+            <dd>{{ body.timestamp | date: 'HH:mm:ss' }}</dd>
+          </div>
+        </dl>
+      } @else if (ready()?.problem; as problem) {
+        <div class="problem">
+          <p class="problem__title">{{ problem.title }}</p>
+          <p class="problem__meta"><code>{{ problem.code }}</code> · HTTP {{ problem.status }}</p>
+          @if (problem.detail) {
+            <p class="problem__detail">{{ problem.detail }}</p>
+          }
+          @if (problem.traceId) {
+            <p class="problem__meta">traceId <code class="mono">{{ problem.traceId }}</code></p>
+          }
+        </div>
+      } @else if (ready()?.transportError; as err) {
+        <p class="alert alert--bad">{{ err }}</p>
+      }
+    </article>
+  </div>
+
+  <!--
+    §3 del prompt inicial exige separar dato real, estimado e inferencia de IA. Esta pantalla
+    sólo produce datos reales, y lo declara en vez de dejarlo implícito.
+  -->
+  <section class="origin">
+    <h2 class="origin__title">De dónde salen estos datos</h2>
+    <ul class="origin__list">
+      <li>
+        <span class="tag tag--real">Real</span>
+        Todo lo anterior son respuestas HTTP medidas en tu navegador, incluida la latencia.
+        El <code>traceId</code> lo emite el API y permite cruzar esta pantalla con sus logs.
+      </li>
+      <li>
+        <span class="tag tag--none">Nada</span>
+        No hay estimaciones ni inferencias de IA aquí. Cuando una pantalla las use, irán
+        etiquetadas como tales.
+      </li>
+    </ul>
+  </section>
+</section>

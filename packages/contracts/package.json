@@ -1,0 +1,26 @@
+{
+  "name": "@crm/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Fuente única de verdad del contrato: schemas Zod, códigos de error y tipos compartidos. Genera OpenAPI y el cliente Angular (ADR-012).",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  }
+}

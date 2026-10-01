@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/.tsbuildinfo"
+  },
+  // Los tests se tipan (con `tsconfig.test.json`) pero NO se emiten: sin este exclude, `dist/`
+  // acaba con `errors.test.js` y el paquete publica su propio código de pruebas.
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts"]
+}

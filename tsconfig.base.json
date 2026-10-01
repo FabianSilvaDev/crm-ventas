@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+
+    // `module`/`moduleResolution` en `node16`: TypeScript decide CJS o ESM **por el `type` del
+    // package.json más cercano**, que es exactamente el modelo de resolución de Node. Todos
+    // nuestros paquetes declaran `"type": "module"`, así que la salida es ESM y los imports
+    // relativos llevan extensión `.js`.
+    //
+    // El rango está fijado a propósito: Angular 22 exige `typescript >=6.0 <6.1`, así que subir a
+    // 6.1 rompería `apps/web` sin que nada avise en el backend. Ver ADR-021.
+    "module": "node16",
+    "moduleResolution": "node16",
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "useUnknownInCatchVariables": true,
+
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "composite": true,
+    "incremental": true,
+
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "types": ["node"]
+  }
+}

@@ -1,0 +1,195 @@
+<section class="page">
+  <header class="page__head">
+    <div>
+      <h1 class="page__title">Leads</h1>
+      <p class="page__sub">
+        Oportunidades entradas por el formulario de Meta Lead Ads. Cada fila es un lead
+        <strong>tal como lo devuelve el API</strong>: sin puntuaciones estimadas ni datos
+        deducidos.
+      </p>
+    </div>
+    <button type="button" class="btn" (click)="refresh()" [disabled]="loading()">
+      {{ loading() ? 'Consultando…' : 'Volver a consultar' }}
+    </button>
+  </header>
+
+  @if (consultedAt(); as at) {
+    <p class="page__stamp" role="status">
+      Última consulta: {{ at | date: 'HH:mm:ss' }}
+      @if (result()?.traceId; as traceId) {
+        · traceId <code class="mono">{{ traceId }}</code>
+      }
+    </p>
+  }
+
+  @if (result(); as r) {
+    <!-- ── Camino correcto ────────────────────────────────────────────────── -->
+    @if (r.outcome === 'ok') {
+      @if (rows().length > 0) {
+        <div class="table-wrap">
+          <table class="table">
+            <caption class="visually-hidden">
+              Leads recibidos, del más reciente al más antiguo
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Contacto</th>
+                <th scope="col">Teléfono</th>
+                <th scope="col">Estado</th>
+                <th scope="col">Consentimiento</th>
+                <th scope="col">Canal</th>
+                <th scope="col">Entrada</th>
+                <th scope="col">Primera respuesta</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of rows(); track row.id) {
+                <tr>
+                  <th scope="row">
+                    <span class="lead__name">{{ row.nombre }}</span>
+                    @if (row.email; as email) {
+                      <span class="table__sub">{{ email }}</span>
+                    }
+                  </th>
+
+                  <td>
+                    @if (row.telefono; as telefono) {
+                      <span class="mono">{{ telefono }}</span>
+                      @if (row.whatsapp; as enlace) {
+                        <a class="lead__wa" [href]="enlace" target="_blank" rel="noopener noreferrer">
+                          Abrir WhatsApp
+                          <span class="visually-hidden">
+                            con {{ row.nombre }} (se abre en otra pestaña)
+                          </span>
+                        </a>
+                      }
+                    } @else {
+                      <!--
+                        Sin teléfono no hay enlace, y se dice por qué. Un botón deshabilitado dejaría
+                        pensando que es un fallo temporal; no lo es: falta el dato.
+                      -->
+                      <span class="table__sub">Sin teléfono</span>
+                      <span class="table__sub">
+                        Meta no lo pidió en ese formulario: sin número no se puede abrir WhatsApp.
+                      </span>
+                    }
+                  </td>
+
+                  <td>
+                    <span class="status" [class]="'status--' + row.estado.tone">
+                      <span class="status__dot" aria-hidden="true"></span>
+                      {{ row.estado.label }}
+                    </span>
+                  </td>
+
+                  <td>
+                    <span class="status" [class]="'status--' + row.consentimiento.tone">
+                      <span class="status__dot" aria-hidden="true"></span>
+                      {{ row.consentimiento.label }}
+                    </span>
+                    <span class="table__sub">Base: {{ row.consentimientoBase }}</span>
+                    @if (row.marketingBloqueado) {
+                      <span class="table__sub">Marketing bloqueado</span>
+                    }
+                  </td>
+
+                  <td>{{ row.canal }}</td>
+
+                  <td>
+                    <time [attr.datetime]="row.creadoEn">{{ row.creadoEn | date: 'yyyy-MM-dd HH:mm' }}</time>
+                  </td>
+
+                  <td>
+                    @if (row.respondido) {
+                      <time [attr.datetime]="row.primeraRespuesta">
+                        {{ row.primeraRespuesta | date: 'yyyy-MM-dd HH:mm' }}
+                      </time>
+                    } @else {
+                      <!-- Color + texto: nunca solo color. -->
+                      <span class="status status--warn">
+                        <span class="status__dot" aria-hidden="true"></span>
+                        Sin responder
+                      </span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (hayMas()) {
+          <p class="note note--info">
+            Se muestran los <strong>{{ rows().length }}</strong> leads más recientes de esta página, y
+            hay más. La paginación por cursor llegará con el listado real; el contrato ya la define
+            (<code>pageInfo.nextCursor</code>).
+          </p>
+        }
+      } @else {
+        <!--
+          El API respondió bien y no hay ni un lead. Es un estado legítimo, no un error: se dice lo
+          que significa en vez de dejar una tabla vacía que parece rota.
+        -->
+        <p class="note note--info">
+          <strong>El API respondió, pero todavía no hay ningún lead.</strong>
+          No es un fallo de esta pantalla: cuando el webhook de Meta reciba el primer formulario
+          aparecerá aquí. Si acabas de enviar uno de prueba y no lo ves, revisa los logs del API
+          —la ingesta y la deduplicación necesitan la base de datos del Hito 2.
+        </p>
+      }
+    } @else if (rutaSinImplementar()) {
+      <!--
+        El caso de HOY, y por eso se explica en lugar de disimularse: el endpoint no está montado
+        porque no hay base de datos. Inventar filas de ejemplo aquí sería exactamente lo que
+        `PrompInicial.MD` §3 prohíbe.
+      -->
+      <p class="note note--warn">
+        <strong>La lista de leads todavía no existe en el API.</strong>
+        El API respondió <code>404</code> con <code>RESOURCE_NOT_FOUND</code>: la ruta
+        <code>GET /api/v1/leads</code> aún no está montada, porque necesita base de datos
+        (Hito 2). Esta pantalla está construida y probada, pero <em>no hay nada que mostrar</em>:
+        los datos de prueba viven solo en los tests, nunca aquí.
+      </p>
+    } @else if (r.problem; as problem) {
+      <div class="problem">
+        <p class="problem__title">{{ problem.title }}</p>
+        <p class="problem__meta"><code>{{ problem.code }}</code> · HTTP {{ problem.status }}</p>
+        @if (problem.detail) {
+          <p class="problem__detail">{{ problem.detail }}</p>
+        }
+        @if (problem.traceId) {
+          <p class="problem__meta">traceId <code class="mono">{{ problem.traceId }}</code></p>
+        }
+      </div>
+    } @else if (r.transportError; as error) {
+      <p class="alert alert--bad">{{ error }}</p>
+    }
+  }
+
+  <!--
+    §3 del prompt inicial exige separar dato real, estimado e inferencia de IA. Esta pantalla solo
+    muestra datos reales, y lo declara —incluido lo que NO puede afirmar.
+  -->
+  <section class="origin">
+    <h2 class="origin__title">De dónde salen estos datos</h2>
+    <ul class="origin__list">
+      <li>
+        <span class="tag tag--real">Real</span>
+        Cada fila es un lead devuelto por el API, tal cual. El <code>traceId</code> permite cruzar
+        esta pantalla con los logs del servidor.
+      </li>
+      <li>
+        <span class="tag tag--warn">Ojo</span>
+        «Abrir WhatsApp» solo abre la conversación con el mensaje ya escrito
+        (<code>wa.me</code>). <strong>No confirma que el mensaje se envió</strong> ni que la persona
+        lo leyó: eso no lo puede saber el navegador. Por eso la columna «Primera respuesta» solo se
+        rellena cuando alguien la registra desde el CRM.
+      </li>
+      <li>
+        <span class="tag tag--none">Nada</span>
+        No hay estimaciones, puntuaciones ni inferencias de IA en esta pantalla. Cuando las haya,
+        irán etiquetadas como tales.
+      </li>
+    </ul>
+  </section>
+</section>

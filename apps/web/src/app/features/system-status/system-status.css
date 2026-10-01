@@ -1,0 +1,15 @@
+/* Sólo layout propio de esta pantalla. Las primitivas que comparte con el resto del CRM
+   —página, tarjeta, pista de tarjeta, tabla, origen de los datos, píldora de estado, aviso,
+   alerta, problem+json, clave/valor, botón, etiqueta— viven en `src/styles/components.css`.
+   Ver el comentario de cabecera de ese archivo. */
+
+:host {
+  display: block;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--s-4);
+  margin-top: var(--s-5);
+}

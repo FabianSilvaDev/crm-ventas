@@ -1,0 +1,30 @@
+{
+  "name": "@crm/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "API REST del CRM. Monolito modular NestJS (ADR-001, ADR-003).",
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "predev": "tsc -b",
+    "dev": "concurrently -n build,serve -c cyan,magenta \"npm:dev:build\" \"npm:dev:serve\"",
+    "dev:build": "tsc -b --watch --preserveWatchOutput",
+    "dev:serve": "node --watch dist/main.js",
+    "start": "node dist/main.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@crm/contracts": "workspace:*",
+    "@nestjs/common": "^12.1.2",
+    "@nestjs/core": "^12.1.2",
+    "@nestjs/platform-express": "^12.1.2",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "concurrently": "^10.0.5"
+  }
+}

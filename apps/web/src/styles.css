@@ -1,0 +1,71 @@
+/* Estilos globales. Los valores concretos viven en tokens.css: aquí sólo se aplican. */
+@import './styles/tokens.css';
+@import './styles/components.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: var(--lh-base);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+/* Foco visible SIEMPRE. Es la regla que más se salta la gente y la que deja el teclado
+   inservible. `:focus-visible` y no `:focus` para no dibujar el anillo al hacer clic. */
+:focus-visible {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* Un botón o un enlace deshabilitado sigue siendo enfocable a propósito: si no lo fuera,
+   quien navega con teclado no podría descubrir que existe. */
+[aria-disabled='true'] {
+  cursor: not-allowed;
+}
+
+/* Respeta a quien ha pedido menos movimiento en su sistema. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Sólo para lectores de pantalla: necesario para el estado que de otro modo se transmite
+   únicamente con color o con un icono. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

@@ -1,0 +1,403 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   PRIMITIVAS DE INTERFAZ — globales, sin encapsular
+   ═══════════════════════════════════════════════════════════════════════════
+
+   Por qué están aquí y no dentro del componente que las estrenó:
+
+   Angular encapsula los estilos de cada componente. Si `.status` viviera en
+   `features/system-status/system-status.css`, la siguiente pantalla que necesitara una
+   píldora de estado tendría que volver a escribirla — y a la tercera copia ya habría tres
+   versiones distintas del mismo verde. Es exactamente la clase de divergencia silenciosa
+   que el proyecto ya se ha encontrado tres veces (ver el comentario del catálogo de
+   errores en `@crm/contracts`).
+
+   Regla para decidir si algo va aquí: **¿lo va a necesitar una segunda pantalla?** Si la
+   respuesta es "sí" o "probablemente", va aquí. Si es layout propio de una pantalla, se
+   queda en el componente.
+
+   Todo valor sale de tokens.css. Ningún color, radio o medida literal.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Página ──────────────────────────────────────────────────────────────────
+   El marco de una pantalla: título, entradilla y sello de "cuándo se consultó". Estaba dentro de
+   `system-status.css` y se promovió al aparecer la segunda pantalla (regla de cabecera). */
+.page {
+  max-width: 1100px;
+}
+
+.page__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+}
+
+.page__title {
+  margin: 0 0 var(--s-1);
+  color: var(--c-text);
+  font-size: var(--fs-2xl);
+  line-height: var(--lh-tight);
+}
+
+.page__sub {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--c-text-muted);
+  line-height: var(--lh-base);
+}
+
+.page__stamp {
+  margin: var(--s-3) 0 0;
+  color: var(--c-text-faint);
+  font-size: var(--fs-xs);
+}
+
+/* ── Botón ───────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-4);
+  border: 1px solid var(--c-accent);
+  border-radius: var(--r-sm);
+  background: var(--c-accent);
+  color: #fff;
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--t-fast), border-color var(--t-fast);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--c-accent-hover);
+  border-color: var(--c-accent-hover);
+}
+
+.btn:disabled {
+  opacity: 0.65;
+  cursor: progress;
+}
+
+.btn--ghost {
+  background: var(--c-surface);
+  border-color: var(--c-border-strong);
+  color: var(--c-text);
+}
+
+.btn--ghost:hover:not(:disabled) {
+  background: var(--c-surface-sunken);
+  border-color: var(--c-border-strong);
+}
+
+/* ── Tarjeta ─────────────────────────────────────────────────────────────── */
+.card {
+  padding: var(--s-4);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  background: var(--c-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+
+.card__title {
+  margin: 0;
+  color: var(--c-text);
+  font-size: var(--fs-lg);
+  line-height: var(--lh-tight);
+}
+
+/* Línea de contexto bajo el título de una tarjeta: qué endpoint la alimenta, de qué año es el dato. */
+.card__hint {
+  margin: var(--s-1) 0 var(--s-4);
+  color: var(--c-text-muted);
+  font-size: var(--fs-xs);
+}
+
+/* ── Texto técnico ───────────────────────────────────────────────────────── */
+code {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+}
+
+.mono {
+  word-break: break-all;
+}
+
+/* ── Píldora de estado ───────────────────────────────────────────────────────
+   El color NUNCA va solo: la píldora siempre lleva texto dentro. Un verde sin la palabra
+   "Operativa" es invisible para quien no distingue verde de rojo (≈8% de los hombres). */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 2px var(--s-2);
+  border: 1px solid;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.status--ok {
+  background: var(--c-ok-bg);
+  border-color: var(--c-ok-border);
+  color: var(--c-ok-fg);
+}
+
+.status--bad {
+  background: var(--c-bad-bg);
+  border-color: var(--c-bad-border);
+  color: var(--c-bad-fg);
+}
+
+.status--warn {
+  background: var(--c-warn-bg);
+  border-color: var(--c-warn-border);
+  color: var(--c-warn-fg);
+}
+
+.status--idle {
+  background: var(--c-idle-bg);
+  border-color: var(--c-idle-border);
+  color: var(--c-idle-fg);
+}
+
+/* ── Etiqueta ────────────────────────────────────────────────────────────── */
+.tag {
+  flex: none;
+  padding: 1px var(--s-2);
+  border: 1px solid;
+  border-radius: var(--r-sm);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.tag--real {
+  background: var(--c-ok-bg);
+  border-color: var(--c-ok-border);
+  color: var(--c-ok-fg);
+}
+
+.tag--none {
+  background: var(--c-idle-bg);
+  border-color: var(--c-idle-border);
+  color: var(--c-idle-fg);
+}
+
+.tag--warn {
+  background: var(--c-warn-bg);
+  border-color: var(--c-warn-border);
+  color: var(--c-warn-fg);
+}
+
+/* ── Lista clave/valor ───────────────────────────────────────────────────── */
+.kv {
+  margin: 0;
+}
+
+.kv__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-2) 0;
+  border-top: 1px solid var(--c-border);
+}
+
+.kv__row:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.kv dt {
+  color: var(--c-text-muted);
+  font-size: var(--fs-sm);
+}
+
+.kv dd {
+  margin: 0;
+  color: var(--c-text);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ── Tabla ───────────────────────────────────────────────────────────────────
+   Generalizada a partir de la tabla de dependencias de `system-status.css`, que era la única.
+   Envuelve siempre la tabla en `.table-wrap`: una tabla ancha en pantalla estrecha debe poder
+   desplazarse en horizontal, no romper el layout. */
+.table-wrap {
+  margin-top: var(--s-5);
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+
+.table th,
+.table td {
+  padding: var(--s-2) var(--s-3);
+  border-bottom: 1px solid var(--c-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.table thead th {
+  padding-top: 0;
+  color: var(--c-text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.table tbody th {
+  font-weight: 600;
+}
+
+/* Segunda línea dentro de una celda: el detalle que no cabe en la columna. */
+.table__sub {
+  display: block;
+  color: var(--c-text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+}
+
+/* Cifras y tiempos: alineados a la derecha y con ancho fijo por dígito, para poder comparar
+   columnas de un vistazo. */
+.table__num {
+  color: var(--c-text-muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ── Aviso en línea ──────────────────────────────────────────────────────── */
+.note {
+  margin: 0 0 var(--s-4);
+  padding: var(--s-3);
+  border: 1px solid;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-base);
+}
+
+.note--warn {
+  background: var(--c-warn-bg);
+  border-color: var(--c-warn-border);
+  color: var(--c-warn-fg);
+}
+
+.note--info {
+  background: var(--c-idle-bg);
+  border-color: var(--c-idle-border);
+  color: var(--c-idle-fg);
+}
+
+/* ── Alerta ──────────────────────────────────────────────────────────────── */
+.alert {
+  margin: var(--s-4) 0 0;
+  padding: var(--s-3);
+  border: 1px solid;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+}
+
+.alert--bad {
+  background: var(--c-bad-bg);
+  border-color: var(--c-bad-border);
+  color: var(--c-bad-fg);
+}
+
+/* ── problem+json (RFC 9457) ────────────────────────────────────────────────
+   Todo error del API llega con esta forma, así que la presentación es una sola para toda
+   la aplicación: título legible + `code` + HTTP + `detail` + `traceId`. */
+.problem {
+  margin-top: var(--s-4);
+  padding: var(--s-3);
+  border: 1px solid var(--c-bad-border);
+  border-left-width: 3px;
+  border-radius: var(--r-sm);
+  background: var(--c-bad-bg);
+}
+
+.problem__title {
+  margin: 0;
+  color: var(--c-bad-fg);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.problem__meta {
+  margin: var(--s-1) 0 0;
+  color: var(--c-bad-fg);
+  font-size: var(--fs-xs);
+}
+
+.problem__detail {
+  margin: var(--s-2) 0 0;
+  color: var(--c-bad-fg);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-base);
+}
+
+/* ── Origen de los datos (§3) ────────────────────────────────────────────────
+   Toda pantalla que muestre datos declara de dónde salen: real, estimado o inferencia de IA.
+   Promovido desde `system-status.css` al aparecer la segunda pantalla que lo necesita. */
+.origin {
+  margin-top: var(--s-6);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--c-border);
+}
+
+.origin__title {
+  margin: 0 0 var(--s-3);
+  color: var(--c-text);
+  font-size: var(--fs-base);
+}
+
+.origin__list {
+  display: grid;
+  gap: var(--s-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.origin__list li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  max-width: 80ch;
+  color: var(--c-text-muted);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-base);
+}
+
+/* Ancho mínimo para que las etiquetas de la lista no bailen entre renglones. */
+.origin .tag {
+  min-width: 52px;
+}

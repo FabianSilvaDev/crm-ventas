@@ -1,0 +1,23 @@
+{
+  "name": "crm-ventas",
+  "version": "0.0.0",
+  "private": true,
+  "description": "CRM de ventas + plataforma de marketing con IA. Uso interno.",
+  "packageManager": "pnpm@12.8.1",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean",
+    "typecheck": "corepack pnpm -r typecheck",
+    "test": "corepack pnpm -r --workspace-concurrency=1 test",
+    "dev": "corepack pnpm --filter @crm/api dev",
+    "start": "corepack pnpm --filter @crm/api start"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.3"
+  }
+}

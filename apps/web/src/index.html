@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>CRM de Ventas</title>
+  <base href="/">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!--
+    El CRM interno NO debe indexarse: está detrás de autenticación y exponer su estructura en un
+    buscador es superficie de ataque. `noindex` es la primera barrera; la segunda es que sin sesión
+    no se sirve nada. Ver docs/seo.md y ADR-002.
+
+    OJO: esto aplica a la SPA (apps/web). El sitio público (apps/site) es lo contrario: SSR e
+    indexable. Si alguien copia esta línea a apps/site, el sitio desaparece de Google en silencio.
+  -->
+  <meta name="robots" content="noindex, nofollow">
+
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+</head>
+<body>
+  <app-root></app-root>
+</body>
+</html>
