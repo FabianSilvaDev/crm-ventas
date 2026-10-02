@@ -1,0 +1,15 @@
+/* Estilos propios del módulo de Investigación. Las primitivas compartidas viven en
+   `src/styles/components.css`. */
+
+:host {
+  display: block;
+}
+
+/* El icono del header debe tener el trazo morado. */
+.module-header__icon svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

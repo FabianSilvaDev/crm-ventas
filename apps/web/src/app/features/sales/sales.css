@@ -1,0 +1,125 @@
+:host {
+  display: block;
+}
+
+.sales {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* ── Hero ────────────────────────────────────────────────────────────────── */
+.sales__hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+.sales__title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  line-height: var(--lh-display);
+}
+
+.sales__sub {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-base);
+}
+
+/* ── Secciones ───────────────────────────────────────────────────────────── */
+.sales__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ── Pipeline ───────────────────────────────────────────────────────────── */
+.sales__pipeline {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+
+.sales__stage {
+  text-align: center;
+}
+
+.sales__stage-count {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  line-height: var(--lh-tight);
+}
+
+.sales__stage-label {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+/* ── Leads ─────────────────────────────────────────────────────────────── */
+.sales__leads {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+}
+
+.sales__lead-skeleton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.sales__lead-skeleton-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ── Oportunidades y clientes ──────────────────────────────────────────── */
+.sales__opportunities {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+}
+
+.sales__customers {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+}
+
+/* ── Responsive ────────────────────────────────────────────────────────── */
+@media (min-width: 640px) {
+  .sales__pipeline {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .sales__leads,
+  .sales__opportunities,
+  .sales__customers {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .sales__hero {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .sales__leads {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .sales__opportunities {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

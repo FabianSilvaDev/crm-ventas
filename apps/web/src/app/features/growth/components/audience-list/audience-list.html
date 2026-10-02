@@ -1,0 +1,30 @@
+<div class="audience-list">
+  @for (audience of audiences(); track audience.id) {
+    <app-card class="audience-list__item" padding="md">
+      <div class="audience-list__head">
+        <span class="audience-list__avatar" aria-hidden="true">
+          <app-icon name="target" size="sm" />
+        </span>
+        <div class="audience-list__info">
+          <h3 class="audience-list__name">{{ audience.name }}</h3>
+          <p class="muted">{{ audience.channel }}</p>
+        </div>
+      </div>
+
+      <div class="audience-list__metrics">
+        <app-metric
+          label="Tamaño"
+          [value]="audience.size.toLocaleString('es-ES')"
+          hint="Personas"
+          size="sm"
+        />
+        <app-metric
+          label="Conversión"
+          [value]="(audience.conversionRate | percent : '1.0-1') ?? ''"
+          hint="Tasa"
+          size="sm"
+        />
+      </div>
+    </app-card>
+  }
+</div>

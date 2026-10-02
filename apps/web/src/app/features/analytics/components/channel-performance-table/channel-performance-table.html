@@ -1,0 +1,29 @@
+<app-card padding="md">
+  <div class="table-wrap">
+    <table class="table">
+      <caption class="visually-hidden">Rendimiento por canal</caption>
+      <thead>
+        <tr>
+          <th scope="col">Canal</th>
+          <th scope="col">Gasto</th>
+          <th scope="col">Leads</th>
+          <th scope="col">Clientes</th>
+          <th scope="col">Revenue</th>
+          <th scope="col">ROAS</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (channel of channels(); track channel.channel) {
+          <tr>
+            <th scope="row">{{ channel.channel }}</th>
+            <td class="table__num">${{ channel.spend.toLocaleString('es-ES') }}</td>
+            <td class="table__num">{{ channel.leads.toLocaleString('es-ES') }}</td>
+            <td class="table__num">{{ channel.customers.toLocaleString('es-ES') }}</td>
+            <td class="table__num">${{ channel.revenue.toLocaleString('es-ES') }}</td>
+            <td class="table__num">{{ channel.roas }}x</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</app-card>

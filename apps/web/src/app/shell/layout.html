@@ -1,0 +1,188 @@
+<a class="skip-link" href="#contenido">Saltar al contenido</a>
+
+<div class="shell">
+  <header class="topbar">
+    <div class="topbar__brand">
+      <a class="brand" routerLink="/home" aria-label="CRM de Ventas, ir al inicio">
+        <svg class="brand__mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M4 19V9m5 10V5m5 14v-7m5 7V8" />
+        </svg>
+        <span class="brand__text">
+          <span class="brand__name">CRM de Ventas</span>
+        </span>
+      </a>
+    </div>
+
+    <nav class="topbar__nav" aria-label="Navegación principal">
+      @for (item of mainNav; track item.id) {
+        <a
+          class="nav-link"
+          [routerLink]="item.path"
+          routerLinkActive="nav-link--active"
+          [routerLinkActiveOptions]="{ exact: true }"
+        >
+          <app-icon [name]="item.icon" size="sm" />
+          <span>{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+
+    <div class="topbar__actions">
+      <button
+        type="button"
+        class="action-btn"
+        aria-label="Buscar"
+        (click)="openSearch()"
+      >
+        <app-icon name="search" size="md" />
+      </button>
+
+      <button
+        type="button"
+        class="action-btn"
+        [class.action-btn--active]="notificationsOpen()"
+        aria-label="Notificaciones"
+        aria-expanded="false"
+        (click)="toggleNotifications()"
+      >
+        <app-icon name="notifications" size="md" />
+      </button>
+
+      <div class="user-menu">
+        <button
+          type="button"
+          class="action-btn"
+          [class.action-btn--active]="userMenuOpen()"
+          aria-label="Menú de usuario"
+          aria-haspopup="true"
+          [attr.aria-expanded]="userMenuOpen()"
+          (click)="toggleUserMenu()"
+        >
+          <app-icon name="user" size="md" />
+        </button>
+
+        @if (userMenuOpen()) {
+          <div class="dropdown" role="menu" aria-label="Menú de usuario">
+            <a class="dropdown__item" routerLink="/settings" role="menuitem" (click)="closeUserMenu()">
+              <app-icon name="settings" size="sm" />
+              Configuración
+            </a>
+            <button
+              type="button"
+              class="dropdown__item dropdown__item--danger"
+              role="menuitem"
+              (click)="logout()"
+            >
+              <app-icon name="logout" size="sm" />
+              Salir
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  </header>
+
+  <main id="contenido" class="content" tabindex="-1">
+    @if (demo()) {
+      <p class="content__demo banner banner--demo">
+        <strong>Sesión de demostración.</strong> No hay ninguna cuenta detrás de esto: no hay
+        credencial y el API responderá <code>401</code> a todo. Es una puerta que solo existe en
+        desarrollo, para poder ver la interfaz antes de que exista el backend.
+      </p>
+    }
+    <router-outlet />
+  </main>
+
+  <nav class="bottom-nav" aria-label="Navegación principal móvil">
+    @for (item of bottomNav; track item.id) {
+      <a
+        class="bottom-nav__link"
+        [routerLink]="item.path"
+        routerLinkActive="bottom-nav__link--active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        <app-icon [name]="item.icon" size="lg" />
+        <span>{{ item.label }}</span>
+      </a>
+    }
+
+    <button
+      type="button"
+      class="bottom-nav__link"
+      [class.bottom-nav__link--active]="moreOpen()"
+      aria-label="Más opciones"
+      [attr.aria-expanded]="moreOpen()"
+      (click)="toggleMore()"
+    >
+      <app-icon name="menu" size="lg" />
+      <span>Más</span>
+    </button>
+  </nav>
+</div>
+
+<!-- Drawer "Más" para mobile -->
+@if (moreOpen()) {
+  <div class="drawer-backdrop" (click)="closeMore()" aria-hidden="true"></div>
+  <div
+    class="drawer"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="more-drawer-title"
+  >
+    <div class="drawer__header">
+      <h2 id="more-drawer-title">Más</h2>
+      <button
+        type="button"
+        class="action-btn"
+        aria-label="Cerrar"
+        (click)="closeMore()"
+      >
+        <app-icon name="close" size="md" />
+      </button>
+    </div>
+    <nav class="drawer__nav" aria-label="Más opciones">
+      @for (item of moreNav; track item.id) {
+        <a
+          class="drawer__link"
+          [routerLink]="item.path"
+          routerLinkActive="drawer__link--active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          (click)="closeMore()"
+        >
+          <app-icon [name]="item.icon" size="md" />
+          <span>{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+  </div>
+}
+
+<!-- Drawer de búsqueda (placeholder) -->
+@if (searchOpen()) {
+  <div class="drawer-backdrop" (click)="closeSearch()" aria-hidden="true"></div>
+  <div
+    class="drawer drawer--search"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="search-drawer-title"
+  >
+    <div class="drawer__header">
+      <h2 id="search-drawer-title">Buscar</h2>
+      <button
+        type="button"
+        class="action-btn"
+        aria-label="Cerrar"
+        (click)="closeSearch()"
+      >
+        <app-icon name="close" size="md" />
+      </button>
+    </div>
+    <div class="search-placeholder">
+      <app-icon name="search" size="2xl" />
+      <p>Búsqueda global próximamente.</p>
+      <p class="search-placeholder__hint">
+        Podrás buscar productos, clientes, leads, campañas y órdenes.
+      </p>
+    </div>
+  </div>
+}

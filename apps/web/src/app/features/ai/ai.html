@@ -1,0 +1,102 @@
+<section class="ai" aria-label="Centro de inteligencia artificial">
+  <!-- ── Cabecera ─────────────────────────────────────────────────────────── -->
+  <header class="ai__hero">
+    <div>
+      <h1 class="ai__title">IA</h1>
+      <p class="ai__sub">Recomendaciones, agentes, actividad y automatizaciones.</p>
+    </div>
+    <app-button variant="primary" iconLeft="plus" (click)="onNewAutomation()"
+      >Nueva automatización</app-button
+    >
+  </header>
+
+  <!-- ── Recomendaciones ─────────────────────────────────────────────────── -->
+  <section class="ai__section" aria-labelledby="recommendations-heading">
+    <div class="section-head">
+      <app-icon name="sparkles" size="sm" />
+      <h2 id="recommendations-heading" class="section-title">Recomendaciones de IA</h2>
+      <app-badge variant="info" label="Demo" />
+    </div>
+    <p class="section-note">
+      Recomendaciones de demostración con estructura WHAT/WHY/CONFIDENCE/ACTION. Cuando los agentes
+      estén activos, estas tarjetas se alimentarán con análisis real.
+    </p>
+
+    <div class="ai__recommendations">
+      @for (rec of recommendations; track rec.id) {
+        <app-ai-recommendation-card
+          [recommendation]="rec"
+          (action)="onRecommendationAction($event)"
+        />
+      }
+    </div>
+  </section>
+
+  <!-- ── Agentes ─────────────────────────────────────────────────────────── -->
+  <section class="ai__section" aria-labelledby="agents-heading">
+    <div class="section-head">
+      <app-icon name="robot" size="sm" />
+      <h2 id="agents-heading" class="section-title">Agentes</h2>
+      <app-badge variant="info" label="Demo" />
+    </div>
+
+    <div class="ai__agents">
+      @for (agent of agents; track agent.id) {
+        <app-agent-card [agent]="agent" (action)="onAgentAction($event)" />
+      }
+    </div>
+  </section>
+
+  <!-- ── Actividad de IA ─────────────────────────────────────────────────── -->
+  <section class="ai__section" aria-labelledby="activity-heading">
+    <div class="section-head">
+      <app-icon name="analytics" size="sm" />
+      <h2 id="activity-heading" class="section-title">Actividad reciente</h2>
+      <app-badge variant="info" label="Demo" />
+    </div>
+
+    <div class="ai__activity">
+      @for (activity of activities; track activity.id) {
+        <app-ai-activity-item [activity]="activity" />
+      }
+    </div>
+  </section>
+
+  <!-- ── Uso y costos ───────────────────────────────────────────────────── -->
+  <section class="ai__section" aria-labelledby="usage-heading">
+    <div class="section-head">
+      <app-icon name="money" size="sm" />
+      <h2 id="usage-heading" class="section-title">Uso y costos</h2>
+      <app-badge variant="info" label="Demo" />
+    </div>
+    <app-card padding="md">
+      <app-empty-state
+        icon="money"
+        title="Sin datos de uso"
+        text="Cuando los agentes estén activos, aquí verás tokens consumidos, costos estimados y límites de presupuesto."
+        actionLabel="Configurar agentes"
+      />
+    </app-card>
+  </section>
+
+  <!-- ── Origen de los datos ─────────────────────────────────────────────── -->
+  <section class="origin-box" aria-labelledby="origin-heading">
+    <h2 id="origin-heading" class="origin-box__title">De dónde salen estos datos</h2>
+    <ul class="origin-box__list">
+      <li class="origin-box__item">
+        <app-badge variant="info" label="Demo" />
+        <span
+          >Todas las recomendaciones, actividades, agentes y métricas son visuales de demostración; no
+          hay backend de IA operativo aún.</span
+        >
+      </li>
+      <li class="origin-box__item">
+        <app-badge variant="neutral" label="Pendiente" />
+        <span
+          >Conectores con proveedores de LLM, bus de eventos de agentes y métricas de uso requieren
+          endpoints nuevos (documentado como FRONTEND DATA GAP).</span
+        >
+      </li>
+    </ul>
+  </section>
+</section>

@@ -1,0 +1,12 @@
+<button
+  [type]="type()"
+  [class]="classes()"
+  [disabled]="disabled()"
+  [attr.aria-label]="ariaLabel()"
+  (click)="click.emit($event)"
+>
+  @if (iconLeft(); as icon) {
+    <app-icon [name]="icon" size="sm" />
+  }
+  <span class="btn__text"><ng-content /></span>
+</button>

@@ -1,0 +1,288 @@
+<section class="home" aria-label="Resumen del negocio">
+  <!-- ── Saludo + métrica principal ─────────────────────────────────────────── -->
+  <header class="home__hero">
+    <div class="home__hero-text">
+      <p class="home__greeting">{{ greeting() }}, {{ userName() }}</p>
+      <h1 class="home__title">Así va tu negocio hoy</h1>
+    </div>
+
+    @if (loading()) {
+      <app-card class="home__hero-metric" padding="lg">
+        <app-skeleton variant="text" width="120px" />
+        <app-skeleton variant="title" width="180px" height="48px" />
+        <app-skeleton variant="text" width="140px" />
+      </app-card>
+    } @else {
+      <app-card class="home__hero-metric" padding="lg">
+        <app-metric
+          label="Leads activos"
+          [value]="activeLeads().toString()"
+          hint="Leads recibidos vía API"
+          size="lg"
+        />
+        <a class="home__hero-link" routerLink="/sales">
+          Ver todos
+          <app-icon name="arrowRight" size="sm" />
+        </a>
+      </app-card>
+    }
+  </header>
+
+  <!-- ── Attention ───────────────────────────────────────────────────────────── -->
+  @if (attentionItems(); as items) {
+    @if (items.length > 0) {
+      <section class="home__section" aria-labelledby="attention-heading">
+        <div class="section-head">
+          <app-icon name="attention" size="sm" />
+          <h2 id="attention-heading" class="section-title">Requiere atención</h2>
+        </div>
+        <div class="dashboard-grid">
+          @for (item of items; track item.id) {
+            <app-card class="attention-card" padding="md">
+              <div class="attention-card__inner">
+                <div class="attention-card__body">
+                  <app-badge
+                    [variant]="item.severity === 'danger' ? 'danger' : 'warning'"
+                    [label]="item.severity === 'danger' ? 'Crítico' : 'Revisar'"
+                  />
+                  <h3 class="attention-card__title">{{ item.title }}</h3>
+                  <p class="muted">{{ item.message }}</p>
+                </div>
+                <a [routerLink]="item.actionPath" class="btn btn--secondary btn--sm">
+                  {{ item.actionLabel }}
+                </a>
+              </div>
+            </app-card>
+          }
+        </div>
+      </section>
+    }
+  }
+
+  <!-- ── AI Recommendations (demostración visual) ─────────────────────────────── -->
+  <section class="home__section" aria-labelledby="ai-heading">
+    <div class="section-head">
+      <app-icon name="sparkles" size="sm" />
+      <h2 id="ai-heading" class="section-title">Recomendaciones de IA</h2>
+      <app-badge variant="info" label="Demo" />
+    </div>
+    <p class="section-note">
+      Estas recomendaciones son visuales de demostración. Cuando los agentes de IA estén activos,
+      aparecerán aquí con datos reales de tu negocio.
+    </p>
+
+    <div class="dashboard-grid">
+      @for (rec of aiRecommendations; track rec.id) {
+        <app-card class="home__ai-card" padding="md">
+          <div class="home__ai-inner">
+            <div class="home__ai-main">
+              <div class="home__ai-header">
+                <app-icon name="robot" size="md" />
+                <div>
+                  <h3 class="home__ai-title">{{ rec.title }}</h3>
+                  <p class="home__ai-what">{{ rec.what }}</p>
+                </div>
+              </div>
+
+              <div>
+                <p class="label">¿Por qué?</p>
+                <ul class="home__ai-list">
+                  @for (reason of rec.why; track reason) {
+                    <li>{{ reason }}</li>
+                  }
+                </ul>
+              </div>
+
+              <div class="home__ai-row">
+                <div>
+                  <p class="label">Confianza</p>
+                  <p class="home__ai-confidence">{{ rec.confidence }}%</p>
+                </div>
+                <div>
+                  <p class="label">Impacto esperado</p>
+                  <p class="muted">{{ rec.impact }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="home__ai-actions">
+              <a [routerLink]="rec.actionPath" class="btn btn--primary">
+                {{ rec.actionLabel }}
+              </a>
+              <app-button variant="ghost" size="sm">Ignorar</app-button>
+            </div>
+          </div>
+        </app-card>
+      }
+    </div>
+  </section>
+
+  <!-- ── Performance ─────────────────────────────────────────────────────────── -->
+  <section class="home__section" aria-labelledby="performance-heading">
+    <h2 id="performance-heading" class="section-title section-title--solo">
+      Performance
+    </h2>
+
+    @if (loading()) {
+      <div class="metric-grid">
+        @for (_ of [1, 2, 3, 4]; track $index) {
+          <app-card padding="md">
+            <app-skeleton variant="text" width="80px" />
+            <app-skeleton variant="title" width="100px" height="32px" />
+            <app-skeleton variant="text" width="60px" />
+          </app-card>
+        }
+      </div>
+    } @else {
+      <div class="metric-grid">
+        <app-card padding="md">
+          <app-metric label="Leads activos" [value]="activeLeads().toString()" hint="Total acumulado" />
+        </app-card>
+        <app-card padding="md">
+          <app-metric
+            label="Tasa de respuesta"
+            [value]="responseRate()"
+            hint="Leads con primera respuesta"
+            [trend]="activeLeads() > 0 ? 'up' : null"
+            trendValue="vs. periodo actual"
+          />
+        </app-card>
+        <app-card padding="md">
+          <app-metric
+            label="Estado del sistema"
+            [value]="healthResult()?.outcome === 'ok' ? 'Saludable' : 'Revisar'"
+            [hint]="healthResult()?.outcome === 'ok' ? 'API responde correctamente' : 'Revisa el estado del sistema'"
+          />
+        </app-card>
+        <app-card padding="md">
+          <app-metric
+            label="Campañas activas"
+            value="0"
+            hint="No hay campañas configuradas"
+          />
+        </app-card>
+      </div>
+    }
+  </section>
+
+  <!-- ── Active Work ───────────────────────────────────────────────────────── -->
+  <section class="home__section" aria-labelledby="active-heading">
+    <h2 id="active-heading" class="section-title section-title--solo">Trabajo activo</h2>
+
+    <div class="dashboard-grid">
+      <!-- Leads recientes -->
+      <app-card padding="md">
+        <div class="work-card__head">
+          <h3 class="work-card__title">Leads recientes</h3>
+          <a routerLink="/sales" class="work-link">
+            Ver todos
+            <app-icon name="arrowRight" size="xs" />
+          </a>
+        </div>
+
+        @if (loading()) {
+          <div class="home__leads">
+            @for (_ of [1, 2, 3]; track $index) {
+              <div class="home__leads-row">
+                <app-skeleton variant="circle" width="32px" height="32px" />
+                <div class="home__leads-text">
+                  <app-skeleton variant="text" width="140px" />
+                  <app-skeleton variant="text" width="100px" />
+                </div>
+              </div>
+            }
+          </div>
+        } @else if (recentLeads().length > 0) {
+          <ul class="lead-list">
+            @for (lead of recentLeads(); track lead.id) {
+              <li class="lead-list__item">
+                <span class="lead-list__avatar" aria-hidden="true">
+                  {{ lead.contactName ? lead.contactName.charAt(0).toUpperCase() : '?' }}
+                </span>
+                <div class="lead-list__info">
+                  <p class="lead-list__name">
+                    {{ lead.contactName ?? 'Sin nombre' }}
+                  </p>
+                  <p class="lead-list__meta">
+                    {{ lead.status }}
+                    <span aria-hidden="true">·</span>
+                    <time [attr.datetime]="lead.createdAt">
+                      {{ lead.createdAt | date: 'dd/MM' }}
+                    </time>
+                  </p>
+                </div>
+              </li>
+            }
+          </ul>
+        } @else {
+          <app-empty-state
+            icon="lead"
+            title="Sin leads recientes"
+            text="Cuando lleguen leads desde Meta o formularios aparecerán aquí."
+            actionLabel="Ir a Leads"
+            actionPath="/sales"
+          />
+        }
+      </app-card>
+
+      <!-- Campañas -->
+      <app-card padding="md">
+        <div class="work-card__head">
+          <h3 class="work-card__title">Campañas</h3>
+          <a routerLink="/growth" class="work-link">
+            Ir a Growth
+            <app-icon name="arrowRight" size="xs" />
+          </a>
+        </div>
+        <app-empty-state
+          icon="campaign"
+          title="No hay campañas activas"
+          text="Lanza tu primera campaña y empieza a medir qué canales convierten."
+          actionLabel="Crear campaña"
+          actionPath="/growth"
+        />
+      </app-card>
+
+      <!-- AI Tasks -->
+      <app-card padding="md">
+        <div class="work-card__head">
+          <h3 class="work-card__title">Tareas de IA</h3>
+          <a routerLink="/ai" class="work-link">
+            Ir a IA
+            <app-icon name="arrowRight" size="xs" />
+          </a>
+        </div>
+        <app-empty-state
+          icon="robot"
+          title="Sin tareas activas"
+          text="Cuando los agentes de IA tengan trabajos pendientes los verás aquí."
+          actionLabel="Explorar IA"
+          actionPath="/ai"
+        />
+      </app-card>
+    </div>
+  </section>
+
+  <!-- ── Origen de los datos ───────────────────────────────────────────────── -->
+  <section class="origin-box" aria-labelledby="origin-heading">
+    <h2 id="origin-heading" class="origin-box__title">De dónde salen estos datos</h2>
+    <ul class="origin-box__list">
+      <li class="origin-box__item">
+        <app-badge variant="success" label="Real" />
+        <span>Leads, conteos y tasa de respuesta provienen de <code>GET /api/v1/leads</code>.</span>
+      </li>
+      <li class="origin-box__item">
+        <app-badge variant="success" label="Real" />
+        <span>El estado del sistema proviene de <code>/health/live</code>.</span>
+      </li>
+      <li class="origin-box__item">
+        <app-badge variant="info" label="Demo" />
+        <span>Las recomendaciones de IA y las campañas son visuales de demostración; no hay backend aún.</span>
+      </li>
+      <li class="origin-box__item">
+        <app-badge variant="neutral" label="Pendiente" />
+        <span>Revenue, orders, ROAS y AI tasks requieren endpoints nuevos (documentado como FRONTEND DATA GAP).</span>
+      </li>
+    </ul>
+  </section>
+</section>

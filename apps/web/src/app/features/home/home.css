@@ -1,0 +1,157 @@
+:host {
+  display: block;
+}
+
+.home {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* ── Hero ──────────────────────────────────────────────────────────────────── */
+.home__hero {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.home__hero-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.home__greeting {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-lg);
+  font-weight: 500;
+}
+
+.home__title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  line-height: var(--lh-display);
+}
+
+.home__hero-metric {
+  display: block;
+}
+
+.home__hero-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-3);
+  color: var(--color-primary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.home__hero-link:hover {
+  color: var(--color-primary-hover);
+}
+
+/* ── AI Recommendations ──────────────────────────────────────────────────── */
+.home__ai-card {
+  display: block;
+}
+
+.home__ai-inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  height: 100%;
+}
+
+.home__ai-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  flex: 1;
+}
+
+.home__ai-header {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.home__ai-header app-icon {
+  flex: none;
+  color: var(--color-primary);
+}
+
+.home__ai-title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.home__ai-what {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.home__ai-list {
+  margin: 0;
+  padding-left: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.home__ai-list li + li {
+  margin-top: var(--space-1);
+}
+
+.home__ai-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: var(--space-3);
+}
+
+.home__ai-confidence {
+  margin: 0;
+  color: var(--color-primary);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+}
+
+.home__ai-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ── Skeletons de leads ──────────────────────────────────────────────────── */
+.home__leads {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.home__leads-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.home__leads-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (min-width: 768px) {
+  .home__hero {
+    grid-template-columns: 1fr auto;
+  }
+}

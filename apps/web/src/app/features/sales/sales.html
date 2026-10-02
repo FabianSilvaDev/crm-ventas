@@ -1,0 +1,211 @@
+<section class="sales" aria-label="Centro comercial">
+  <!-- ── Cabecera ─────────────────────────────────────────────────────────── -->
+  <header class="sales__hero">
+    <div>
+      <h1 class="sales__title">Ventas</h1>
+      <p class="sales__sub">Leads, oportunidades, clientes y seguimiento.</p>
+    </div>
+    <app-button variant="primary" iconLeft="plus" (click)="onCreateDeal()"
+      >Nuevo deal</app-button
+    >
+  </header>
+
+  <!-- ── Pipeline visual ──────────────────────────────────────────────────── -->
+  <section class="sales__section" aria-labelledby="pipeline-heading">
+    <h2 id="pipeline-heading" class="section-title section-title--solo">Pipeline</h2>
+    <div class="sales__pipeline">
+      @for (stage of pipeline; track stage.id) {
+        <app-card class="sales__stage" padding="md">
+          <p class="sales__stage-count">{{ stage.count }}</p>
+          <p class="sales__stage-label">{{ stage.label }}</p>
+          @if (stage.value > 0) {
+            <p class="muted">{{ (stage.value | currency : 'USD' : 'symbol' : '1.0-0') ?? '' }}</p>
+          }
+        </app-card>
+      }
+    </div>
+  </section>
+
+  <!-- ── Métricas de resumen ──────────────────────────────────────────────── -->
+  <section class="sales__section" aria-labelledby="metrics-heading">
+    <div class="section-head">
+      <app-icon name="analytics" size="sm" />
+      <h2 id="metrics-heading" class="section-title">Resumen comercial</h2>
+    </div>
+
+    @if (loading()) {
+      <div class="metric-grid">
+        @for (_ of [1, 2, 3, 4]; track $index) {
+          <app-card padding="md">
+            <app-skeleton variant="text" width="80px" />
+            <app-skeleton variant="title" width="100px" height="32px" />
+            <app-skeleton variant="text" width="60px" />
+          </app-card>
+        }
+      </div>
+    } @else {
+      <div class="metric-grid">
+        <app-card padding="md">
+          <app-metric
+            label="Leads activos"
+            [value]="activeLeads().toString()"
+            hint="Total acumulado"
+          />
+        </app-card>
+        <app-card padding="md">
+          <app-metric
+            label="Tasa de respuesta"
+            [value]="responseRate()"
+            hint="Leads con primera respuesta"
+          />
+        </app-card>
+        <app-card padding="md">
+          <app-metric
+            label="Valor pipeline"
+            value="$399K"
+            hint="Oportunidades demo"
+          />
+        </app-card>
+        <app-card padding="md">
+          <app-metric
+            label="Clientes activos"
+            value="3"
+            hint="Demo"
+          />
+        </app-card>
+      </div>
+    }
+  </section>
+
+  <!-- ── Leads recientes ──────────────────────────────────────────────────── -->
+  <section class="sales__section" aria-labelledby="leads-heading">
+    <div class="section-head">
+      <app-icon name="lead" size="sm" />
+      <h2 id="leads-heading" class="section-title">Leads recientes</h2>
+      <app-badge variant="success" label="Real" />
+    </div>
+    <p class="section-note">
+      Datos reales de <code>GET /api/v1/leads</code>. La lista completa sigue en
+      <a routerLink="/leads">/leads</a>.
+    </p>
+
+    @if (loading()) {
+      <div class="sales__leads">
+        @for (_ of [1, 2, 3]; track $index) {
+          <app-card padding="md">
+            <div class="sales__lead-skeleton">
+              <app-skeleton variant="circle" width="40px" height="40px" />
+              <div class="sales__lead-skeleton-text">
+                <app-skeleton variant="text" width="140px" />
+                <app-skeleton variant="text" width="100px" />
+              </div>
+            </div>
+          </app-card>
+        }
+      </div>
+    } @else if (recentLeads().length > 0) {
+      <div class="sales__leads">
+        @for (lead of recentLeads(); track lead.id) {
+          <app-lead-card [lead]="lead" (action)="onLeadAction($event)" />
+        }
+      </div>
+    } @else {
+      <app-card padding="md">
+        <app-empty-state
+          icon="lead"
+          title="Sin leads recientes"
+          text="Cuando lleguen leads desde Meta o formularios aparecerán aquí."
+          actionLabel="Ir a Leads"
+          actionPath="/leads"
+        />
+      </app-card>
+    }
+  </section>
+
+  <!-- ── Oportunidades ────────────────────────────────────────────────────── -->
+  <section class="sales__section" aria-labelledby="opportunities-heading">
+    <div class="section-head">
+      <app-icon name="opportunity" size="sm" />
+      <h2 id="opportunities-heading" class="section-title">Oportunidades</h2>
+      <app-badge variant="info" label="Demo" />
+    </div>
+
+    <div class="sales__opportunities">
+      @for (opportunity of opportunities; track opportunity.id) {
+        <app-opportunity-card
+          [opportunity]="opportunity"
+          (action)="onOpportunityAction($event)"
+        />
+      }
+    </div>
+  </section>
+
+  <!-- ── Clientes + Seguimientos ──────────────────────────────────────────── -->
+  <section class="sales__section" aria-labelledby="customers-heading">
+    <div class="section-head">
+      <app-icon name="user" size="sm" />
+      <h2 id="customers-heading" class="section-title">Clientes</h2>
+      <app-badge variant="info" label="Demo" />
+    </div>
+
+    <div class="sales__customers">
+      @for (customer of customers; track customer.id) {
+        <app-customer-card
+          [customer]="customer"
+          (action)="onCustomerAction($event)"
+        />
+      }
+    </div>
+  </section>
+
+  <section class="sales__section" aria-labelledby="follow-ups-heading">
+    <div class="section-head">
+      <app-icon name="clock" size="sm" />
+      <h2 id="follow-ups-heading" class="section-title">Seguimientos</h2>
+      <app-badge variant="info" label="Demo" />
+    </div>
+
+    <app-follow-up-list [followUps]="followUps" />
+  </section>
+
+  <!-- ── Órdenes ─────────────────────────────────────────────────────────── -->
+  <section class="sales__section" aria-labelledby="orders-heading">
+    <h2 id="orders-heading" class="section-title section-title--solo">Órdenes y pedidos</h2>
+    <app-card padding="md">
+      <app-empty-state
+        icon="money"
+        title="Sin órdenes registradas"
+        text="Cuando los leads se conviertan en clientes y cierren pedidos, aparecerán aquí con estado, valor y fecha de entrega."
+        actionLabel="Ver oportunidades"
+      />
+    </app-card>
+  </section>
+
+  <!-- ── Origen de los datos ─────────────────────────────────────────────── -->
+  <section class="origin-box" aria-labelledby="origin-heading">
+    <h2 id="origin-heading" class="origin-box__title">De dónde salen estos datos</h2>
+    <ul class="origin-box__list">
+      <li class="origin-box__item">
+        <app-badge variant="success" label="Real" />
+        <span
+          >Leads, conteos y tasa de respuesta provienen de
+          <code>GET /api/v1/leads</code>.</span
+        >
+      </li>
+      <li class="origin-box__item">
+        <app-badge variant="info" label="Demo" />
+        <span
+          >Pipeline, oportunidades, clientes, seguimientos y órdenes son visuales de
+          demostración; no hay backend de CRM comercial aún.</span
+        >
+      </li>
+      <li class="origin-box__item">
+        <app-badge variant="neutral" label="Pendiente" />
+        <span
+          >Acciones de contactar, cualificar, convertir y archivar requieren endpoints nuevos
+          (documentado como FRONTEND DATA GAP).</span
+        >
+      </li>
+    </ul>
+  </section>
+</section>

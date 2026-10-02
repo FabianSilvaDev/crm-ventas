@@ -1,0 +1,53 @@
+<section class="page">
+  <header class="module-header">
+    <div class="module-header__top">
+      <svg class="module-header__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M16 11V7a4 4 0 0 0-8 0v4M5 9h14l1 12H4L5 9z" />
+      </svg>
+      <div>
+        <h1 class="module-header__title">CRM / Ventas</h1>
+        <p class="module-header__sub">
+          Leads, pipeline, cotizaciones y seguimiento por WhatsApp. Donde la conversación se
+          convierte en ingreso.
+        </p>
+      </div>
+      <span class="tag tag--none">Vacío</span>
+    </div>
+  </header>
+
+  <div class="module-grid">
+    @for (section of sections; track section.label) {
+      <article class="module-card module-card--empty">
+        <header class="module-card__head">
+          <span class="module-card__icon">
+            <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path [attr.d]="section.icon" />
+            </svg>
+          </span>
+          <h2 class="module-card__title">{{ section.label }}</h2>
+        </header>
+        <p class="module-card__hint">{{ section.description }}</p>
+        <div class="module-card__metrics">
+          @for (metric of section.metrics; track metric.label) {
+            <div class="module-card__metric">
+              <p class="module-card__metric-label">{{ metric.label }}</p>
+              <p class="module-card__metric-value">{{ metric.value }}</p>
+            </div>
+          }
+        </div>
+        <span class="module-card__link module-card__link--disabled">Próximamente</span>
+      </article>
+    }
+  </div>
+
+  <section class="origin">
+    <h2 class="origin__title">De dónde salen estos datos</h2>
+    <ul class="origin__list">
+      <li>
+        <span class="tag tag--none">Nada</span>
+        Todavía no hay datos reales en este módulo. Cuando el backend de CRM exista,
+        cada sección se etiquetará como real, estimado o inferencia de IA.
+      </li>
+    </ul>
+  </section>
+</section>

@@ -1,0 +1,97 @@
+<section class="page dashboard">
+  <!-- Hero de bienvenida: la única superficie de marca dentro del área de trabajo. -->
+  <header class="dashboard__hero">
+    <div class="dashboard__hero-inner">
+      <p class="dashboard__greeting">Buenos días.</p>
+      <h1 class="page__title page__title--hero">Resumen del día</h1>
+      <p class="dashboard__lede">
+        Ciclo comercial completo: investigación, estrategia, adquisición, ventas y aprendizaje.
+        Hoy el panel muestra la estructura visual; los datos reales llegarán en la etapa lógica.
+      </p>
+    </div>
+  </header>
+
+  <!-- KPIs globales: guiones con aclaración de origen. -->
+  <section class="dashboard__kpis" aria-labelledby="kpis-globales">
+    <h2 id="kpis-globales" class="visually-hidden">Indicadores globales</h2>
+    <div class="metric-grid">
+      @for (kpi of globalKpis; track kpi.label) {
+        <article class="stat">
+          <p class="stat__label">{{ kpi.label }}</p>
+          <p class="stat__value">{{ kpi.value }}</p>
+          <p class="module-card__metric-hint">{{ kpi.hint }}</p>
+        </article>
+      }
+    </div>
+  </section>
+
+  <!-- Hub de módulos: cards grandes con icono, descripción y métricas. -->
+  <section class="dashboard__modules" aria-labelledby="modulos-titulo">
+    <header class="module-header">
+      <h2 id="modulos-titulo" class="module-header__title">Módulos del ciclo comercial</h2>
+      <p class="module-header__sub">Cada card representa una etapa. Los valores se llenarán cuando el backend exista.</p>
+    </header>
+
+    <div class="module-grid">
+      @for (module of modules; track module.label) {
+        <article class="module-card" [class.module-card--empty]="module.state === 'empty'">
+          <header class="module-card__head">
+            <svg class="module-card__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path [attr.d]="module.icon" />
+            </svg>
+            <div class="module-card__titles">
+              <h3 class="module-card__title">{{ module.label }}</h3>
+              <p class="module-card__desc">{{ module.description }}</p>
+            </div>
+            @if (module.state === 'empty') {
+              <span class="module-card__tag tag tag--none">Vacío</span>
+            }
+          </header>
+
+          <div class="module-card__metrics">
+            @for (m of module.metrics; track m.label) {
+              <div class="module-card__metric">
+                <p class="module-card__metric-label">{{ m.label }}</p>
+                <p class="module-card__metric-value">{{ m.value }}</p>
+                <p class="module-card__metric-hint">{{ m.hint }}</p>
+              </div>
+            }
+          </div>
+
+          @if (module.path; as path) {
+            <a class="module-card__link" [routerLink]="path">
+              Abrir módulo
+              <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </a>
+          } @else {
+            <span class="module-card__link module-card__link--disabled">Próximamente</span>
+          }
+        </article>
+      }
+    </div>
+  </section>
+
+  <!-- Accesos directos. -->
+  <section class="dashboard__quick" aria-labelledby="acciones-rapidas">
+    <h2 id="acciones-rapidas" class="module-header__title">Accesos directos</h2>
+    <div class="dashboard__quick-list">
+      @for (action of quickActions; track action.label) {
+        <a class="btn btn--ghost" [routerLink]="action.path">{{ action.label }}</a>
+      }
+    </div>
+  </section>
+
+  <!-- Honestidad de origen: nada es real todavía. -->
+  <section class="origin">
+    <h2 class="origin__title">De dónde salen estos datos</h2>
+    <ul class="origin__list">
+      <li>
+        <span class="tag tag--none">Nada</span>
+        Todavía no hay datos reales en esta pantalla. Cuando el backend de resúmenes exista,
+        cada métrica irá etiquetada con su origen: real, estimado o inferencia de IA.
+      </li>
+    </ul>
+  </section>
+</section>

@@ -1,0 +1,15 @@
+<app-card class="metric-trend" padding="md">
+  <div class="metric-trend__header">
+    <app-metric
+      [label]="metric().label"
+      [value]="metric().value"
+      [hint]="metric().hint"
+      [trend]="metric().trend"
+      [trendValue]="metric().change"
+      size="md"
+    />
+  </div>
+  <p class="muted">
+    Periodo anterior: {{ metric().previousValue }}
+  </p>
+</app-card>

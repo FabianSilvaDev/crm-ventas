@@ -1,0 +1,45 @@
+<div class="experiment-list">
+  @for (experiment of experiments(); track experiment.id) {
+    <app-card class="experiment-list__item" padding="md">
+      <div class="experiment-list__head">
+        <div class="experiment-list__identity">
+          <span class="experiment-list__avatar" aria-hidden="true">
+            <app-icon name="flask" size="sm" />
+          </span>
+          <div>
+            <h3 class="experiment-list__name">{{ experiment.name }}</h3>
+            <p class="muted">{{ experiment.hypothesis }}</p>
+          </div>
+        </div>
+        <app-badge
+          [variant]="statusVariant(experiment.status)"
+          [label]="statusLabel(experiment.status)"
+        />
+      </div>
+
+      <div class="experiment-list__variants">
+        <div
+          class="experiment-list__variant"
+          [class.experiment-list__variant--winner]="experiment.winner === 'A'"
+        >
+          <p class="label">Variante A</p>
+          <p class="muted">{{ experiment.variantA }}</p>
+        </div>
+        <div
+          class="experiment-list__variant"
+          [class.experiment-list__variant--winner]="experiment.winner === 'B'"
+        >
+          <p class="label">Variante B</p>
+          <p class="muted">{{ experiment.variantB }}</p>
+        </div>
+      </div>
+
+      @if (experiment.winner) {
+        <p class="experiment-list__lift">
+          Ganador {{ experiment.winner === 'A' ? 'A' : 'B' }} con
+          {{ experiment.lift | percent : '1.0-1' }} de lift
+        </p>
+      }
+    </app-card>
+  }
+</div>

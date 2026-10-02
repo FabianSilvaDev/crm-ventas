@@ -1,0 +1,166 @@
+<section class="growth" aria-label="Ecosistema de crecimiento">
+  <!-- ── Cabecera ─────────────────────────────────────────────────────────── -->
+  <header class="growth__hero">
+    <div>
+      <h1 class="growth__title">Growth</h1>
+      <p class="growth__sub">Campañas, creativos, audiencias, experimentos, contenido y SEO.</p>
+    </div>
+    <app-button variant="primary" iconLeft="plus" (click)="onNewCampaign()">Nueva campaña</app-button>
+  </header>
+
+  <!-- ── Pipeline mental ──────────────────────────────────────────────────── -->
+  <section class="growth__section" aria-labelledby="pipeline-heading">
+    <h2 id="pipeline-heading" class="section-title section-title--solo">
+      Atraer → Enganchar → Convertir → Retener → Optimizar
+    </h2>
+    <div class="growth__pipeline">
+      @for (step of pipeline; track step.id) {
+        <div class="growth__step">
+          <div class="growth__step-marker" aria-hidden="true">{{ $index + 1 }}</div>
+          <div class="growth__step-content">
+            <p class="growth__step-label">{{ step.label }}</p>
+            <p class="growth__step-desc">{{ step.description }}</p>
+          </div>
+          @if (!$last) {
+            <app-icon
+              class="growth__step-arrow"
+              name="arrowRight"
+              size="sm"
+              aria-hidden="true"
+            />
+          }
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- ── Métricas de resumen ───────────────────────────────────────────────── -->
+  <section class="growth__section" aria-labelledby="summary-heading">
+    <div class="section-head">
+      <app-icon name="analytics" size="sm" />
+      <h2 id="summary-heading" class="section-title">Resumen del ecosistema</h2>
+      <app-badge variant="info" label="Demo" />
+    </div>
+    <p class="section-note">
+      Estas métricas son de demostración. Cuando haya conectores con Meta, Google Ads y
+      TikTok mostrarán datos reales.
+    </p>
+
+    <div class="metric-grid">
+      <app-card padding="md">
+        <app-metric label="Campañas activas" value="2" hint="De 3 configuradas" />
+      </app-card>
+      <app-card padding="md">
+        <app-metric
+          label="Gasto estimado"
+          value="$4.530"
+          hint="Presupuesto total $9.500"
+        />
+      </app-card>
+      <app-card padding="md">
+        <app-metric label="Leads generados" value="247" hint="Últimos 30 días" />
+      </app-card>
+      <app-card padding="md">
+        <app-metric
+          label="ROAS promedio"
+          value="2.8x"
+          hint="Retorno por gasto"
+          trend="up"
+          trendValue="vs. mes anterior"
+        />
+      </app-card>
+    </div>
+  </section>
+
+  <!-- ── Campañas activas ─────────────────────────────────────────────────── -->
+  <section class="growth__section" aria-labelledby="campaigns-heading">
+    <div class="section-head">
+      <app-icon name="campaign" size="sm" />
+      <h2 id="campaigns-heading" class="section-title">Campañas activas</h2>
+      <app-badge variant="info" label="Demo" />
+    </div>
+    <p class="section-note">
+      Campañas de demostración. La gestión real requiere conectar con el backend de ads.
+    </p>
+
+    <div class="growth__campaigns">
+      @for (campaign of campaigns; track campaign.id) {
+        <app-campaign-card
+          [campaign]="campaign"
+          (action)="onCampaignAction($event)"
+        />
+      }
+    </div>
+  </section>
+
+  <!-- ── Creativos ────────────────────────────────────────────────────────── -->
+  <section class="growth__section" aria-labelledby="creatives-heading">
+    <div class="section-head">
+      <app-icon name="sparkles" size="sm" />
+      <h2 id="creatives-heading" class="section-title">Creativos destacados</h2>
+      <app-badge variant="info" label="Demo" />
+    </div>
+
+    <div class="growth__creatives">
+      @for (creative of creatives; track creative.id) {
+        <app-creative-card [creative]="creative" />
+      }
+    </div>
+  </section>
+
+  <!-- ── Audiencias + Experimentos ────────────────────────────────────────── -->
+  <section class="growth__section" aria-labelledby="audiences-heading">
+    <div class="section-head">
+      <app-icon name="target" size="sm" />
+      <h2 id="audiences-heading" class="section-title">Audiencias</h2>
+      <app-badge variant="info" label="Demo" />
+    </div>
+    <app-audience-list [audiences]="audiences" />
+  </section>
+
+  <section class="growth__section" aria-labelledby="experiments-heading">
+    <div class="section-head">
+      <app-icon name="flask" size="sm" />
+      <h2 id="experiments-heading" class="section-title">Experimentos</h2>
+      <app-badge variant="info" label="Demo" />
+    </div>
+    <app-experiment-list [experiments]="experiments" />
+  </section>
+
+  <!-- ── SEO / Contenido ──────────────────────────────────────────────────── -->
+  <section class="growth__section" aria-labelledby="content-heading">
+    <h2 id="content-heading" class="section-title section-title--solo">
+      SEO y contenido
+    </h2>
+    <app-card padding="md">
+      <app-empty-state
+        icon="search"
+        title="Sin oportunidades de contenido"
+        text="Cuando el motor de IA de research detecte keywords, temas y huecos de contenido, los verás aquí con prioridad y esfuerzo estimado."
+        actionLabel="Ver research"
+        actionPath="/products"
+      />
+    </app-card>
+  </section>
+
+  <!-- ── Origen de los datos ─────────────────────────────────────────────── -->
+  <section class="origin-box" aria-labelledby="origin-heading">
+    <h2 id="origin-heading" class="origin-box__title">De dónde salen estos datos</h2>
+    <ul class="origin-box__list">
+      <li class="origin-box__item">
+        <app-badge variant="info" label="Demo" />
+        <span
+          >Todas las métricas, campañas, creativos, audiencias y experimentos son visuales de
+          demostración; no hay backend de growth aún.</span
+        >
+      </li>
+      <li class="origin-box__item">
+        <app-badge variant="neutral" label="Pendiente" />
+        <span
+          >Conectores con Meta Ads, Google Ads, TikTok, SEO y experimentos requieren endpoints
+          nuevos (documentado como FRONTEND DATA GAP).</span
+        >
+      </li>
+    </ul>
+  </section>
+</section>

@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Guía de uso · CRM de Ventas</title>
+  <style>
+    :root {
+      --bg: #fafafa;
+      --surface: #ffffff;
+      --sunken: #f3f4f6;
+      --border: #e5e7eb;
+      --text: #111827;
+      --muted: #4b5563;
+      --faint: #6b7280;
+      --accent: #4f46e5;
+      --accent-hover: #4338ca;
+      --accent-soft: #eef2ff;
+      --ok-bg: #dcfce7;
+      --ok-fg: #166534;
+      --ok-border: #86efac;
+      --warn-bg: #fef3c7;
+      --warn-fg: #92400e;
+      --warn-border: #fde68a;
+      --bad-bg: #fee2e2;
+      --bad-fg: #991b1b;
+      --bad-border: #fca5a5;
+      --info-bg: #eff6ff;
+      --info-fg: #1e40af;
+      --info-border: #bfdbfe;
+      --radius: 12px;
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 24px;
+      --space-6: 32px;
+      --space-7: 48px;
+      --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      --max: 760px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #0b0f19;
+        --surface: #111827;
+        --sunken: #1f2937;
+        --border: #374151;
+        --text: #f9fafb;
+        --muted: #d1d5db;
+        --faint: #9ca3af;
+        --accent-soft: #1e1b4b;
+        --ok-bg: #14532d;
+        --ok-fg: #bbf7d0;
+        --ok-border: #166534;
+        --warn-bg: #78350f;
+        --warn-fg: #fde68a;
+        --warn-border: #92400e;
+        --bad-bg: #7f1d1d;
+        --bad-fg: #fecaca;
+        --bad-border: #991b1b;
+        --info-bg: #1e3a8a;
+        --info-fg: #bfdbfe;
+        --info-border: #1e40af;
+      }
+    }
+
+    :root[data-theme="dark"] {
+      --bg: #0b0f19;
+      --surface: #111827;
+      --sunken: #1f2937;
+      --border: #374151;
+      --text: #f9fafb;
+      --muted: #d1d5db;
+      --faint: #9ca3af;
+      --accent-soft: #1e1b4b;
+      --ok-bg: #14532d;
+      --ok-fg: #bbf7d0;
+      --ok-border: #166534;
+      --warn-bg: #78350f;
+      --warn-fg: #fde68a;
+      --warn-border: #92400e;
+      --bad-bg: #7f1d1d;
+      --bad-fg: #fecaca;
+      --bad-border: #991b1b;
+      --info-bg: #1e3a8a;
+      --info-fg: #bfdbfe;
+      --info-border: #1e40af;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: var(--space-5) var(--space-4);
+    }
+
+    .wrap {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: var(--space-4);
+    }
+
+    header .wrap { padding: 0 var(--space-4); }
+
+    h1 {
+      font-size: 1.75rem;
+      line-height: 1.2;
+      margin: 0 0 var(--space-2);
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    h2 {
+      font-size: 1.35rem;
+      margin: var(--space-7) 0 var(--space-3);
+      padding-bottom: var(--space-2);
+      border-bottom: 1px solid var(--border);
+    }
+
+    h3 {
+      font-size: 1.1rem;
+      margin: var(--space-5) 0 var(--space-2);
+      color: var(--text);
+    }
+
+    p, li {
+      color: var(--muted);
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover { text-decoration: underline; }
+
+    code, kbd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.92em;
+      background: var(--sunken);
+      padding: 0.15em 0.4em;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+
+    pre {
+      background: var(--sunken);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: var(--space-4);
+      overflow-x: auto;
+      font-size: 0.92em;
+      line-height: 1.5;
+    }
+
+    pre code {
+      background: transparent;
+      border: 0;
+      padding: 0;
+    }
+
+    ul, ol {
+      padding-left: var(--space-5);
+    }
+
+    li { margin: var(--space-2) 0; }
+
+    .callout {
+      border-radius: var(--radius);
+      padding: var(--space-4);
+      margin: var(--space-4) 0;
+      border: 1px solid;
+    }
+
+    .callout-title {
+      font-weight: 600;
+      margin: 0 0 var(--space-2);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .ok {
+      background: var(--ok-bg);
+      border-color: var(--ok-border);
+      color: var(--ok-fg);
+    }
+
+    .ok .callout-title, .ok p, .ok li { color: var(--ok-fg); }
+
+    .warn {
+      background: var(--warn-bg);
+      border-color: var(--warn-border);
+      color: var(--warn-fg);
+    }
+
+    .warn .callout-title, .warn p, .warn li { color: var(--warn-fg); }
+
+    .info {
+      background: var(--info-bg);
+      border-color: var(--info-border);
+      color: var(--info-fg);
+    }
+
+    .info .callout-title, .info p, .info li { color: var(--info-fg); }
+
+    .bad {
+      background: var(--bad-bg);
+      border-color: var(--bad-border);
+      color: var(--bad-fg);
+    }
+
+    .bad .callout-title, .bad p, .bad li { color: var(--bad-fg); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: var(--space-4) 0;
+      font-size: 0.95em;
+    }
+
+    th, td {
+      text-align: left;
+      padding: var(--space-3) var(--space-3);
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      color: var(--text);
+      font-weight: 600;
+      background: var(--sunken);
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.75em;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      padding: 0.15em 0.5em;
+      border-radius: 999px;
+    }
+
+    .badge-real {
+      background: var(--ok-bg);
+      color: var(--ok-fg);
+      border: 1px solid var(--ok-border);
+    }
+
+    .badge-demo {
+      background: var(--warn-bg);
+      color: var(--warn-fg);
+      border: 1px solid var(--warn-border);
+    }
+
+    .badge-soon {
+      background: var(--info-bg);
+      color: var(--info-fg);
+      border: 1px solid var(--info-border);
+    }
+
+    .nav-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: var(--space-4);
+      margin: var(--space-4) 0;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: var(--space-4);
+    }
+
+    .card h4 {
+      margin: 0 0 var(--space-2);
+      font-size: 1rem;
+    }
+
+    .card p {
+      margin: 0;
+      font-size: 0.95em;
+    }
+
+    .step {
+      display: flex;
+      gap: var(--space-3);
+      margin: var(--space-4) 0;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      flex: 0 0 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    .step-body { flex: 1; }
+
+    .step-body p:first-child { margin-top: 0; }
+
+    footer {
+      border-top: 1px solid var(--border);
+      margin-top: var(--space-7);
+      padding: var(--space-5) 0;
+      color: var(--faint);
+      font-size: 0.9em;
+    }
+
+    @media (max-width: 640px) {
+      h1 { font-size: 1.45rem; }
+      h2 { font-size: 1.2rem; }
+      .nav-grid { grid-template-columns: 1fr; }
+      th, td { padding: var(--space-2); font-size: 0.9em; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>Guía de uso del CRM de Ventas</h1>
+      <p class="subtitle">Cómo usar la aplicación hoy, cómo funcionan los agentes de IA y desde qué punto partes.</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="callout info">
+      <p class="callout-title">📌 Estado actual del proyecto</p>
+      <p>El CRM está en <strong>Fase 1 (Cimientos)</strong>. La interfaz ya tiene la estructura completa, pero solo una parte del backend está implementada: <strong>la gestión de leads</strong>. El resto de pantallas muestran datos de demostración etiquetados como <span class="badge badge-demo">Demo</span> para que puedas validar el flujo visual mientras se construyen los endpoints.</p>
+    </div>
+
+    <h2>1. Punto de partida: arrancar la app</h2>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <p><strong>Arranca el backend.</strong> Desde la raíz del repo:</p>
+        <pre><code>corepack pnpm --filter @crm/api dev</code></pre>
+        <p>Esto levanta <code>apps/api</code> en <code>http://localhost:3000</code>.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <p><strong>Arranca el frontend.</strong> En otra terminal:</p>
+        <pre><code>corepack pnpm --filter @crm/web dev</code></pre>
+        <p>La SPA se abre normalmente en <code>http://localhost:4200</code>.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <p><strong>Configura el token de desarrollo.</strong> El API usa autenticación de desarrollo con la cabecera <code>X-Dev-Api-Token</code>. Asegúrate de que tu <code>.env</code> tenga:</p>
+        <pre><code>DEV_API_TOKEN=dev-local-token-no-es-un-secreto-real</code></pre>
+        <p>El frontend ya envía este token automáticamente en cada llamada a <code>LeadsApi</code>.</p>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <p class="callout-title">⚠️ Importante</p>
+      <p>La pantalla <code>/entrar</code> aún no autentica contra un backend real. Para ver la interfaz, usa el botón <strong>"Ver demostración"</strong>. Eso abre una sesión simulada (solo en desarrollo) que te permite navegar, pero no tiene credenciales reales.</p>
+    </div>
+
+    <h2>2. Estructura de la aplicación</h2>
+
+    <p>La navegación principal está arriba en escritorio y abajo en móvil. Estas son las 7 áreas mentales del producto:</p>
+
+    <div class="nav-grid">
+      <div class="card">
+        <h4>🏠 Inicio</h4>
+        <p>Centro de control: saludo, alertas, métricas y recomendaciones de IA. Muestra leads reales y datos de demostración.</p>
+      </div>
+      <div class="card">
+        <h4>🚀 Growth</h4>
+        <p>Campañas, creativos, audiencias y experimentos. Hoy todo es <span class="badge badge-demo">Demo</span>.</p>
+      </div>
+      <div class="card">
+        <h4>💼 Ventas</h4>
+        <p>Leads, oportunidades, clientes y tareas de seguimiento. El conteo de leads y la tasa de respuesta son reales; el resto es demo.</p>
+      </div>
+      <div class="card">
+        <h4>🧩 Productos</h4>
+        <p>Descubrir, analizar, puntuar y seleccionar productos. Hoy todo es <span class="badge badge-demo">Demo</span>.</p>
+      </div>
+      <div class="card">
+        <h4>🤖 IA</h4>
+        <p>Recomendaciones, historial de agentes y costos. Hoy todo es <span class="badge badge-demo">Demo</span>.</p>
+      </div>
+      <div class="card">
+        <h4>📊 Analytics</h4>
+        <p>Dashboard de revenue, margen, CAC, ROAS y embudo. Hoy todo es <span class="badge badge-demo">Demo</span>.</p>
+      </div>
+      <div class="card">
+        <h4>⚙️ Configuración</h4>
+        <p>Preferencias, conectores, marca y permisos. Hoy es principalmente estructura.</p>
+      </div>
+    </div>
+
+    <p>Todavía existen dos rutas legado con datos reales:</p>
+    <ul>
+      <li><code>/leads</code> — listado clásico de leads (funciona con el API real).</li>
+      <li><code>/sistema</code> — estado de salud del API.</li>
+    </ul>
+
+    <h2>3. Lo primero que puedes hacer hoy: trabajar con leads</h2>
+
+    <p>El flujo real empieza en <strong>Ventas</strong> o en <strong>/leads</strong>. El backend ya permite:</p>
+
+    <ul>
+      <li>Ver la lista de leads paginada.</li>
+      <li>Ver la ficha de un lead.</li>
+      <li>Actualizar estado, notas y datos de contacto.</li>
+      <li>Marcar un lead como convertido.</li>
+      <li>Registrar la primera respuesta.</li>
+    </ul>
+
+    <p>Los datos de prueba se siembran automáticamente en memoria cuando arranca el API. Tienes 3 leads de ejemplo para mover por los estados.</p>
+
+    <h3>3.1 Estados de un lead</h3>
+
+    <table>
+      <thead>
+        <tr><th>Estado</th><th>Significado</th><th>¿Qué puedes hacer?</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Nuevo</strong></td><td>Acaba de entrar.</td><td>Contactar, cualificar o descartar.</td></tr>
+        <tr><td><strong>Contactado</strong></td><td>Ya hubo un primer toque.</td><td>Registrar respuesta, avanzar o perder.</td></tr>
+        <tr><td><strong>Cualificado</strong></td><td>Tiene interés y presupuesto.</td><td>Convertir en oportunidad.</td></tr>
+        <tr><td><strong>No cualificado</strong></td><td>No encaja por ahora.</td><td>Archivar con nota.</td></tr>
+        <tr><td><strong>Convertido</strong></td><td>Se convirtió en cliente.</td><td>Ver en oportunidades (cuando exista).</td></tr>
+        <tr><td><strong>Perdido</strong></td><td>No se cerró.</td><td>Dejar nota de aprendizaje.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout ok">
+      <p class="callout-title">✅ Comienza aquí</p>
+      <p>Abre <code>http://localhost:4200/sales</code>, revisa los leads recientes, intenta cambiar el estado de uno y registra una primera respuesta. Así validas que el backend, la autenticación de desarrollo y el contrato de leads funcionan.</p>
+    </div>
+
+    <h2>4. Cómo funcionan los agentes de IA</h2>
+
+    <p>La capa de IA está diseñada, pero <strong>aún no implementada</strong>. Esto es lo que hará cuando llegue la Fase 4:</p>
+
+    <h3>4.1 Los 9 agentes del sistema</h3>
+
+    <table>
+      <thead>
+        <tr><th>Agente</th><th>Qué hace</th><th>Fase</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Orchestrator</strong></td><td>Recibe peticiones de alto nivel, clasifica y encadena sub-agentes.</td><td>4 (MVP)</td></tr>
+        <tr><td><strong>MarketingStrategy</strong></td><td>Define buyer persona, propuesta de valor, ángulos, hooks y estructura de landing.</td><td>4 (MVP)</td></tr>
+        <tr><td><strong>Content</strong></td><td>Genera copy por canal aplicando el Brand Context.</td><td>4 (MVP)</td></tr>
+        <tr><td><strong>ProductResearch</strong></td><td>Investiga un nicho y devuelve productos candidatos con evidencia.</td><td>5</td></tr>
+        <tr><td><strong>SEO</strong></td><td>Keywords, clustering, briefs, metadata y JSON-LD.</td><td>6</td></tr>
+        <tr><td><strong>Advertising</strong></td><td>Propone campañas en borrador, nunca las publica.</td><td>7</td></tr>
+        <tr><td><strong>Analytics</strong></td><td>Explica variaciones de métricas y propone hipótesis.</td><td>8</td></tr>
+        <tr><td><strong>CRM Intelligence</strong></td><td>Prioriza leads y sugiere la siguiente acción.</td><td>8</td></tr>
+        <tr><td><strong>Budget Optimization</strong></td><td>Propone cambios de presupuesto, nunca los ejecuta.</td><td>9</td></tr>
+      </tbody>
+    </table>
+
+    <h3>4.2 Reglas de seguridad de los agentes</h3>
+
+    <p>La capa de IA tiene tres reglas duras:</p>
+
+    <ol>
+      <li><strong>Un agente nunca emite SQL ni toca Prisma.</strong> Solo invoca <em>tools</em> registradas. Si un prompt es comprometido, el daño se limita a las tools concedidas.</li>
+      <li><strong>Un agente nunca puede hacer más que quien lo invoca.</strong> Sus permisos son la intersección entre los permisos del agente y los del usuario.</li>
+      <li><strong>Acciones de gasto o publicación siempre requieren aprobación humana.</strong> Publicar campañas, cambiar presupuesto y publicar contenido pasan por una bandeja de aprobaciones.</li>
+    </ol>
+
+    <h3>4.3 Cómo se ejecuta una tarea de IA</h3>
+
+    <ol>
+      <li><strong>Orquestador</strong> recibe la petición (p. ej. "investiga este nicho").</li>
+      <li>Clasifica la petición y crea un plan con pasos dependientes.</li>
+      <li>Delega cada paso al agente especializado. Los permisos heredados son la intersección, nunca más.</li>
+      <li>El <strong>ModelRouter</strong> elige modelo local o remoto según clase de tarea, presupuesto y criticidad.</li>
+      <li>El <strong>ToolRegistry</strong> valida permiso, input schema, rate limit y, si es necesario, aprobación humana.</li>
+      <li>El resultado valida contra un output schema. Si pide gastar dinero o publicar, se convierte en una aprobación pendiente.</li>
+    </ol>
+
+    <h3>4.4 Cómo leer una recomendación de IA</h3>
+
+    <p>Cuando un agente propone algo, verás cuatro campos:</p>
+
+    <ul>
+      <li><strong>WHAT:</strong> qué detectó o propone.</li>
+      <li><strong>WHY:</strong> evidencia que lo soporta.</li>
+      <li><strong>CONFIDENCE:</strong> número del 0 al 100. Por debajo de 70 se marca como dato insuficiente.</li>
+      <li><strong>ACTION:</strong> qué puede hacer el sistema si apruebas.</li>
+    </ul>
+
+    <p>Hoy en la pantalla de <strong>IA</strong> y en <strong>Inicio</strong> ves recomendaciones de demostración con badge <span class="badge badge-demo">Demo</span>. No provienen de modelos reales todavía.</p>
+
+    <h2>5. Qué es real hoy y qué es demostración</h2>
+
+    <table>
+      <thead>
+        <tr><th>Área</th><th>Estado</th><th>Notas</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Login real (JWT, refresh, argon2)</td>
+          <td><span class="badge badge-soon">En diseño</span></td>
+          <td>Contratos, permisos y guards ya existen; endpoints aún no.</td>
+        </tr>
+        <tr>
+          <td>API de leads</td>
+          <td><span class="badge badge-real">Real</span></td>
+          <td>Repositorio en memoria, paginado, con datos de prueba.</td>
+        </tr>
+        <tr>
+          <td>Autenticación de desarrollo</td>
+          <td><span class="badge badge-real">Real</span></td>
+          <td><code>X-Dev-Api-Token</code>; rechazado en producción.</td>
+        </tr>
+        <tr>
+          <td>Home, Sales, Products, Growth, AI, Analytics</td>
+          <td><span class="badge badge-demo">Demo visual</span></td>
+          <td>Estructura y componentes listos; esperan endpoints.</td>
+        </tr>
+        <tr>
+          <td>Agentes de IA</td>
+          <td><span class="badge badge-soon">Especificados</span></td>
+          <td>Diseño completo en <code>docs/ai-agents.md</code>. Implementación en Fase 4.</td>
+        </tr>
+        <tr>
+          <td>Conectores (Meta, WhatsApp, MercadoLibre)</td>
+          <td><span class="badge badge-soon">Futuro</span></td>
+          <td>Fases 5-BIS y Post-MVP.</td>
+        </tr>
+        <tr>
+          <td>Base de datos persistente</td>
+          <td><span class="badge badge-soon">Pendiente</span></td>
+          <td>Prisma y Postgres no están conectados todavía.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>6. Desde qué punto partes como usuario</h2>
+
+    <p>Tu punto de partida práctico es este:</p>
+
+    <ol>
+      <li><strong>Valida que todo compila y los tests pasan:</strong></li>
+      <pre><code>corepack pnpm typecheck
+corepack pnpm test
+corepack pnpm build</code></pre>
+      <li><strong>Levanta API y web.</strong></li>
+      <li><strong>Entra en modo demostración</strong> y navega por las 7 áreas para validar que la estructura visual te hace sentido.</li>
+      <li><strong>Prueba el flujo real de leads:</strong> ve a <code>/sales</code> o <code>/leads</code>, cambia estados y registra respuestas.</li>
+      <li><strong>Revisa las decisiones arquitectónicas</strong> en <code>docs/decisions.md</code>, <code>docs/roadmap.md</code> y <code>docs/ai-agents.md</code> antes de decidir el siguiente feature.</li>
+    </ol>
+
+    <div class="callout ok">
+      <p class="callout-title">✅ Recomendación inmediata</p>
+      <p>El siguiente paso lógico es conectar <strong>Postgres + Prisma</strong> para persistir leads y usuarios. Eso desbloquea el login real y convierte la demo visual en datos reales. Mientras tanto, el in-memory repository te permite iterar en la API sin depender de Docker en el portátil corporativo.</p>
+    </div>
+
+    <footer>
+      <p>Guía generada para el CRM de Ventas · Fase 1 · Última actualización: 2026-10-01</p>
+    </footer>
+  </main>
+</body>
+</html>

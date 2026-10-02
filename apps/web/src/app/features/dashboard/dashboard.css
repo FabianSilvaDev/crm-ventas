@@ -1,0 +1,77 @@
+/* Layout propio del panel. Las primitivas compartidas —página, tarjetas de módulo, grids,
+   estados, botón, origen de los datos, etiqueta— viven en `src/styles/components.css`. */
+
+:host {
+  display: block;
+}
+
+/* Hero de marca en la parte superior del panel. */
+.dashboard__hero {
+  margin: calc(var(--s-5) * -1) calc(var(--s-5) * -1) var(--s-6);
+  padding: var(--s-6) var(--s-5);
+  background: var(--c-surface-brand);
+  color: var(--c-text-on-brand);
+}
+
+.dashboard__hero-inner {
+  max-width: var(--measure-text);
+}
+
+.dashboard__greeting {
+  margin: 0 0 var(--s-2);
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  line-height: var(--lh-tight);
+}
+
+/* El título del hero hereda el color claro de la superficie de marca. */
+.page__title--hero {
+  color: var(--c-text-on-brand);
+}
+
+.dashboard__lede {
+  margin: var(--s-2) 0 0;
+  color: var(--c-text-on-brand-muted);
+  line-height: var(--lh-base);
+}
+
+/* Secciones del dashboard. */
+.dashboard__modules,
+.dashboard__quick {
+  margin-top: var(--s-6);
+}
+
+/* Icono de módulo dentro de la card: el path debe ser morado sobre el fondo suave. */
+.module-card__icon svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Lista de accesos directos. */
+.dashboard__quick-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  margin-top: var(--s-3);
+}
+
+/* Título de sección secundario dentro del dashboard. */
+.dashboard .module-header__title {
+  font-size: var(--fs-base);
+  text-transform: uppercase;
+  letter-spacing: var(--ls-caps);
+  color: var(--c-text-muted);
+}
+
+/* Responsive: menos padding interno en pantallas estrechas. */
+@media (max-width: 900px) {
+  .dashboard__hero {
+    margin: calc(var(--s-4) * -1) calc(var(--s-4) * -1) var(--s-5);
+    padding: var(--s-5) var(--s-4);
+  }
+}

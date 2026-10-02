@@ -1,0 +1,13 @@
+<div
+  class="score"
+  [class.score--high]="level() === 'high'"
+  [class.score--medium]="level() === 'medium'"
+  [class.score--low]="level() === 'low'"
+  [attr.aria-label]="'Puntuación ' + clamped() + ' de 100, ' + label()"
+>
+  <p class="score__value" aria-hidden="true">{{ clamped() }}</p>
+  <p class="score__label" aria-hidden="true">{{ label() }}</p>
+  <div class="score__bar" role="presentation">
+    <span class="score__fill" [style.width.%]="clamped()"></span>
+  </div>
+</div>

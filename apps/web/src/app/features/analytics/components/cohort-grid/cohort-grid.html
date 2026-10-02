@@ -1,0 +1,33 @@
+<app-card padding="md">
+  <div class="cohort-grid__wrap">
+    <table class="cohort-grid">
+      <caption class="visually-hidden">Retención de cohortes semanales</caption>
+      <thead>
+        <tr>
+          <th scope="col">Cohorte</th>
+          @for (week of weeks(); track week) {
+            <th scope="col">{{ week }}</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (cohort of cohorts(); track cohort.week) {
+          <tr>
+            <th scope="row">{{ cohort.week }}</th>
+            @for (value of cohort.values; track $index) {
+              <td class="cohort-grid__cell">
+                <span
+                  class="cohort-grid__pill"
+                  [style.opacity]="Math.max(0.15, value / 100)"
+                  [class.cohort-grid__pill--low]="value < 30"
+                >
+                  {{ value }}%
+                </span>
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</app-card>

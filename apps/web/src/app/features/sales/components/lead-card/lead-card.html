@@ -1,0 +1,32 @@
+<app-card class="lead-card" padding="md">
+  <div class="lead-card__main">
+    <div class="lead-card__identity">
+      <span class="lead-card__avatar" aria-hidden="true">{{ initials() }}</span>
+      <div class="lead-card__info">
+        <h3 class="lead-card__name">{{ lead().contactName ?? 'Sin nombre' }}</h3>
+        <p class="muted">
+          {{ channelLabel() }}
+          <span aria-hidden="true">·</span>
+          <time [attr.datetime]="lead().createdAt">{{ lead().createdAt | date : 'dd/MM HH:mm' }}</time>
+        </p>
+      </div>
+    </div>
+
+    <app-badge [variant]="statusVariant()" [label]="statusLabel()" />
+  </div>
+
+  <div class="lead-card__actions">
+    <app-button variant="secondary" size="sm" iconLeft="phone" (click)="emit('contact')"
+      >Contactar</app-button
+    >
+    <app-button variant="ghost" size="sm" (click)="emit('qualify')"
+      >Cualificar</app-button
+    >
+    <app-button variant="ghost" size="sm" (click)="emit('convert')"
+      >Convertir</app-button
+    >
+    <app-button variant="ghost" size="sm" (click)="emit('archive')"
+      >Archivar</app-button
+    >
+  </div>
+</app-card>

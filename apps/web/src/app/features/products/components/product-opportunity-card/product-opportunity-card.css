@@ -1,0 +1,123 @@
+:host {
+  display: block;
+}
+
+.opportunity {
+  display: block;
+}
+
+.opportunity__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.opportunity__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.opportunity__identity {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.opportunity__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.opportunity__category {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.opportunity__name {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text);
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.opportunity__metrics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+
+.opportunity__metric {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.opportunity__value {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.opportunity__trend {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.opportunity__trend--up {
+  color: var(--color-success-fg);
+}
+
+.opportunity__trend--down {
+  color: var(--color-danger-fg);
+}
+
+.opportunity__trend--flat {
+  color: var(--color-text-tertiary);
+}
+
+.opportunity__insight {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.opportunity__actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-top: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .opportunity__header {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+  .opportunity__metrics {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}

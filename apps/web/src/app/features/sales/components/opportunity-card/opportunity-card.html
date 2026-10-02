@@ -1,0 +1,40 @@
+<app-card class="opportunity-card" padding="md">
+  <div class="opportunity-card__head">
+    <div class="opportunity-card__identity">
+      <span class="opportunity-card__avatar" aria-hidden="true">{{ opportunity().name.charAt(0).toUpperCase() }}</span>
+      <div>
+        <h3 class="opportunity-card__title">{{ opportunity().name }}</h3>
+        <p class="muted">{{ opportunity().company }}</p>
+      </div>
+    </div>
+    <app-badge [variant]="stageVariant()" [label]="stageLabel()" />
+  </div>
+
+  <div class="opportunity-card__metrics">
+    <app-metric
+      label="Valor"
+      [value]="(opportunity().value | currency : 'USD' : 'symbol' : '1.0-0') ?? ''"
+      hint="Deal size"
+      size="sm"
+    />
+    <app-metric
+      label="Probabilidad"
+      [value]="opportunity().probability + '%'"
+      hint="A cerrar"
+      size="sm"
+    />
+    <app-metric
+      label="Cierre esperado"
+      [value]="opportunity().expectedClose"
+      hint="Fecha"
+      size="sm"
+    />
+  </div>
+
+  <div class="opportunity-card__next">
+    <p class="label">Próxima acción</p>
+    <p class="muted">{{ opportunity().nextAction }}</p>
+  </div>
+
+  <app-button variant="secondary" size="sm" (click)="onAction()">Ver deal</app-button>
+</app-card>

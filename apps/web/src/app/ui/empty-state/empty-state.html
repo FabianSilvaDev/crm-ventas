@@ -1,0 +1,16 @@
+<div class="empty-state">
+  <app-icon class="empty-state__icon" [name]="icon()" size="xl" />
+  <h3 class="empty-state__title">{{ title() }}</h3>
+
+  @if (text(); as t) {
+    <p class="empty-state__text">{{ t }}</p>
+  }
+
+  @if (actionLabel(); as label) {
+    @if (actionPath(); as path) {
+      <app-button [variant]="actionVariant()" [routerLink]="path">{{ label }}</app-button>
+    } @else {
+      <app-button [variant]="actionVariant()" (click)="action.emit()">{{ label }}</app-button>
+    }
+  }
+</div>

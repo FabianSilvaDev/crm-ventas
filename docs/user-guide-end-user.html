@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Guía de uso · CRM de Ventas</title>
+  <style>
+    :root {
+      --bg: #fafafa;
+      --surface: #ffffff;
+      --sunken: #f3f4f6;
+      --border: #e5e7eb;
+      --text: #111827;
+      --muted: #4b5563;
+      --faint: #6b7280;
+      --accent: #4f46e5;
+      --accent-hover: #4338ca;
+      --accent-soft: #eef2ff;
+      --ok-bg: #dcfce7;
+      --ok-fg: #166534;
+      --ok-border: #86efac;
+      --warn-bg: #fef3c7;
+      --warn-fg: #92400e;
+      --warn-border: #fde68a;
+      --info-bg: #eff6ff;
+      --info-fg: #1e40af;
+      --info-border: #bfdbfe;
+      --radius: 12px;
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 24px;
+      --space-6: 32px;
+      --space-7: 48px;
+      --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      --max: 760px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #0b0f19;
+        --surface: #111827;
+        --sunken: #1f2937;
+        --border: #374151;
+        --text: #f9fafb;
+        --muted: #d1d5db;
+        --faint: #9ca3af;
+        --accent-soft: #1e1b4b;
+        --ok-bg: #14532d;
+        --ok-fg: #bbf7d0;
+        --ok-border: #166534;
+        --warn-bg: #78350f;
+        --warn-fg: #fde68a;
+        --warn-border: #92400e;
+        --info-bg: #1e3a8a;
+        --info-fg: #bfdbfe;
+        --info-border: #1e40af;
+      }
+    }
+
+    :root[data-theme="dark"] {
+      --bg: #0b0f19;
+      --surface: #111827;
+      --sunken: #1f2937;
+      --border: #374151;
+      --text: #f9fafb;
+      --muted: #d1d5db;
+      --faint: #9ca3af;
+      --accent-soft: #1e1b4b;
+      --ok-bg: #14532d;
+      --ok-fg: #bbf7d0;
+      --ok-border: #166534;
+      --warn-bg: #78350f;
+      --warn-fg: #fde68a;
+      --warn-border: #92400e;
+      --info-bg: #1e3a8a;
+      --info-fg: #bfdbfe;
+      --info-border: #1e40af;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: var(--space-5) var(--space-4);
+    }
+
+    .wrap {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: var(--space-4);
+    }
+
+    header .wrap { padding: 0 var(--space-4); }
+
+    h1 {
+      font-size: 1.75rem;
+      line-height: 1.2;
+      margin: 0 0 var(--space-2);
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    h2 {
+      font-size: 1.35rem;
+      margin: var(--space-7) 0 var(--space-3);
+      padding-bottom: var(--space-2);
+      border-bottom: 1px solid var(--border);
+    }
+
+    h3 {
+      font-size: 1.1rem;
+      margin: var(--space-5) 0 var(--space-2);
+      color: var(--text);
+    }
+
+    p, li { color: var(--muted); }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover { text-decoration: underline; }
+
+    code, kbd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.92em;
+      background: var(--sunken);
+      padding: 0.15em 0.4em;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+
+    ul, ol {
+      padding-left: var(--space-5);
+    }
+
+    li { margin: var(--space-2) 0; }
+
+    .callout {
+      border-radius: var(--radius);
+      padding: var(--space-4);
+      margin: var(--space-4) 0;
+      border: 1px solid;
+    }
+
+    .callout-title {
+      font-weight: 600;
+      margin: 0 0 var(--space-2);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .ok {
+      background: var(--ok-bg);
+      border-color: var(--ok-border);
+      color: var(--ok-fg);
+    }
+
+    .ok .callout-title, .ok p, .ok li { color: var(--ok-fg); }
+
+    .warn {
+      background: var(--warn-bg);
+      border-color: var(--warn-border);
+      color: var(--warn-fg);
+    }
+
+    .warn .callout-title, .warn p, .warn li { color: var(--warn-fg); }
+
+    .info {
+      background: var(--info-bg);
+      border-color: var(--info-border);
+      color: var(--info-fg);
+    }
+
+    .info .callout-title, .info p, .info li { color: var(--info-fg); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: var(--space-4) 0;
+      font-size: 0.95em;
+    }
+
+    th, td {
+      text-align: left;
+      padding: var(--space-3) var(--space-3);
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      color: var(--text);
+      font-weight: 600;
+      background: var(--sunken);
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.75em;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      padding: 0.15em 0.5em;
+      border-radius: 999px;
+    }
+
+    .badge-real {
+      background: var(--ok-bg);
+      color: var(--ok-fg);
+      border: 1px solid var(--ok-border);
+    }
+
+    .badge-demo {
+      background: var(--warn-bg);
+      color: var(--warn-fg);
+      border: 1px solid var(--warn-border);
+    }
+
+    .nav-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: var(--space-4);
+      margin: var(--space-4) 0;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: var(--space-4);
+    }
+
+    .card h4 {
+      margin: 0 0 var(--space-2);
+      font-size: 1rem;
+    }
+
+    .card p {
+      margin: 0;
+      font-size: 0.95em;
+    }
+
+    .step {
+      display: flex;
+      gap: var(--space-3);
+      margin: var(--space-4) 0;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      flex: 0 0 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    .step-body { flex: 1; }
+
+    .step-body p:first-child { margin-top: 0; }
+
+    footer {
+      border-top: 1px solid var(--border);
+      margin-top: var(--space-7);
+      padding: var(--space-5) 0;
+      color: var(--faint);
+      font-size: 0.9em;
+    }
+
+    @media (max-width: 640px) {
+      h1 { font-size: 1.45rem; }
+      h2 { font-size: 1.2rem; }
+      .nav-grid { grid-template-columns: 1fr; }
+      th, td { padding: var(--space-2); font-size: 0.9em; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>Guía de uso · CRM de Ventas</h1>
+      <p class="subtitle">Cómo usar la aplicación para vender más y mejor, con ayuda de la inteligencia artificial.</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="callout info">
+      <p class="callout-title">📌 Para tener en cuenta</p>
+      <p>Esta versión del CRM está en construcción. La estructura completa ya está lista y puedes navegar por todas las secciones. Hoy lo más funcional es el <strong>área de Ventas</strong>, donde puedes ver y mover leads. Las demás áreas muestran ejemplos visuales para que veas cómo se verá todo cuando esté terminado.</p>
+    </div>
+
+    <h2>1. Cómo entrar</h2>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <p><strong>Abre la app.</strong> Tu equipo te dará una dirección web (URL). Guardala en favoritos.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <p><strong>Inicia sesión.</strong> Escribe tu correo y contraseña. Si aún no tienes una, pídesela a quien administra la plataforma.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <p><strong>Revisa el aviso de demostración.</strong> En esta etapa puede que veas un letrero diciendo que estás en modo de prueba. Eso significa que algunas pantallas muestran datos de ejemplo, no reales. No te preocupes: todo lo que toques en <strong>Ventas</strong> sí queda registrado.</p>
+      </div>
+    </div>
+
+    <h2>2. Las 7 áreas del CRM</h2>
+
+    <p>La barra de navegación (arriba en computador, abajo en celular) tiene siete botones. Acá te contamos para qué sirve cada uno en el día a día.</p>
+
+    <div class="nav-grid">
+      <div class="card">
+        <h4>🏠 Inicio</h4>
+        <p>Tu centro de mando. Vésalo al arrancar el día: leads que necesitan atención, alertas del sistema y recomendaciones de IA.</p>
+      </div>
+      <div class="card">
+        <h4>🚀 Growth</h4>
+        <p>Todo lo que trae clientes: campañas publicitarias, creativos, audiencias y experimentos para mejorar resultados.</p>
+      </div>
+      <div class="card">
+        <h4>💼 Ventas</h4>
+        <p>Tu lugar de trabajo principal. Acá están los leads, las oportunidades, los clientes y las tareas de seguimiento.</p>
+      </div>
+      <div class="card">
+        <h4>🧩 Productos</h4>
+        <p>Descubrir, analizar y elegir qué productos vender. Te dice cuáles tienen mejor margen y menos riesgo.</p>
+      </div>
+      <div class="card">
+        <h4>🤖 IA</h4>
+        <p>El centro de control de los agentes: recomendaciones, historial de actividad y configuración de automatizaciones.</p>
+      </div>
+      <div class="card">
+        <h4>📊 Analytics</h4>
+        <p>Tus números: ventas, margen, CAC, ROAS y el embudo de conversión. Para saber dónde poner el dinero.</p>
+      </div>
+      <div class="card">
+        <h4>⚙️ Configuración</h4>
+        <p>Preferencias, conectores con otras plataformas, marca y permisos de usuario.</p>
+      </div>
+    </div>
+
+    <h2>3. Tu rutina diaria recomendada</h2>
+
+    <ol>
+      <li><strong>Inicio:</strong> revisá si hay alertas o recomendaciones de IA que necesiten tu atención.</li>
+      <li><strong>Ventas → Leads:</strong> mirá los leads nuevos que entraron. Decidí cuáles contactar hoy.</li>
+      <li><strong>Abrir un lead:</strong> leé sus datos, el canal por el que vino y el consentimiento de comunicación.</li>
+      <li><strong>Cambiar el estado:</strong> a medida que avanzás la conversación, marcá si está contactado, cualificado, convertido o perdido.</li>
+      <li><strong>Registrar respuestas:</strong> cuando una persona te responda por primera vez, guardá ese momento. Ayuda a medir tiempos.</li>
+      <li><strong>Revisar Analytics:</strong> al final de la semana, mirá qué tan bien estás convirtiendo y dónde se pierden leads.</li>
+    </ol>
+
+    <h2>4. Estados de un lead: qué significan</h2>
+
+    <table>
+      <thead>
+        <tr><th>Estado</th><th>Cuándo usarlo</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Nuevo</strong></td><td>La persona acaba de entrar. Todavía no la contactaste.</td></tr>
+        <tr><td><strong>Contactado</strong></td><td>Ya le escribiste o llamaste. Esperás respuesta.</td></tr>
+        <tr><td><strong>Cualificado</strong></td><td>Mostró interés real y tiene presupuesto o necesidad clara.</td></tr>
+        <tr><td><strong>Convertido</strong></td><td>Se convirtió en cliente o en una oportunidad de venta cerrada.</td></tr>
+        <tr><td><strong>No cualificado</strong></td><td>No encaja ahora. Lo dejás con una nota para el futuro.</td></tr>
+        <tr><td><strong>Perdido</strong></td><td>Se fue por precio, timing o competencia. Guardá el aprendizaje.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout ok">
+      <p class="callout-title">✅ Consejo práctico</p>
+      <p>No dejes leads en <strong>Nuevo</strong> más de un día laboral. Cuanto más rápido contactes, más probabilidad de convertir.</p>
+    </div>
+
+    <h2>5. Cómo funcionan los agentes de IA</h2>
+
+    <p>Los agentes son asistentes automáticos que te ayudan a tomar mejores decisiones. No reemplazan tu criterio: te preparan propuestas y vos decidís si las aplicás.</p>
+
+    <h3>5.1 Agentes que tendrás disponibles</h3>
+
+    <table>
+      <thead>
+        <tr><th>Agente</th><th>Qué hace por vos</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>GrowthBot</strong></td><td>Detecta campañas que mejoran y propone ajustes de presupuesto o audiencias.</td></tr>
+        <tr><td><strong>SalesAssistant</strong></td><td>Te dice qué leads atender primero y sugiere la siguiente acción de seguimiento.</td></tr>
+        <tr><td><strong>ContentAI</strong></td><td>Genera textos para anuncios, emails o redes sociales según tu tono de marca.</td></tr>
+        <tr><td><strong>ResearchBot</strong></td><td>Investiga un nicho de productos y te entrega candidatos con evidencia.</td></tr>
+        <tr><td><strong>AnalyticsBot</strong></td><td>Explica por qué subió o bajó una métrica y propone hipótesis.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>5.2 Tres reglas importantes</h3>
+
+    <ol>
+      <li><strong>Los agentes no pueden gastar plata solos.</strong> Si proponen publicar una campaña o cambiar un presupuesto, vos tenés que aprobarlo primero.</li>
+      <li><strong>Los agentes solo ven lo que vos les permitís.</strong> No acceden a datos que no correspondan a tu usuario.</li>
+      <li><strong>Cuando no tienen datos suficientes, lo dicen.</strong> No inventan números. Te avisan qué falta para decidir con confianza.</li>
+    </ol>
+
+    <h3>5.3 Cómo leer una recomendación de IA</h3>
+
+    <p>Cada recomendación viene con cuatro partes:</p>
+
+    <ul>
+      <li><strong>Qué encontró:</strong> la situación que detectó.</li>
+      <li><strong>Por qué:</strong> la evidencia. Puede ser un dato real, una estimación o una inferencia del modelo.</li>
+      <li><strong>Confianza:</strong> un puntaje de 0 a 100. Por debajo de 70, la recomendación se marca como "dato insuficiente".</li>
+      <li><strong>Acción propuesta:</strong> lo que el sistema puede hacer si vos le das el sí.</li>
+    </ul>
+
+    <p>En esta versión inicial las recomendaciones que ves son de demostración. Pronto serán generadas por los agentes reales a partir de tus datos.</p>
+
+    <h2>6. Qué podés usar hoy y qué viene pronto</h2>
+
+    <table>
+      <thead>
+        <tr><th>Función</th><th>Disponible hoy</th><th>Nota</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Ver y mover leads</td>
+          <td><span class="badge badge-real">Sí</span></td>
+          <td>Podés cambiar estados y registrar primeras respuestas.</td>
+        </tr>
+        <tr>
+          <td>Ver salud del sistema</td>
+          <td><span class="badge badge-real">Sí</span></td>
+          <td>Te avisa si el servicio no responde.</td>
+        </tr>
+        <tr>
+          <td>Navegar todas las áreas</td>
+          <td><span class="badge badge-real">Sí</span></td>
+          <td>Algunas con datos de ejemplo.</td>
+        </tr>
+        <tr>
+          <td>Login con correo y contraseña real</td>
+          <td><span class="badge badge-demo">Pronto</span></td>
+          <td>Ahora se usa un modo de demostración.</td>
+        </tr>
+        <tr>
+          <td>Recomendaciones de IA reales</td>
+          <td><span class="badge badge-demo">Pronto</span></td>
+          <td>Hoy se ven ejemplos visuales.</td>
+        </tr>
+        <tr>
+          <td>Campañas publicitarias conectadas</td>
+          <td><span class="badge badge-demo">Pronto</span></td>
+          <td>Se conectarán con Meta, Google y TikTok.</td>
+        </tr>
+        <tr>
+          <td>WhatsApp dentro del CRM</td>
+          <td><span class="badge badge-demo">Pronto</span></td>
+          <td>Para responder leads sin salir de la app.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>7. Desde dónde empezar</h2>
+
+    <p>Si sos el primer usuario del CRM, te recomendamos este orden:</p>
+
+    <ol>
+      <li><strong>Entrá y navegá.</strong> Recorré las 7 áreas para familiarizarte con los nombres y la estructura.</li>
+      <li><strong>Andá a Ventas.</strong> Mirá los leads que ya están cargados.</li>
+      <li><strong>Abrí un lead y cambiale el estado.</strong> Así entendés cómo se mueve la información.</li>
+      <li><strong>Registrá una primera respuesta.</strong> Fijate cómo cambian los indicadores.</li>
+      <li><strong>Vé a Inicio.</strong> Mirá las alertas y las recomendaciones de demostración para entender el formato.</li>
+      <li><strong>Contale a tu equipo qué te funciona y qué no.</strong> Estamos en una etapa temprana: tu feedback define qué se construye primero.</li>
+    </ol>
+
+    <div class="callout ok">
+      <p class="callout-title">✅ Tu primer objetivo</p>
+      <p>Contactar todos los leads <strong>Nuevos</strong> en menos de 24 horas y llevarlos al estado que corresponda. Esa disciplina sola mejora la conversión.</p>
+    </div>
+
+    <h2>8. Preguntas frecuentes</h2>
+
+    <h3>¿La IA toma decisiones sola?</h3>
+    <p>No. Prepara propuestas, pero vos las revisás y aprobás. Nunca gasta dinero ni publica nada sin tu permiso.</p>
+
+    <h3>¿Puedo confiar en los números que muestra?</h3>
+    <p>Los datos del área de Ventas son reales. Los de otras áreas pueden ser ejemplos de demostración mientras se terminan las conexiones. Cuando un dato sea estimado o inferido por IA, la app te lo dirá claramente.</p>
+
+    <h3>¿Qué pasa si el sistema no responde?</h3>
+    <p>En Inicio aparecerá una alerta roja. Podés ir a <strong>Configuración → Estado del sistema</strong> para ver más detalle. Avísale a quien administra la plataforma.</p>
+
+    <h3>¿Cómo sé si un lead autorizó que le escriba?</h3>
+    <p>En la ficha del lead aparece el estado del consentimiento: <strong>Autorizado</strong>, <strong>No autorizado</strong> o <strong>Sin registro</strong>. Si no hay registro, no le envíes mensajes de marketing.</p>
+
+    <footer>
+      <p>Guía de usuario · CRM de Ventas · Última actualización: 2026-10-01</p>
+    </footer>
+  </main>
+</body>
+</html>

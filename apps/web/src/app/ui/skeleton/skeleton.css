@@ -1,0 +1,59 @@
+:host {
+  display: block;
+}
+
+.skeleton {
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-sunken) 0%,
+    var(--color-border) 50%,
+    var(--color-surface-sunken) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton--text {
+  height: 1em;
+  width: 100%;
+  max-width: 240px;
+}
+
+.skeleton--title {
+  height: 1.25em;
+  width: 60%;
+}
+
+.skeleton--block {
+  height: 120px;
+  width: 100%;
+}
+
+.skeleton--circle {
+  border-radius: var(--radius-circle);
+  height: var(--icon-xl);
+  width: var(--icon-xl);
+}
+
+.skeleton--button {
+  height: 36px;
+  width: 120px;
+  border-radius: var(--radius-md);
+}
+
+@keyframes skeleton-pulse {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    background: var(--color-surface-sunken);
+  }
+}

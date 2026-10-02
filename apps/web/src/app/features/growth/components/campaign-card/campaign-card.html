@@ -1,0 +1,62 @@
+<app-card class="campaign-card" padding="md">
+  <div class="campaign-card__head">
+    <div class="campaign-card__identity">
+      <span class="campaign-card__avatar" aria-hidden="true">
+        <app-icon name="campaign" size="sm" />
+      </span>
+      <div>
+        <h3 class="campaign-card__title">{{ campaign().name }}</h3>
+        <p class="muted">{{ campaign().channel }} · {{ campaign().daysLeft }} días restantes</p>
+      </div>
+    </div>
+
+    <div class="campaign-card__badges">
+      <app-badge [variant]="statusVariant()" [label]="statusLabel()" />
+      <app-badge variant="info" label="Demo" />
+    </div>
+  </div>
+
+  <div class="campaign-card__metrics">
+    <app-metric
+      label="Presupuesto"
+      [value]="(campaign().budget | currency : 'USD' : 'symbol' : '1.0-0') ?? ''"
+      hint="Total asignado"
+      size="sm"
+    />
+    <app-metric
+      label="Gasto"
+      [value]="(campaign().spend | currency : 'USD' : 'symbol' : '1.0-0') ?? ''"
+      hint="Acumulado"
+      size="sm"
+    />
+    <app-metric
+      label="Leads"
+      [value]="campaign().leads.toString()"
+      hint="Registrados"
+      size="sm"
+    />
+    <app-metric
+      label="CTR"
+      [value]="(campaign().ctr | percent : '1.0-1') ?? ''"
+      hint="Click-through rate"
+      size="sm"
+    />
+    <app-metric
+      label="ROAS"
+      [value]="campaign().roas + 'x'"
+      hint="Retorno por gasto"
+      size="sm"
+    />
+  </div>
+
+  <div class="campaign-card__progress" aria-hidden="true">
+    <div class="progress-bar">
+      <div class="progress-bar__fill" [style.width.%]="spendPercent()"></div>
+    </div>
+    <p class="muted">
+      {{ (campaign().spend | currency : 'USD' : 'symbol' : '1.0-0') ?? '' }} gastado ({{ spendPercent() }}%)
+    </p>
+  </div>
+
+  <app-button variant="secondary" size="sm" (click)="onAction()">Gestionar</app-button>
+</app-card>

@@ -1,0 +1,20 @@
+<app-card class="ai-activity" padding="md">
+  <div class="ai-activity__head">
+    <span class="ai-activity__avatar" aria-hidden="true">
+      <app-icon [name]="icon()" size="sm" />
+    </span>
+    <div class="ai-activity__info">
+      <p class="ai-activity__summary">{{ activity().summary }}</p>
+      <p class="muted">
+        {{ activity().agentName }}
+        <span aria-hidden="true">·</span>
+        <time [attr.datetime]="activity().createdAt">
+          {{ activity().createdAt | date : 'dd/MM HH:mm' }}
+        </time>
+      </p>
+    </div>
+    <app-badge [variant]="typeVariant()" [label]="typeLabel()" />
+  </div>
+
+  <p class="muted">{{ activity().detail }}</p>
+</app-card>

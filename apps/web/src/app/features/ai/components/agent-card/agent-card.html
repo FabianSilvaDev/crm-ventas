@@ -1,0 +1,31 @@
+<app-card class="agent-card" padding="md">
+  <div class="agent-card__head">
+    <div class="agent-card__identity">
+      <span class="agent-card__avatar" aria-hidden="true">
+        <app-icon name="robot" size="md" />
+      </span>
+      <div>
+        <h3 class="agent-card__title">{{ agent().name }}</h3>
+        <p class="muted">{{ agent().description }}</p>
+      </div>
+    </div>
+    <app-badge [variant]="statusVariant()" [label]="statusLabel()" />
+  </div>
+
+  <div class="agent-card__metrics">
+    <app-metric
+      label="Tareas hoy"
+      [value]="agent().tasksToday.toString()"
+      hint="Procesadas"
+      size="sm"
+    />
+    <app-metric
+      label="Éxito"
+      [value]="agent().successRate + '%'"
+      hint="Últimos 7 días"
+      size="sm"
+    />
+  </div>
+
+  <app-button variant="secondary" size="sm" (click)="onAction()">Configurar</app-button>
+</app-card>

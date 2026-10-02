@@ -1,0 +1,17 @@
+<article class="metric metric--{{ size() }}">
+  <p class="metric__label">{{ label() }}</p>
+  <p class="metric__value">{{ value() }}</p>
+
+  @if (trend(); as t) {
+    <p class="metric__trend metric__trend--{{ t }}">
+      <app-icon [name]="trendIcon()" size="xs" />
+      @if (trendValue(); as tv) {
+        <span class="metric__trend-value">{{ tv }}</span>
+      }
+    </p>
+  }
+
+  @if (hint(); as h) {
+    <p class="metric__hint">{{ h }}</p>
+  }
+</article>

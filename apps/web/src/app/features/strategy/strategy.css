@@ -1,0 +1,14 @@
+/* Estilos propios del módulo de Estrategia. Las primitivas compartidas viven en
+   `src/styles/components.css`. */
+
+:host {
+  display: block;
+}
+
+.module-header__icon svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

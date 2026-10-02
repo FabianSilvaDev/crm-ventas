@@ -1,0 +1,147 @@
+:host {
+  display: block;
+}
+
+/* Dos columnas: marca a la izquierda, formulario a la derecha. Una pantalla de acceso no tiene área
+   de trabajo que respetar, así que el morado puede ocupar una columna entera — es una de las dos
+   únicas superficies de marca del rediseño; la otra es la banda fina del panel.
+
+   `1fr` y `100dvh` no son literales en el sentido de la regla: son proporciones y una unidad
+   relativa al viewport, no hay ningún valor de diseño que tokenizar ahí. El control automático
+   (`border-radius` numérico, `#hex`) no los mira, y hace bien. */
+.acceso {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100dvh;
+}
+
+.acceso__hero {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--s-8);
+  padding: var(--s-8) var(--s-7);
+  background: var(--c-surface-brand);
+  color: var(--c-text-on-brand);
+  /* Aquí NO se reasigna `--c-focus`, y es deliberado: este bloque no tiene ningún elemento
+     enfocable (la marca es un párrafo y los datos son texto). El día que se añada un enlace o un
+     botón dentro, esta línea pasa a ser obligatoria: `--c-surface-brand` y `--c-accent` son el
+     MISMO valor, así que el anillo por defecto daría 1.00:1 —invisible, literalmente del color
+     del fondo— y habría que elegir y medir el sustituto antes de escribirlo. */
+}
+
+/* El primitivo fija `--c-text-muted`, que sobre el morado de marca da 1.03:1: literalmente
+   invisible. Aquí se hereda el token claro (5.27:1, ya medido en tokens.css). */
+.acceso__hero .brand__sub {
+  color: var(--c-text-on-brand-muted);
+}
+
+.acceso__claim {
+  margin: 0;
+  max-width: var(--measure-text);
+  font-size: var(--fs-3xl);
+  font-weight: 600;
+  line-height: var(--lh-display);
+}
+
+/* Tres datos del negocio dichos como lo que son: declaraciones del repositorio, no mediciones.
+   Están aquí para que la columna de marca no sea decorativa; si dejan de ser ciertos, esta pantalla
+   miente en el sitio más visible de la aplicación. */
+.acceso__facts {
+  display: grid;
+  gap: var(--s-4);
+  margin: 0;
+}
+
+.acceso__fact dt {
+  color: var(--c-text-on-brand-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+}
+
+.acceso__fact dd {
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+
+.acceso__main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s-7) var(--s-5);
+  background: var(--c-bg);
+}
+
+.acceso__card {
+  width: 100%;
+  max-width: var(--auth-card-width);
+  padding: var(--s-6);
+}
+
+.acceso__title {
+  margin: 0 0 var(--s-4);
+  color: var(--c-text);
+  font-size: var(--fs-3xl);
+  line-height: var(--lh-display);
+}
+
+.acceso__form {
+  display: grid;
+  gap: var(--s-4);
+}
+
+/* Altura reservada para la región viva: existe siempre desde el primer render, así que sin esto el
+   botón daría un salto hacia abajo al aparecer «Entrando…». Se calcula con los tokens de tipografía
+   en vez de fijar un píxel. */
+.acceso__estado {
+  margin: 0;
+  min-height: calc(var(--fs-sm) * var(--lh-base));
+  color: var(--c-text-muted);
+  font-size: var(--fs-sm);
+}
+
+/* Título, texto y traza heredan el color del aviso que los contiene —`.note--warn` (6.58:1) o
+   `.alert--bad` (6.49:1), ambos ya medidos—. No se les pone color propio justamente para no
+   romper ese contraste desde aquí. */
+.acceso__error-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.acceso__error-text {
+  margin: var(--s-1) 0 0;
+}
+
+.acceso__error-meta {
+  margin: var(--s-2) 0 0;
+  font-size: var(--fs-xs);
+}
+
+.acceso__demo {
+  margin-top: var(--s-6);
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--c-border);
+}
+
+.acceso__demo-text {
+  margin: 0 0 var(--s-3);
+  color: var(--c-text-muted);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-base);
+}
+
+/* El `900px` es un literal por el mismo motivo que en `shell/layout.css`: `var()` no funciona dentro
+   de una `@media`, es una limitación de CSS y no un descuido (hallazgo D del plan). Es una de las
+   tres excepciones escritas a la regla de «cero literales». Si cambia allí, cambia aquí. */
+@media (max-width: 900px) {
+  .acceso {
+    grid-template-columns: 1fr;
+  }
+
+  .acceso__hero {
+    gap: var(--s-5);
+    padding: var(--s-6) var(--s-5);
+  }
+}

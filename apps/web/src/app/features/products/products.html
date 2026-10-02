@@ -1,0 +1,105 @@
+<section class="products" aria-label="Inteligencia de producto">
+  <!-- ── Cabecera ─────────────────────────────────────────────────────────── -->
+  <header class="products__hero">
+    <div>
+      <h1 class="products__title">Productos</h1>
+      <p class="products__sub">Descubre oportunidades, evalúa el mercado y selecciona qué vender.</p>
+    </div>
+    <app-button variant="primary" iconLeft="plus">Nueva oportunidad</app-button>
+  </header>
+
+  <!-- ── Pipeline: Discover → Analyze → Score → Select → Sell ───────────────── -->
+  <section class="products__section" aria-labelledby="pipeline-heading">
+    <h2 id="pipeline-heading" class="section-title section-title--solo">
+      Descubrir → Analizar → Puntuar → Seleccionar → Vender
+    </h2>
+    <div class="products__pipeline">
+      @for (step of pipeline; track step.id) {
+        <div class="products__step">
+          <div class="products__step-marker" aria-hidden="true">{{ $index + 1 }}</div>
+          <div class="products__step-content">
+            <p class="products__step-label">{{ step.label }}</p>
+            <p class="products__step-desc">{{ step.description }}</p>
+          </div>
+          @if (!$last) {
+            <app-icon class="products__step-arrow" name="arrowRight" size="sm" aria-hidden="true" />
+          }
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- ── Oportunidades de producto ────────────────────────────────────────── -->
+  <section class="products__section" aria-labelledby="opportunities-heading">
+    <div class="section-head">
+      <app-icon name="sparkles" size="sm" />
+      <h2 id="opportunities-heading" class="section-title">Oportunidades destacadas</h2>
+      <app-badge variant="info" label="Demo" />
+    </div>
+    <p class="section-note">
+      Estas oportunidades son datos de demostración. Cuando el backend de product intelligence esté
+      listo, se alimentarán con análisis real de mercado.
+    </p>
+
+    @if (visibleOpportunities().length > 0) {
+      <div class="products__opportunities">
+        @for (opportunity of visibleOpportunities(); track opportunity.id) {
+          <app-product-opportunity-card
+            [opportunity]="opportunity"
+            (action)="handleAction(opportunity.id, $event)"
+          />
+        }
+      </div>
+    } @else {
+      <app-card padding="md">
+        <app-empty-state
+          icon="products"
+          title="No hay oportunidades activas"
+          text="Cuando el motor de product intelligence encuentre oportunidades, las verás aquí."
+          actionLabel="Descubrir productos"
+        />
+      </app-card>
+    }
+  </section>
+
+  <!-- ── Tendencias ───────────────────────────────────────────────────────── -->
+  <section class="products__section" aria-labelledby="trends-heading">
+    <h2 id="trends-heading" class="section-title section-title--solo">Tendencias de mercado</h2>
+    <app-card padding="md">
+      <app-empty-state
+        icon="analytics"
+        title="Datos de tendencias no disponibles"
+        text="El seguimiento de tendencias requiere un proveedor de datos de mercado o el motor de IA de research."
+        actionLabel="Conectar fuente"
+      />
+    </app-card>
+  </section>
+
+  <!-- ── Competidores ─────────────────────────────────────────────────────── -->
+  <section class="products__section" aria-labelledby="competitors-heading">
+    <h2 id="competitors-heading" class="section-title section-title--solo">Competidores</h2>
+    <app-card padding="md">
+      <app-empty-state
+        icon="products"
+        title="Sin análisis de competidores"
+        text="Cuando configures los competidores a vigilar, aparecerán sus precios, posicionamiento y diferencias."
+        actionLabel="Añadir competidores"
+      />
+    </app-card>
+  </section>
+
+  <!-- ── Origen de los datos ───────────────────────────────────────────── -->
+  <section class="origin-box" aria-labelledby="origin-heading">
+    <h2 id="origin-heading" class="origin-box__title">De dónde salen estos datos</h2>
+    <ul class="origin-box__list">
+      <li class="origin-box__item">
+        <app-badge variant="info" label="Demo" />
+        <span>Las oportunidades y scores son visuales de demostración; no hay backend de product intelligence aún.</span>
+      </li>
+      <li class="origin-box__item">
+        <app-badge variant="neutral" label="Pendiente" />
+        <span>Tendencias, competidores y catálogo requieren endpoints nuevos (documentado como FRONTEND DATA GAP).</span>
+      </li>
+    </ul>
+  </section>
+</section>

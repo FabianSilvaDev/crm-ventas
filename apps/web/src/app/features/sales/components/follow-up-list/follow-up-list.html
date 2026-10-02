@@ -1,0 +1,25 @@
+<div class="follow-up-list">
+  @for (item of followUps(); track item.id) {
+    <app-card class="follow-up-list__item" padding="md">
+      <div class="follow-up-list__main">
+        <span class="follow-up-list__avatar" aria-hidden="true">
+          <app-icon [name]="iconFor(item.type)" size="sm" />
+        </span>
+        <div class="follow-up-list__info">
+          <p class="follow-up-list__subject">{{ item.subject }}</p>
+          <p class="muted">
+            {{ labelFor(item.type) }} · {{ item.leadName }}
+          </p>
+        </div>
+      </div>
+
+      <time
+        class="follow-up-list__due"
+        [class.follow-up-list__due--overdue]="item.overdue"
+        [attr.datetime]="item.dueAt"
+      >
+        {{ item.dueAt | date : 'dd/MM HH:mm' }}
+      </time>
+    </app-card>
+  }
+</div>

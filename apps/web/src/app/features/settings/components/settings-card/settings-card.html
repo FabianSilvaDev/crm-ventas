@@ -1,0 +1,33 @@
+<app-card class="settings-card" padding="md">
+  <div class="settings-card__head">
+    <div class="settings-card__identity">
+      <span class="settings-card__avatar" aria-hidden="true">
+        <app-icon [name]="icon()" size="md" />
+      </span>
+      <div>
+        <h3 class="settings-card__title">{{ title() }}</h3>
+        <p class="muted">{{ description() }}</p>
+      </div>
+    </div>
+
+    @if (status(); as s) {
+      <span class="settings-card__status" [class.settings-card__status--active]="statusVariant() === 'success'">
+        {{ s }}
+      </span>
+    }
+  </div>
+
+  @if (actions().length > 0) {
+    <div class="settings-card__actions">
+      @for (item of actions(); track item.id) {
+        <app-button
+          [variant]="item.primary ? 'primary' : 'secondary'"
+          size="sm"
+          (click)="emit(item.id)"
+        >
+          {{ item.label }}
+        </app-button>
+      }
+    </div>
+  }
+</app-card>

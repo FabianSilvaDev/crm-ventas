@@ -1,0 +1,62 @@
+<app-card class="opportunity" padding="md">
+  <div class="opportunity__main">
+    <div class="opportunity__header">
+      <div class="opportunity__identity">
+        <span class="opportunity__avatar" aria-hidden="true">{{ opportunity().name.charAt(0).toUpperCase() }}</span>
+        <div>
+          <p class="opportunity__category">Oportunidad de producto</p>
+          <h3 class="opportunity__name">{{ opportunity().name }}</h3>
+        </div>
+      </div>
+      <app-product-score [score]="opportunity().score" />
+    </div>
+
+    <div class="opportunity__metrics">
+      <div class="opportunity__metric">
+        <p class="label">Demanda</p>
+        <app-badge
+          [variant]="badgeVariant(opportunity().demand)"
+          [label]="demandLabel(opportunity().demand)"
+        />
+      </div>
+      <div class="opportunity__metric">
+        <p class="label">Competencia</p>
+        <app-badge
+          [variant]="badgeVariant(opportunity().competition)"
+          [label]="competitionLabel(opportunity().competition)"
+        />
+      </div>
+      <div class="opportunity__metric">
+        <p class="label">Margen</p>
+        <p class="opportunity__value">{{ opportunity().margin }}%</p>
+      </div>
+      <div class="opportunity__metric">
+        <p class="label">Tendencia</p>
+        <p class="opportunity__trend opportunity__trend--{{ opportunity().trend }}">
+          <app-icon [name]="trendIcon(opportunity().trend)" size="xs" />
+          {{ opportunity().trendValue }}
+        </p>
+      </div>
+    </div>
+
+    <div class="opportunity__insight">
+      <div class="section-head">
+        <app-icon name="sparkles" size="sm" />
+        <p class="section-title section-title--sm">Insight de IA</p>
+      </div>
+      <p class="muted">{{ opportunity().aiInsight }}</p>
+    </div>
+  </div>
+
+  <div class="opportunity__actions">
+    @for (item of opportunity().actions; track item.id) {
+      <app-button
+        [variant]="item.primary ? 'primary' : 'ghost'"
+        size="sm"
+        (click)="action.emit(item.id)"
+      >
+        {{ item.label }}
+      </app-button>
+    }
+  </div>
+</app-card>

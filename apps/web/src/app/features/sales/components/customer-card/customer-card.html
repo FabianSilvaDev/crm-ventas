@@ -1,0 +1,33 @@
+<app-card class="customer-card" padding="md">
+  <div class="customer-card__head">
+    <div class="customer-card__identity">
+      <span class="customer-card__avatar" aria-hidden="true">{{ customer().name.charAt(0).toUpperCase() }}</span>
+      <div>
+        <h3 class="customer-card__title">{{ customer().name }}</h3>
+        <p class="muted">{{ customer().company }}</p>
+      </div>
+    </div>
+
+    <span class="customer-card__health" [class]="healthClass()">
+      <app-icon name="checkCircle" size="xs" />
+      {{ healthLabel() }}
+    </span>
+  </div>
+
+  <div class="customer-card__metrics">
+    <app-metric
+      label="LTV"
+      [value]="(customer().ltv | currency : 'USD' : 'symbol' : '1.0-0') ?? ''"
+      hint="Lifetime value"
+      size="sm"
+    />
+    <app-metric
+      label="Último contacto"
+      [value]="customer().lastContact"
+      hint="Días"
+      size="sm"
+    />
+  </div>
+
+  <app-button variant="ghost" size="sm" (click)="onAction()">Ver ficha</app-button>
+</app-card>

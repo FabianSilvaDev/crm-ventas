@@ -1,0 +1,74 @@
+:host {
+  display: block;
+}
+
+.experiment-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.experiment-list__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.experiment-list__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.experiment-list__identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.experiment-list__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.experiment-list__name {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-base);
+  font-weight: 600;
+  line-height: var(--lh-tight);
+}
+
+.experiment-list__variants {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+
+.experiment-list__variant {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.experiment-list__variant--winner {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.experiment-list__lift {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}

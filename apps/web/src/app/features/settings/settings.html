@@ -1,0 +1,70 @@
+<section class="settings" aria-labelledby="settings-title">
+  <!-- ── Cabecera ─────────────────────────────────────────────────────────── -->
+  <header class="settings__hero">
+    <div>
+      <div class="settings__eyebrow">
+        <app-badge variant="neutral" label="Configuración" />
+      </div>
+      <h1 id="settings-title" class="settings__title">Settings</h1>
+      <p class="settings__sub">
+        Workspace, usuarios, permisos, integraciones y proveedores de IA.
+      </p>
+    </div>
+  </header>
+
+  <!-- ── Secciones de configuración ───────────────────────────────────────── -->
+  <section class="settings__section" aria-labelledby="sections-heading">
+    <h2 id="sections-heading" class="section-title section-title--solo">
+      Configuración general
+    </h2>
+
+    <div class="settings__grid">
+      @for (section of sections; track section.id) {
+        <app-settings-card
+          [icon]="section.icon"
+          [title]="section.title"
+          [description]="section.description"
+          [status]="section.status"
+          [statusVariant]="section.statusVariant"
+          [actions]="section.actions"
+          (action)="onSectionAction(section.id, $event)"
+        />
+      }
+    </div>
+  </section>
+
+  <!-- ── Facturación ────────────────────────────────────────────────────── -->
+  <section class="settings__section" aria-labelledby="billing-heading">
+    <h2 id="billing-heading" class="section-title section-title--solo">Facturación</h2>
+    <app-card padding="md">
+      <app-empty-state
+        icon="money"
+        title="Gestión de plan"
+        text="El portal de facturación y administración de suscripción aún no está conectado."
+        actionLabel="Abrir facturación"
+        (action)="onBillingAction()"
+      />
+    </app-card>
+  </section>
+
+  <!-- ── Origen de los datos ─────────────────────────────────────────────── -->
+  <section class="origin-box" aria-labelledby="origin-heading">
+    <h2 id="origin-heading" class="origin-box__title">De dónde salen estos datos</h2>
+    <ul class="origin-box__list">
+      <li class="origin-box__item">
+        <app-badge variant="neutral" label="Local" />
+        <span
+          >El estado de cada sección es estático y representa la intención de configuración; no hay
+          endpoints de gestión aún.</span
+        >
+      </li>
+      <li class="origin-box__item">
+        <app-badge variant="neutral" label="Pendiente" />
+        <span
+          >Workspace, usuarios, integraciones, proveedores de IA, notificaciones y facturación
+          requieren endpoints nuevos (documentado como FRONTEND DATA GAP).</span
+        >
+      </li>
+    </ul>
+  </section>
+</section>

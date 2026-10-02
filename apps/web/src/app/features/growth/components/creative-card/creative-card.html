@@ -1,0 +1,26 @@
+<app-card class="creative-card" padding="md">
+  <div class="creative-card__head">
+    <span class="creative-card__avatar" aria-hidden="true">
+      <app-icon [name]="formatIcon()" size="sm" />
+    </span>
+    <div>
+      <h3 class="creative-card__title">{{ creative().name }}</h3>
+      <p class="muted">{{ formatLabel() }} · {{ creative().campaignName }}</p>
+    </div>
+  </div>
+
+  <div class="creative-card__metrics">
+    <app-metric
+      label="Impresiones"
+      [value]="creative().impressions.toLocaleString('es-ES')"
+      hint="Total"
+      size="sm"
+    />
+    <app-metric
+      label="CTR"
+      [value]="(creative().ctr | percent : '1.0-1') ?? ''"
+      hint="Click-through rate"
+      size="sm"
+    />
+  </div>
+</app-card>

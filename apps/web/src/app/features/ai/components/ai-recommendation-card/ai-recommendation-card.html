@@ -1,0 +1,49 @@
+<app-card class="ai-rec" padding="md">
+  <div class="ai-rec__head">
+    <span class="ai-rec__avatar" aria-hidden="true">
+      <app-icon name="robot" size="md" />
+    </span>
+    <div>
+      <h3 class="ai-rec__title">{{ recommendation().title }}</h3>
+      <p class="muted">{{ recommendation().source }}</p>
+    </div>
+  </div>
+
+  <div class="ai-rec__what">
+    <p class="label">Qué recomienda</p>
+    <p class="muted">{{ recommendation().what }}</p>
+  </div>
+
+  <div class="ai-rec__why">
+    <p class="label">Por qué</p>
+    <ul class="ai-rec__list">
+      @for (reason of recommendation().why; track reason) {
+        <li>{{ reason }}</li>
+      }
+    </ul>
+  </div>
+
+  <div class="ai-rec__metrics">
+    <app-metric
+      label="Confianza"
+      [value]="recommendation().confidence + '%'"
+      [hint]="confidenceVariant() === 'success' ? 'Alta' : confidenceVariant() === 'warning' ? 'Media' : 'Baja'"
+      size="sm"
+    />
+    <app-metric
+      label="Impacto"
+      [value]="recommendation().impact"
+      hint="Esperado"
+      size="sm"
+    />
+  </div>
+
+  <div class="ai-rec__actions">
+    <app-button variant="primary" size="sm" (click)="onAction()"
+      >{{ recommendation().actionLabel }}</app-button
+    >
+    <app-button variant="ghost" size="sm"
+      >Ignorar</app-button
+    >
+  </div>
+</app-card>
