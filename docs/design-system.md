@@ -57,38 +57,41 @@ manda el archivo.
 
 | Token | Valor | Uso |
 |---|---|---|
-| `--c-bg` | `#f4f6f8` | Fondo de la aplicación |
-| `--c-surface` | `#ffffff` | Tarjetas, barras |
-| `--c-surface-sunken` | `#eef1f5` | Zonas hundidas |
-| `--c-border` | `#dde3ea` | Bordes normales |
-| `--c-border-strong` | `#c3ccd6` | Bordes que deben verse (controles) |
+| `--c-bg` / `--color-background` | `#fafafa` | Fondo de la aplicación |
+| `--c-surface` / `--color-surface` | `#ffffff` | Tarjetas, barras |
+| `--c-surface-sunken` / `--color-surface-sunken` | `#f3f4f6` | Zonas hundidas |
+| `--c-border` / `--color-border` | `#e5e7eb` | Bordes normales |
+| `--c-border-strong` / `--color-border-strong` | `#d1d5db` | Bordes que deben verse (controles) |
 
 ### Color — texto
 
 | Token | Valor | Contraste sobre `--c-surface` |
 |---|---|---|
-| `--c-text` | `#131a22` | **17.3:1** |
-| `--c-text-muted` | `#5a6675` | **5.5:1** |
-| `--c-text-faint` | `#67717d` | **4.8:1** — el mínimo permitido |
+| `--c-text` / `--color-text` | `#111827` | **18.7:1** |
+| `--c-text-muted` / `--color-text-secondary` | `#4b5563` | **7.6:1** |
+| `--c-text-faint` / `--color-text-tertiary` | `#6b7280` | **5.7:1** |
 
 ### Color — navegación
 
 | Token | Valor | Nota |
 |---|---|---|
-| `--c-nav-bg` | `#151d26` | Barra oscura, para separarla del área de trabajo |
-| `--c-nav-text` | `#aab6c3` | **8.3:1** sobre `--c-nav-bg` |
-| `--c-nav-text-active` | `#ffffff` | Elemento activo |
-| `--c-nav-active-bg` | `#1f2a36` | Fondo del elemento activo |
-| `--c-nav-heading` | `#6f7d8c` | Etiquetas de grupo. **Decorativas**: siempre acompañan a texto |
+| `--c-nav-bg` | `#ffffff` | Barra superior clara |
+| `--c-nav-text` | `#4b5563` | **7.6:1** sobre `--c-nav-bg` |
+| `--c-nav-text-active` | `#111827` | Elemento activo |
+| `--c-nav-active-bg` | `#eef2ff` | Fondo del elemento activo |
+| `--c-nav-active-indicator` | `#4f46e5` | Indicador activo |
+| `--c-nav-heading` | `#6b7280` | Etiquetas de grupo. **Decorativas**: siempre acompañan a texto |
 
 ### Color — acento
 
 | Token | Valor | Uso |
 |---|---|---|
-| `--c-accent` | `#0d7267` | Acción principal, marca |
-| `--c-accent-hover` | `#0a5b52` | Estado hover |
-| `--c-accent-soft` | `#e6f2f0` | Fondo teñido |
-| `--c-accent-ring` | `rgba(13,114,103,.35)` | Anillo de foco alternativo |
+| `--c-accent` / `--color-primary` | `#4f46e5` | Acción principal, marca |
+| `--c-accent-hover` / `--color-primary-hover` | `#4338ca` | Estado hover |
+| `--c-accent-soft` / `--color-primary-soft` | `#eef2ff` | Fondo teñido |
+| `--c-accent-ring` / `--color-primary-ring` | `rgba(79, 70, 229, .35)` | Anillo de foco alternativo |
+| `--c-accent-bright` / `--color-primary-bright` | `#dbe4ff` | Foco sobre fondo de marca |
+| `--c-text-on-brand` / `--color-text-on-primary` | `#ffffff` | Texto sobre fondo de marca (contraste 6.6:1) |
 
 ### Color — estados
 
@@ -96,14 +99,17 @@ Cada estado tiene **tres** tokens: `-bg`, `-fg`, `-border`. El estado nunca se u
 
 | Estado | `-bg` | `-fg` | `-border` |
 |---|---|---|---|
-| `--c-ok-*` | `#e9f7ee` | `#14663a` | `#b7e0c6` |
-| `--c-bad-*` | `#fdeceb` | `#a5211b` | `#f3c3c0` |
-| `--c-warn-*` | `#fdf5e6` | `#8a5a12` | `#eeddb5` |
-| `--c-idle-*` | `#f0f2f5` | `#5a6675` | `#dde3ea` |
+| `--c-ok-*` / `--color-success-*` | `#dcfce7` | `#166534` | `#86efac` |
+| `--color-success` | — | `#16a34a` | — |
+| `--color-success-soft` | `#dcfce7` | — | — |
+| `--c-bad-*` / `--color-danger-*` | `#fee2e2` | `#991b1b` | `#fca5a5` |
+| `--c-warn-*` / `--color-warning-*` | `#fef3c7` | `#92400e` | `#fde68a` |
+| `--c-idle-*` / `--color-neutral-*` | `#f3f4f6` | `#4b5563` | `#e5e7eb` |
+| `--color-info-*` | `#eff6ff` | `#1e40af` | `#bfdbfe` |
 
 ### Espaciado — escala de 4
 
-`--s-1` 4px · `--s-2` 8px · `--s-3` 12px · `--s-4` 16px · `--s-5` 24px · `--s-6` 32px · `--s-7` 48px
+`--s-1`/`--space-1` 4px · `--s-2`/`--space-2` 8px · `--s-3`/`--space-3` 12px · `--s-4`/`--space-4` 16px · `--s-5`/`--space-5` 24px · `--s-6`/`--space-6` 32px · `--s-7`/`--space-7` 48px · `--s-8`/`--space-8` 64px
 
 **Un valor intermedio es un error**, no una decisión de diseño. Si 16px no basta y 24px sobra, el
 problema suele estar en el layout, no en la escala.
@@ -115,18 +121,21 @@ problema suele estar en el layout, no en la escala.
 --font-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Consolas, monospace;
 ```
 
-Tamaños: `--fs-xs` 12 · `--fs-sm` 13 · `--fs-base` 14 · `--fs-lg` 16 · `--fs-xl` 20 · `--fs-2xl` 26
-Interlineado: `--lh-tight` 1.25 (títulos) · `--lh-base` 1.5 (texto)
+Tamaños: `--fs-xs`/`--text-xs` 12 · `--fs-sm`/`--text-sm` 14 · `--fs-base`/`--text-base` 16 · `--fs-lg`/`--text-lg` 18 · `--fs-xl`/`--text-xl` 20 · `--fs-2xl`/`--text-2xl` 24 · `--fs-3xl`/`--text-3xl` 30 · `--fs-4xl`/`--text-4xl` 36 · `--text-5xl` 48
+Interlineado: `--lh-tight` 1.25 (títulos) · `--lh-base` 1.5 (texto) · `--lh-display` 1.15 (números grandes)
 
 **Pila del sistema, no webfont.** Cero peticiones de red en el arranque, cero FOUT, funciona sin
 conexión. Para una herramienta interna, una webfont añade un punto de fallo externo a cambio de una
-ganancia estética que nadie ha pedido (§48: nada ajeno en la ruta crítica).
+ganancia estética que nadie ha pedido (§48: nada ajeno en la ruta crítica). Los nuevos componentes
+`ui/*` usan `--font-sans` con este stack; si en el futuro se decide cargar Inter, el cambio es en
+un solo token.
 
 ### Radios, sombras y layout
 
-`--r-sm` 6px · `--r-md` 10px · `--r-lg` 14px · `--r-pill` 999px
-`--shadow-sm` · `--shadow-md`
-`--nav-width` 264px · `--topbar-height` 56px · `--t-fast` 120ms ease
+`--r-sm`/`--radius-sm` 6px · `--r-md`/`--radius-md` 10px · `--r-lg`/`--radius-lg` 16px · `--r-xl`/`--radius-xl` 24px · `--r-2xl`/`--radius-2xl` 32px · `--r-pill`/`--radius-pill` 999px · `--r-circle`/`--radius-circle` 50%
+`--shadow-sm` · `--shadow-md` · `--shadow-lg` · `--shadow-xl`
+`--nav-width` 264px · `--topbar-height` 64px · `--bottom-nav-height` 64px · `--t-fast` 120ms ease · `--t-base` 200ms ease
+`--duration-fast` 120ms · `--duration-base` 200ms · `--duration-slow` 300ms · `--ease-out` · `--ease-in-out`
 
 ---
 
@@ -145,6 +154,20 @@ cualquier componente sin importar nada.
 | `.note` | Aviso en línea, dentro del flujo | `.note--warn`, `.note--info` |
 | `.alert` | Alerta de fallo, separada del contenido | `.alert--bad` |
 | `.problem` + `__title` `__meta` `__detail` | Render de `problem+json` (RFC 9457) | — |
+| `.section-head` + `.section-title` + `.section-note` | Cabecera de sección con icono, título y nota | `.section-title--solo`, `.section-title--sm` |
+| `.sales__stage` | Tarjeta numerada de etapa de pipeline | — |
+| `.opportunity-card__next` | Caja de próxima acción dentro de una oportunidad | — |
+| `.customer-card__health` | Insignia de salud de cliente con color + texto | `--good`, `--at-risk`, `--churned` |
+| `.follow-up-list__item` | Fila de seguimiento con icono, asunto y fecha | — |
+| `.metric-grid` | Grid de 2–4 métricas | — |
+| `.dashboard-grid` | Grid de 1–3 tarjetas de trabajo | — |
+| `.attention-card` + `__inner` + `__body` + `__title` | Alerta de atención con borde lateral | `:has(.badge--warning)` |
+| `.work-card__head` + `.work-card__title` + `.work-link` | Cabecera de tarjeta de trabajo activo | — |
+| `.lead-list` + `__item` `__avatar` `__name` `__meta` | Lista compacta de leads | — |
+| `.label` | Etiqueta uppercase de campo | — |
+| `.muted` | Texto secundario neutral | — |
+| `.origin-box` + `__title` `__list` `__item` | Origen de datos con fondo diferenciado | — |
+| `.settings-card` + `__head` `__identity` `__title` `__status` `__actions` | Tarjeta de sección de configuración | `.settings-card__status--active` |
 | `.visually-hidden` | Solo para lectores de pantalla | — |
 | `code`, `.mono` | Texto técnico | — |
 

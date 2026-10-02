@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { identitySummarySchema } from './identity.js';
+import { emailSchema, identitySummarySchema, phoneE164Schema } from './identity.js';
 
 /**
  * Lead: la oportunidad comercial. Columnas y enums copiados de `docs/database.md` §3 y
@@ -224,3 +224,52 @@ export const firstResponseRequestSchema = z.strictObject({
 });
 
 export type FirstResponseRequest = z.infer<typeof firstResponseRequestSchema>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Escritura
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Identidad adjunta a un lead nuevo. Hoy solo email y teléfono; el nombre se toma del canal de
+ * origen (p. ej. el formulario de Meta) y no se solicita en la creación manual del MVP.
+ */
+export const leadIdentityCreateSchema = z.strictObject({
+  email: emailSchema.nullable().default(null),
+  phone: phoneE164Schema.nullable().default(null),
+});
+
+export type LeadIdentityCreate = z.infer<typeof leadIdentityCreateSchema>;
+
+export const leadCreateSchema = z.strictObject({
+  identity: leadIdentityCreateSchema,
+  status: leadStatusSchema.default('NEW'),
+  source: leadSourceSchema,
+  channel: leadChannelSchema,
+  ownerUserId: z.uuid().nullable().default(null),
+  score: z.number().int().min(0).max(100).nullable().default(null),
+  consent: consentSchema.nullable().default(null),
+});
+
+export type LeadCreate = z.infer<typeof leadCreateSchema>;
+
+/**
+ * Actualización parcial de un lead. No se toca la identidad desde este endpoint: la fusión de
+ * identidades tiene su propia ruta (`POST /identities/merge`).
+ */
+export const leadUpdateSchema = z.strictObject({
+  status: leadStatusSchema.optional(),
+  ownerUserId: z.uuid().nullable().optional(),
+  score: z.number().int().min(0).max(100).nullable().optional(),
+  closedVia: closedViaSchema.nullable().optional(),
+  consent: consentSchema.nullable().optional(),
+});
+
+export type LeadUpdate = z.infer<typeof leadUpdateSchema>;
+
+/**
+ * Cuerpo de `POST /leads/:id/convert`. En el MVP no requiere campos: convierte el lead a
+ * contacto + oportunidad con los datos que ya tiene.
+ */
+export const leadConvertRequestSchema = z.strictObject({}).optional().default({});
+
+export type LeadConvertRequest = z.infer<typeof leadConvertRequestSchema>;

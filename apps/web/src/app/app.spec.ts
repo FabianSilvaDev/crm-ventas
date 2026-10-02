@@ -2,9 +2,16 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
 import { App } from './app';
-import { NAV_GROUPS } from './nav-items';
 
-describe('App (shell)', () => {
+/**
+ * `App` es la raíz y no debe tener contenido propio: el shell es una ruta (`shell/layout.ts`) y
+ * las pantallas cuelgan de ella. Lo que aquí se vigila es una **regresión concreta**: que alguien
+ * vuelva a meter la barra lateral en la raíz, con lo que la pantalla de acceso —que tiene que
+ * existir fuera del shell— dejaría de ser posible.
+ *
+ * Los asertos del shell viven en `shell/layout.spec.ts`, donde está el componente que los cumple.
+ */
+describe('App (raíz)', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
@@ -19,36 +26,17 @@ describe('App (shell)', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  it('lista los grupos de navegación como encabezados reales', async () => {
+  it('deja el contenido a la ruta activa', async () => {
     const el = await render();
-    const headings = [...el.querySelectorAll('.nav__heading')].map((h) => h.textContent?.trim());
 
-    expect(headings).toEqual([...NAV_GROUPS.map((g) => g.heading), 'Sistema']);
+    expect(el.querySelector('router-outlet')).not.toBeNull();
   });
 
-  it('una etapa sin implementar NO es un enlace', async () => {
-    // Contrato de honestidad de la interfaz: si no navega a ninguna parte, no debe parecer
-    // que sí. Un <a> que no lleva a nada es peor que un texto marcado como pendiente.
+  it('NO renderiza navegación: el shell es una ruta, no la raíz', async () => {
     const el = await render();
 
-    const pending = [...el.querySelectorAll('.nav__link--pending')];
-    expect(pending.length).toBeGreaterThan(0);
-    expect(pending.every((node) => node.tagName === 'SPAN')).toBe(true);
-    expect(pending.every((node) => node.querySelector('.nav__tag')?.textContent?.trim() === 'pendiente')).toBe(true);
-  });
-
-  it('las etapas implementadas sí son enlaces', async () => {
-    const el = await render();
-
-    const links = [...el.querySelectorAll('a.nav__link')].map((a) => a.getAttribute('href'));
-    expect(links).toContain('/sistema');
-  });
-
-  it('el menú arranca cerrado en pantalla estrecha', async () => {
-    const el = await render();
-
-    const toggle = el.querySelector('.nav-toggle');
-    expect(toggle?.getAttribute('aria-expanded')).toBe('false');
-    expect(el.querySelector('#nav-principal')?.classList.contains('nav--open')).toBe(false);
+    expect(el.querySelector('.nav')).toBeNull();
+    expect(el.querySelector('.skip-link')).toBeNull();
+    expect(el.querySelector('#contenido')).toBeNull();
   });
 });

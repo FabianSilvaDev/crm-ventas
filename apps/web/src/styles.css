@@ -31,9 +31,15 @@ p {
 }
 
 /* Foco visible SIEMPRE. Es la regla que más se salta la gente y la que deja el teclado
-   inservible. `:focus-visible` y no `:focus` para no dibujar el anillo al hacer clic. */
+   inservible. `:focus-visible` y no `:focus` para no dibujar el anillo al hacer clic.
+
+   El color sale de `--c-focus`, que es un alias de `--c-accent`... salvo sobre fondo oscuro
+   o de marca, donde se reasigna a `--c-accent-bright`. No es un capricho: con el acento de
+   marca sobre la barra lateral el anillo daba 2.49:1, es decir un anillo que existe en el
+   CSS y que nadie ve. Con `--c-accent-bright` da 8.00:1. Cualquier bloque nuevo con fondo
+   oscuro o morado DEBE reasignar `--c-focus` en su propio ámbito. */
 :focus-visible {
-  outline: 2px solid var(--c-accent);
+  outline: 2px solid var(--c-focus);
   outline-offset: 2px;
   border-radius: var(--r-sm);
 }

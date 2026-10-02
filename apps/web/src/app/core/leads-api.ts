@@ -5,20 +5,19 @@ import { firstValueFrom } from 'rxjs';
 import type { Lead, LeadListResponse, ProblemDetails } from '@crm/contracts';
 
 /**
- * Cliente de `GET /api/v1/leads` (`docs/api.md` §9.2, endpoint todavía **no implementado**: necesita
- * base de datos).
+ * Cliente de `GET /api/v1/leads` (`docs/api.md` §9.2).
  *
- * Se escribe a mano y tipado contra `@crm/contracts`, contra la decisión ADR-012 —que preveía
- * generarlo desde OpenAPI— y por la misma razón que `core/health.ts`: ese pipeline no existe
- * todavía. Los tipos vienen del contrato compartido; la comprobación en tiempo de ejecución es una
- * comprobación de forma, no una validación con Zod (ver `comoListaDeLeads`, y el porqué de la
- * diferencia: 460 kB de bundle).
+ * El endpoint ahora está implementado con un repositorio en memoria y se protege en desarrollo con
+ * `X-Dev-Api-Token`. Sigue escrito a mano y tipado contra `@crm/contracts`, contra la decisión
+ * ADR-012 —que preveía generarlo desde OpenAPI— y por la misma razón que `core/health.ts`: ese
+ * pipeline no existe todavía. Los tipos vienen del contrato compartido; la comprobación en tiempo
+ * de ejecución es una comprobación de forma, no una validación con Zod (ver `comoListaDeLeads`, y
+ * el porqué de la diferencia: 460 kB de bundle).
  *
  * ## Los tres desenlaces, y por qué se distinguen
  *
  * - **`ok`** → el API respondió y la respuesta cumple el contrato.
- * - **`problem`** → el API respondió con un error del contrato (4xx/5xx problem+json). El caso de
- *   hoy es `RESOURCE_NOT_FOUND`: la ruta aún no existe.
+ * - **`problem`** → el API respondió con un error del contrato (4xx/5xx problem+json).
  * - **`unreachable`** → no hubo respuesta (API caído, puerto equivocado), o la respuesta no se pudo
  *   interpretar. Exigen acciones distintas —mirar el API encendido o mirar el contrato— y mezclarlas
  *   convertiría un API caído en un «error 500» que apunta al sitio equivocado.

@@ -33,5 +33,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
+    // Evita correr los tests también en `dist/`, que duplicaría el trabajo y el tiempo de suite.
+    exclude: ['**/node_modules/**', '**/dist/**'],
   },
 });

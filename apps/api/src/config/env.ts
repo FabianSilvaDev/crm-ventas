@@ -105,6 +105,15 @@ export const envSchema = z.object({
 
   /** Organización por defecto del MVP (uso interno, despliegue único). Ver ADR-011. */
   DEFAULT_ORGANIZATION_ID: z.uuid().optional(),
+
+  /**
+   * Token estático de desarrollo para proteger endpoints de negocio antes de que exista
+   * autenticación real (`docs/api.md` §9.2 nota). Fail-closed: sin él las rutas devuelven 401.
+   *
+   * En producción **no se permite**: el arranque falla si está configurado, porque eso significaría
+   * que el modo de autenticación no es el real (JWT + permisos).
+   */
+  DEV_API_TOKEN: z.string().min(16).optional(),
 })
   // Reglas que **no** se pueden expresar campo a campo, porque dependen de dos valores a la vez.
   .superRefine((env, ctx) => {
@@ -122,6 +131,15 @@ export const envSchema = z.object({
         code: 'custom',
         path: ['META_ACCESS_TOKEN'],
         message: 'Es obligatorio cuando META_GRAPH_MODE=live.',
+      });
+    }
+
+    if (env.NODE_ENV === 'production' && env.DEV_API_TOKEN !== undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['DEV_API_TOKEN'],
+        message:
+          'No se puede usar DEV_API_TOKEN en producción: las rutas de negocio deben usar autenticación real.',
       });
     }
   });

@@ -16,13 +16,24 @@
    queda en el componente.
 
    Todo valor sale de tokens.css. Ningún color, radio o medida literal.
+
+   Este fichero NO cuenta en el presupuesto `anyComponentStyle` (4 kB) porque se importa
+   desde `styles.css`, la hoja global: cuenta en el presupuesto `initial`, donde unos pocos
+   kB no mueven la aguja. Ese es justo el mecanismo que impide que el CSS de una pantalla
+   engorde hasta reventar el límite. Ver docs/design-system.md.
+
+   ── Lenguaje visual (resumen; la argumentación está en la enmienda de ADR-022) ──
+     · separación por ELEVACIÓN, no por borde: `.card` no lleva borde
+     · radios generosos: contenedor `--r-lg`, control `--r-md`, píldora `--r-pill`
+     · el color de marca como superficie, solo en el hero del acceso y una banda del panel
+     · la densidad de las tablas NO se toca: es el activo de un CRM, no un detalle estético
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ── Página ──────────────────────────────────────────────────────────────────
    El marco de una pantalla: título, entradilla y sello de "cuándo se consultó". Estaba dentro de
    `system-status.css` y se promovió al aparecer la segunda pantalla (regla de cabecera). */
 .page {
-  max-width: 1100px;
+  max-width: var(--page-max-width);
 }
 
 .page__head {
@@ -42,7 +53,7 @@
 
 .page__sub {
   margin: 0;
-  max-width: 62ch;
+  max-width: var(--measure-text);
   color: var(--c-text-muted);
   line-height: var(--lh-base);
 }
@@ -57,12 +68,13 @@
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--s-2);
   padding: var(--s-2) var(--s-4);
   border: 1px solid var(--c-accent);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-md);
   background: var(--c-accent);
-  color: #fff;
+  color: var(--c-text-on-brand);
   font: inherit;
   font-size: var(--fs-sm);
   font-weight: 600;
@@ -91,13 +103,40 @@
   border-color: var(--c-border-strong);
 }
 
+/* Botón sobre una superficie de marca (el hero del acceso): no puede ser morado sobre
+   morado, así que se invierte. */
+.btn--on-brand {
+  background: var(--c-surface);
+  border-color: var(--c-surface);
+  color: var(--c-accent);
+}
+
+.btn--on-brand:hover:not(:disabled) {
+  background: var(--c-accent-soft);
+  border-color: var(--c-accent-soft);
+  color: var(--c-accent-hover);
+}
+
+/* Tamaño grande: la acción principal de una pantalla sin barra lateral (el acceso). */
+.btn--lg {
+  padding: var(--s-3) var(--s-5);
+  font-size: var(--fs-base);
+}
+
+.btn--block {
+  width: 100%;
+}
+
 /* ── Tarjeta ─────────────────────────────────────────────────────────────── */
+/* Sin borde a propósito: la separación la da la elevación. El modo de alto contraste de
+   Windows fuerza `box-shadow: none`, así que este diseño OBLIGA al bloque
+   `@media (forced-colors: active)` del final de este fichero. Si se quita aquel bloque,
+   las tarjetas desaparecen para quien use alto contraste. */
 .card {
   padding: var(--s-4);
-  border: 1px solid var(--c-border);
-  border-radius: var(--r-md);
+  border-radius: var(--r-lg);
   background: var(--c-surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
 }
 
 .card__head {
@@ -122,10 +161,51 @@
   font-size: var(--fs-xs);
 }
 
+/* ── Marca (logotipo + nombre) ───────────────────────────────────────────────
+   El mismo bloque lo usan la barra lateral y el hero del acceso, así que es primitiva.
+   El COLOR no se fija aquí: se hereda del contexto (`.brand { color: inherit }`), porque
+   sobre la barra oscura el morado de marca es ilegible y hace falta el acento claro. */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  color: inherit;
+}
+
+/* El trazo va aquí y no en el HTML porque el glifo es el mismo en la barra lateral y en el
+   hero del acceso: duplicarlo en dos plantillas es como acaban divergiendo dos iconos que
+   deberían ser uno. `currentColor` es lo que permite que herede el color del contexto. */
+.brand__mark {
+  flex: none;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+}
+
+.brand__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.brand__name {
+  font-size: var(--fs-base);
+  font-weight: 600;
+  line-height: var(--lh-tight);
+}
+
+.brand__sub {
+  color: var(--c-text-muted);
+  font-size: var(--fs-xs);
+}
+
 /* ── Texto técnico ───────────────────────────────────────────────────────── */
 code {
   font-family: var(--font-mono);
-  font-size: 0.95em;
+  font-size: 0.95em; /* relativo a propósito: `code` hereda el tamaño de su contexto */
 }
 
 .mono {
@@ -139,7 +219,7 @@ code {
   display: inline-flex;
   align-items: center;
   gap: var(--s-2);
-  padding: 2px var(--s-2);
+  padding: var(--s-1) var(--s-2);
   border: 1px solid;
   border-radius: var(--r-pill);
   font-size: var(--fs-xs);
@@ -148,9 +228,10 @@ code {
 }
 
 .status__dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
+  flex: none;
+  width: var(--dot-size);
+  height: var(--dot-size);
+  border-radius: var(--r-circle);
   background: currentColor;
 }
 
@@ -181,12 +262,12 @@ code {
 /* ── Etiqueta ────────────────────────────────────────────────────────────── */
 .tag {
   flex: none;
-  padding: 1px var(--s-2);
+  padding: 0 var(--s-2);
   border: 1px solid;
   border-radius: var(--r-sm);
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--ls-caps);
   text-transform: uppercase;
   text-align: center;
 }
@@ -207,6 +288,192 @@ code {
   background: var(--c-warn-bg);
   border-color: var(--c-warn-border);
   color: var(--c-warn-fg);
+}
+
+/* ── Insignia ────────────────────────────────────────────────────────────── */
+/* Distinta de `.tag`: `.tag` marca el ORIGEN de un dato y va en mayúsculas; `.badge`
+   describe el contexto de la aplicación ("Uso interno"). */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--s-1) var(--s-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-pill);
+  background: var(--c-surface);
+  color: var(--c-text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── Enlace "Saltar al contenido" ────────────────────────────────────────────
+   Accesibilidad global, no del shell: cualquier pantalla con contenido largo y estructura
+   previa lo necesita. Vive fuera de la vista hasta que recibe el foco — se desplaza con
+   `transform`, no con `display: none`, porque un enlace oculto de verdad no recibe foco. */
+.skip-link {
+  position: absolute;
+  top: var(--s-4);
+  left: var(--s-4);
+  z-index: 10;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-sm);
+  background: var(--c-surface);
+  color: var(--c-text);
+  box-shadow: var(--shadow-md);
+  transform: translateY(var(--skip-link-offset));
+}
+
+.skip-link:focus {
+  transform: none;
+}
+
+/* ── Aviso destacado ─────────────────────────────────────────────────────────
+   Hermano de `.note`, pero para el marco de la pantalla y no para el flujo del contenido:
+   lleva icono o título y no se descarta. `.banner--demo` es el aviso de sesión simulada. */
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid;
+  border-radius: var(--r-md);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-base);
+}
+
+.banner--warn {
+  background: var(--c-warn-bg);
+  border-color: var(--c-warn-border);
+  color: var(--c-warn-fg);
+}
+
+.banner--info {
+  background: var(--c-idle-bg);
+  border-color: var(--c-idle-border);
+  color: var(--c-idle-fg);
+}
+
+/* Sesión simulada: color de marca suave para que se distinga de un aviso cualquiera, pero
+   con TEXTO dentro siempre. Nunca se comunica solo con el color. */
+.banner--demo {
+  background: var(--c-accent-soft);
+  border-color: var(--c-accent-ring);
+  color: var(--c-accent-hover);
+}
+
+/* Superficie de marca: el texto de dentro tiene que ser el token claro, no `--c-text`. */
+.banner--brand {
+  background: var(--c-surface-brand);
+  border-color: var(--c-surface-brand);
+  color: var(--c-text-on-brand);
+}
+
+/* ── Cifra (KPI) ─────────────────────────────────────────────────────────────
+   `--fs-4xl` se usa ÚNICAMENTE aquí. Es la mitad "Nubank" del lenguaje: un número que es
+   el dato se muestra grande. En una tabla, donde hay 50 números, sería ruido. */
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.stat__label {
+  color: var(--c-text-muted);
+  font-size: var(--fs-sm);
+}
+
+.stat__value {
+  color: var(--c-text);
+  font-size: var(--fs-4xl);
+  font-weight: 600;
+  line-height: var(--lh-display);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Estado vacío ────────────────────────────────────────────────────────────
+   Existe para que un "no hay datos" no parezca una avería ni invite a inventar filas.
+   Tercera pantalla que lo necesita: el panel, la lista de leads y el acceso cuando el
+   servicio no está desplegado. */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-2);
+  padding: var(--s-4) 0;
+}
+
+.empty__icon {
+  flex: none;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+  color: var(--c-text-faint);
+}
+
+.empty__title {
+  margin: 0;
+  color: var(--c-text);
+  font-size: var(--fs-lg);
+  line-height: var(--lh-tight);
+}
+
+.empty__text {
+  margin: 0;
+  max-width: var(--measure-text);
+  color: var(--c-text-muted);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-base);
+}
+
+/* ── Campo de formulario ─────────────────────────────────────────────────────
+   Promovido desde el formulario de acceso: cualquier formulario del CRM (edición de lead,
+   filtros guardados) necesita exactamente esto. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.field__label {
+  color: var(--c-text);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.field__input {
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--r-md);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font: inherit;
+  font-size: var(--fs-base);
+}
+
+.field__input:hover:not(:disabled) {
+  border-color: var(--c-text-faint);
+}
+
+.field__input:disabled {
+  background: var(--c-surface-sunken);
+  color: var(--c-text-muted);
+  cursor: not-allowed;
+}
+
+/* El anillo de foco lo pone la regla global `:focus-visible` de styles.css, con `--c-focus`.
+   No se sobreescribe aquí: un anillo distinto por control es como se acaba sin anillo. */
+.field__input[aria-invalid='true'] {
+  border-color: var(--c-bad-fg);
+}
+
+.field__hint {
+  color: var(--c-text-muted);
+  font-size: var(--fs-xs);
+}
+
+.field__error {
+  color: var(--c-bad-fg);
+  font-size: var(--fs-sm);
+  font-weight: 600;
 }
 
 /* ── Lista clave/valor ───────────────────────────────────────────────────── */
@@ -244,7 +511,10 @@ code {
 /* ── Tabla ───────────────────────────────────────────────────────────────────
    Generalizada a partir de la tabla de dependencias de `system-status.css`, que era la única.
    Envuelve siempre la tabla en `.table-wrap`: una tabla ancha en pantalla estrecha debe poder
-   desplazarse en horizontal, no romper el layout. */
+   desplazarse en horizontal, no romper el layout.
+
+   DENSIDAD: el padding de celda NO se toca en el rediseño. Es lo que decide cuántas filas
+   entran en pantalla, y en un CRM eso vale más que el aire. */
 .table-wrap {
   margin-top: var(--s-5);
   overflow-x: auto;
@@ -269,7 +539,7 @@ code {
   color: var(--c-text-muted);
   font-size: var(--fs-xs);
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--ls-caps);
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -300,7 +570,7 @@ code {
   margin: 0 0 var(--s-4);
   padding: var(--s-3);
   border: 1px solid;
-  border-radius: var(--r-sm);
+  border-radius: var(--r-md);
   font-size: var(--fs-sm);
   line-height: var(--lh-base);
 }
@@ -322,7 +592,7 @@ code {
   margin: var(--s-4) 0 0;
   padding: var(--s-3);
   border: 1px solid;
-  border-radius: var(--r-sm);
+  border-radius: var(--r-md);
   font-size: var(--fs-sm);
 }
 
@@ -340,7 +610,7 @@ code {
   padding: var(--s-3);
   border: 1px solid var(--c-bad-border);
   border-left-width: 3px;
-  border-radius: var(--r-sm);
+  border-radius: var(--r-md);
   background: var(--c-bad-bg);
 }
 
@@ -364,9 +634,9 @@ code {
   line-height: var(--lh-base);
 }
 
-/* ── Origen de los datos (§3) ────────────────────────────────────────────────
-   Toda pantalla que muestre datos declara de dónde salen: real, estimado o inferencia de IA.
-   Promovido desde `system-status.css` al aparecer la segunda pantalla que lo necesita. */
+/* ── Origen de los datos (§6 del design-system) ──────────────────────────────
+   Toda pantalla que muestre datos declara de dónde salen: real, estimado, inferencia de IA
+   o —marca añadida en el rediseño— declarado. Promovido desde `system-status.css`. */
 .origin {
   margin-top: var(--s-6);
   padding-top: var(--s-4);
@@ -391,7 +661,7 @@ code {
   display: flex;
   align-items: baseline;
   gap: var(--s-3);
-  max-width: 80ch;
+  max-width: var(--measure-list);
   color: var(--c-text-muted);
   font-size: var(--fs-sm);
   line-height: var(--lh-base);
@@ -399,5 +669,699 @@ code {
 
 /* Ancho mínimo para que las etiquetas de la lista no bailen entre renglones. */
 .origin .tag {
-  min-width: 52px;
+  min-width: var(--tag-min-width);
+}
+
+/* ── Icono de navegación ───────────────────────────────────────────────────
+   SVG en línea junto al texto de cada ítem. El color se hereda del contexto; la barra lateral
+   lo tiñe con el token de texto de nav, y el estado activo con el activo. */
+.nav-icon {
+  flex: none;
+  width: var(--icon-md);
+  height: var(--icon-md);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ── Cabecera de un módulo ─────────────────────────────────────────────────
+   Título grande, descripción del módulo y acción principal. Es el marco visual común de
+   todas las pantallas de módulo. */
+.module-header {
+  margin-bottom: var(--s-6);
+}
+
+.module-header__top {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+
+.module-header__icon {
+  flex: none;
+  width: var(--icon-xl);
+  height: var(--icon-xl);
+  padding: var(--s-2);
+  border-radius: var(--r-lg);
+  background: var(--c-accent-soft);
+  color: var(--c-accent);
+}
+
+.module-header__icon .nav-icon {
+  width: 100%;
+  height: 100%;
+}
+
+.module-header__title {
+  margin: 0 0 var(--s-1);
+  color: var(--c-text);
+  font-size: var(--fs-2xl);
+  line-height: var(--lh-tight);
+}
+
+.module-header__sub {
+  margin: 0;
+  max-width: var(--measure-text);
+  color: var(--c-text-muted);
+  line-height: var(--lh-base);
+}
+
+.module-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  margin-top: var(--s-4);
+}
+
+/* ── Grid de cards de módulos ───────────────────────────────────────────────
+   Distribución responsive para las cards grandes del dashboard y de las pantallas de
+   módulo. Se queda en `components.css` porque se comparte entre varias pantallas. */
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--s-4);
+}
+
+/* ── Card de módulo ─────────────────────────────────────────────────────────
+   Card grande con icono circular, título, hint, estado y acciones. Es el patrón central del
+   rediseño tipo Nubank: una superficie blanca elevada, esquinas muy redondeadas, y un icono
+   de marca suave que identifica el área de negocio. */
+.module-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-5);
+  border-radius: var(--r-xxl);
+  background: var(--c-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.module-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.module-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--icon-xl);
+  height: var(--icon-xl);
+  border-radius: var(--r-lg);
+  background: var(--c-accent-soft);
+  color: var(--c-accent);
+}
+
+.module-card__icon .nav-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.module-card__title {
+  margin: 0;
+  color: var(--c-text);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  line-height: var(--lh-tight);
+}
+
+.module-card__hint {
+  margin: 0;
+  color: var(--c-text-muted);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-base);
+}
+
+.module-card__status {
+  margin-top: auto;
+  padding-top: var(--s-3);
+}
+
+.module-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-top: auto;
+  padding-top: var(--s-3);
+}
+
+/* Métricas dentro de una card de módulo. */
+.module-card__metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: var(--s-3);
+  margin-top: var(--s-2);
+}
+
+.module-card__metric-label {
+  margin: 0;
+  color: var(--c-text-muted);
+  font-size: var(--fs-xs);
+}
+
+.module-card__metric-value {
+  margin: var(--s-1) 0;
+  color: var(--c-text);
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  line-height: var(--lh-tight);
+  font-variant-numeric: tabular-nums;
+}
+
+.module-card__metric-hint {
+  margin: 0;
+  color: var(--c-text-faint);
+  font-size: var(--fs-2xs);
+}
+
+/* Enlace al módulo completo. */
+.module-card__link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-top: auto;
+  padding-top: var(--s-3);
+  color: var(--c-accent);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.module-card__link:hover {
+  color: var(--c-accent-hover);
+}
+
+.module-card__link--disabled {
+  color: var(--c-text-muted);
+  cursor: default;
+}
+
+/* ── Métricas en grid ───────────────────────────────────────────────────────
+   Para mostrar 2-4 cifras grandes en fila, típico del dashboard tipo Nubank. */
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--s-4);
+  margin: var(--s-5) 0 var(--s-6);
+}
+
+/* ── Barra de progreso visual ─────────────────────────────────────────────────
+   Placeholder hasta que haya datos reales de avance. El color del progreso es el acento;
+   el fondo usa el borde suave. */
+.progress-bar {
+  height: var(--progress-height);
+  border-radius: var(--r-pill);
+  background: var(--c-border);
+  overflow: hidden;
+}
+
+.progress-bar__fill {
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--c-accent);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PRIMITIVAS DE NAVEGACIÓN Y PANELES — globales, extraídas del shell
+   ═══════════════════════════════════════════════════════════════════════════
+
+   Estas piezas viven aquí y no en `shell/layout.css` porque se van a reutilizar:
+   drawers para notificaciones, dropdowns para filtros, bottom-nav para otras
+   secciones con jerarquía plana. Al estar globales no cuentan en el presupuesto
+   `anyComponentStyle` del shell.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Botón de acción iconográfica ─────────────────────────────────────────── */
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--c-text-secondary);
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+
+.action-btn:hover {
+  background: var(--c-surface-sunken);
+  color: var(--c-text);
+}
+
+.action-btn--active {
+  background: var(--c-accent-soft);
+  color: var(--c-accent);
+}
+
+/* ── Dropdown ──────────────────────────────────────────────────────────────── */
+.dropdown {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  min-width: 200px;
+  padding: var(--space-2);
+  border-radius: var(--radius-lg);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  box-shadow: var(--shadow-lg);
+  z-index: 110;
+}
+
+.dropdown__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--c-text);
+  text-decoration: none;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+
+.dropdown__item:hover {
+  background: var(--c-surface-sunken);
+}
+
+.dropdown__item--danger {
+  color: var(--c-bad-fg);
+}
+
+.dropdown__item--danger:hover {
+  background: var(--c-bad-bg);
+}
+
+/* ── Drawers ─────────────────────────────────────────────────────────────── */
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 115;
+  background: rgba(17, 24, 39, 0.35);
+  animation: fade-in var(--t-fast) ease-out;
+}
+
+.drawer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 120;
+  max-height: 80dvh;
+  overflow-y: auto;
+  padding: var(--space-4);
+  background: var(--c-surface);
+  border-top: 1px solid var(--c-border);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  box-shadow: var(--shadow-xl);
+  animation: slide-up var(--t-base) ease-out;
+}
+
+.drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.drawer__header h2 {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--c-text);
+}
+
+.drawer__nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.drawer__link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--c-text);
+  text-decoration: none;
+  font-size: var(--fs-base);
+  font-weight: 500;
+  transition: background var(--t-fast);
+}
+
+.drawer__link:hover {
+  background: var(--c-surface-sunken);
+}
+
+.drawer__link--active {
+  background: var(--c-accent-soft);
+  color: var(--c-accent);
+}
+
+/* ── Bottom navigation ─────────────────────────────────────────────────────── */
+.bottom-nav {
+  display: flex;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  justify-content: space-around;
+  align-items: center;
+  height: var(--bottom-nav-height);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  background: var(--c-surface);
+  border-top: 1px solid var(--c-border);
+}
+
+.bottom-nav__link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  flex: 1;
+  height: 100%;
+  color: var(--c-nav-text);
+  text-decoration: none;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color var(--t-fast);
+}
+
+.bottom-nav__link:hover {
+  color: var(--c-nav-text-active);
+}
+
+.bottom-nav__link--active {
+  color: var(--c-accent);
+}
+
+/* ── Animaciones de paneles ──────────────────────────────────────────────── */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer-backdrop,
+  .drawer {
+    animation: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PRIMITIVAS DE BUSINESS OVERVIEW / DASHBOARD
+   ═══════════════════════════════════════════════════════════════════════════
+
+   Clases compartidas por Home, Growth, Sales, Products y Analytics para evitar
+   reescribir el mismo layout de tarjetas, métricas, listas compactas y secciones.
+   Al vivir en la hoja global no cuentan en `anyComponentStyle`.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.section-head app-icon {
+  color: var(--color-primary);
+}
+
+.section-title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.section-title--solo {
+  margin-bottom: var(--space-1);
+}
+
+.section-title--sm {
+  font-size: var(--text-base);
+}
+
+.section-note {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+/* Grids de dashboard */
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+}
+
+/* Alertas de atención */
+.attention-card {
+  display: block;
+  border-left: 4px solid var(--color-danger);
+}
+
+.attention-card:has(.badge--warning) {
+  border-left-color: var(--color-warning);
+}
+
+.attention-card__inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.attention-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.attention-card__title,
+.work-card__title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+/* Tarjetas de trabajo activo */
+.work-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.work-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.work-link:hover {
+  color: var(--color-primary);
+}
+
+/* Lista compacta de leads */
+.lead-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lead-list__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.lead-list__item:last-child {
+  border-bottom: none;
+}
+
+.lead-list__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.lead-list__info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.lead-list__name {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lead-list__meta {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--text-xs);
+}
+
+/* Etiquetas y texto secundario reutilizables */
+.label {
+  margin: 0 0 var(--space-1);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+/* Origen de datos (variante con fondo diferenciado) */
+.origin-box {
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-sunken);
+}
+
+.origin-box__title {
+  margin: 0 0 var(--space-3);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.origin-box__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.origin-box__item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+}
+
+.origin-box__item span {
+  flex: 1;
+}
+
+/* Responsive de grids */
+@media (min-width: 768px) {
+  .metric-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .attention-card__inner {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+@media (min-width: 1024px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ── Alto contraste forzado ──────────────────────────────────────────────────
+   NO ES OPCIONAL. La regla de "separación por elevación" quitó el borde de las tarjetas; en
+   el modo de alto contraste de Windows el sistema fuerza `box-shadow: none`, así que sin
+   este bloque las tarjetas se quedarían sin ningún límite visible. */
+@media (forced-colors: active) {
+  .card,
+  .banner,
+  .note,
+  .alert,
+  .problem,
+  .empty,
+  .stat,
+  .module-card,
+  .dropdown,
+  .drawer,
+  .bottom-nav,
+  .attention-card,
+  .origin-box {
+    border: 1px solid;
+  }
+
+  .progress-bar__fill {
+    background: CanvasText;
+  }
 }

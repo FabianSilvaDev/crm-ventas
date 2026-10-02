@@ -10,6 +10,7 @@
 // antes de que nadie valide nada.
 import './zod-locale.js';
 
+export * from './auth/index.js';
 export * from './errors.js';
 export * from './identity.js';
 export * from './leads.js';

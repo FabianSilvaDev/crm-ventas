@@ -1,26 +1,20 @@
-import { Component, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-
-import { NAV_GROUPS, SYSTEM_NAV } from './nav-items';
+import { Component } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
 
 /**
- * Shell del CRM: navegación + área de trabajo.
+ * Raíz de la aplicación. **Solo el host y el outlet.**
  *
- * `navOpen` controla el menú en pantallas estrechas. En escritorio el CSS ignora el estado y la
- * navegación está siempre visible, así que el botón ni se muestra.
+ * El shell (barra lateral, topbar, «Saltar al contenido») NO vive aquí: se movió a
+ * `shell/layout.ts`, que es una ruta con hijos. El motivo es concreto: la pantalla de acceso
+ * tiene que existir **fuera** de la barra lateral, y mientras el shell fuera la raíz de la
+ * aplicación eso era imposible de expresar.
+ *
+ * Si alguien vuelve a meter navegación en esta plantilla, `app.spec.ts` lo detecta.
  */
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
-export class App {
-  protected readonly groups = NAV_GROUPS;
-  protected readonly systemNav = SYSTEM_NAV;
-  protected readonly navOpen = signal(false);
-
-  protected toggleNav(): void {
-    this.navOpen.update((open) => !open);
-  }
-}
+export class App {}

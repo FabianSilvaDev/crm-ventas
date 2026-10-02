@@ -7,103 +7,233 @@
    `docs/design-system.md`. Un componente con un `#hex` suelto es un componente que ha
    empezado a divergir.
 
-   Por qué existe este archivo: el sistema se diseñó aplicando el criterio del skill
-   ui-ux-pro-max (checklist de entrega + tokens como fuente única), pero adaptado a un
-   CRM OPERATIVO y no a una landing. Un CRM vive de densidad, tablas y teclado; la
-   estética de captación que aquel catálogo propone lo empeoraría. Ver docs/design-system.md.
+   Lenguaje visual: "Business Growth Control Center" — inspirado en los principios de
+   Nu/Nubank (jerarquía, claridad, acciones rápidas, superficies modulares) pero con
+   identidad propia. Se rechaza deliberadamente lo que choca con una herramienta de
+   trabajo de horas en escritorio: mantenemos densidad, tablas legibles y navegación
+   por teclado.
+
+   Identidad de marca: indigo premium. No es el purple de Nubank.
 
    Reglas que estos tokens hacen cumplir:
-     · contraste de texto ≥ 4.5:1 sobre su fondo (anotado en cada valor)
+     · contraste de texto ≥ 4.5:1 sobre su fondo (WCAG 2.1)
      · ningún estado se comunica SÓLO con color (siempre color + texto + icono)
      · movimiento desactivable con `prefers-reduced-motion` (ver styles.css)
+     · los nombres de tokens antiguos (`--c-*`, `--s-*`, etc.) se mantienen como
+       aliases estables para no romper features existentes durante la migración.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
   color-scheme: light;
 
+  /* ── Marca / Acento ────────────────────────────────────────────────────── */
+  --color-primary: #4f46e5;              /* indigo-600 · blanco encima 6.6:1 */
+  --color-primary-hover: #4338ca;        /* indigo-700 · blanco encima 8.1:1 */
+  --color-primary-soft: #eef2ff;        /* indigo-50 · primary encima 5.9:1 */
+  --color-primary-ring: rgba(79, 70, 229, 0.35);
+  --color-primary-bright: #dbe4ff;      /* indigo-100 · foco sobre primary 5.1:1 */
+
   /* ── Superficies ───────────────────────────────────────────────────────── */
-  --c-bg: #f4f6f8;
-  --c-surface: #ffffff;
-  --c-surface-sunken: #eef1f5;
-  --c-border: #dde3ea;
-  --c-border-strong: #c3ccd6;
+  --color-background: #fafafa;
+  --color-surface: #ffffff;
+  --color-surface-sunken: #f3f4f6;
+  --color-surface-elevated: #ffffff;
+  --color-border: #e5e7eb;
+  --color-border-strong: #d1d5db;
 
   /* ── Texto ─────────────────────────────────────────────────────────────── */
-  --c-text: #131a22; /* 17.3:1 sobre --c-surface */
-  --c-text-muted: #5a6675; /*  5.5:1 sobre --c-surface */
-  --c-text-faint: #67717d; /*  4.8:1 sobre --c-surface — el mínimo permitido */
+  --color-text: #111827;                /* gray-900 · 18.7:1 sobre surface */
+  --color-text-secondary: #4b5563;      /* gray-600 ·  7.6:1 sobre surface */
+  --color-text-tertiary: #6b7280;       /* gray-500 ·  5.7:1 sobre surface */
+  --color-text-on-primary: #ffffff;
 
-  /* ── Navegación (oscura, para separarla del área de trabajo) ───────────── */
-  --c-nav-bg: #151d26;
-  --c-nav-text: #aab6c3; /*  8.3:1 sobre --c-nav-bg */
-  --c-nav-text-active: #ffffff;
-  --c-nav-active-bg: #1f2a36;
-  --c-nav-border: #26313d;
-  --c-nav-heading: #6f7d8c; /* etiquetas de grupo; decorativas, acompañan siempre a texto */
+  /* ── Estados. Siempre color + texto ───────────────────────────────────── */
+  --color-success: #16a34a;
+  --color-success-soft: #dcfce7;
+  --color-success-bg: #dcfce7;
+  --color-success-fg: #166534;          /* 6.4:1 sobre success-bg */
+  --color-success-border: #86efac;
 
-  /* ── Acento ────────────────────────────────────────────────────────────── */
-  --c-accent: #0d7267;
-  --c-accent-hover: #0a5b52;
-  --c-accent-soft: #e6f2f0;
-  --c-accent-ring: rgba(13, 114, 103, 0.35);
+  --color-warning-bg: #fef3c7;
+  --color-warning-fg: #92400e;          /* 6.6:1 sobre warning-bg */
+  --color-warning-border: #fde68a;
 
-  /* ── Estados. Siempre color + texto: el color solo no es accesible ─────── */
-  --c-ok-bg: #e9f7ee;
-  --c-ok-fg: #14663a;
-  --c-ok-border: #b7e0c6;
+  --color-danger-bg: #fee2e2;
+  --color-danger-fg: #991b1b;           /* 6.7:1 sobre danger-bg */
+  --color-danger-border: #fca5a5;
 
-  --c-bad-bg: #fdeceb;
-  --c-bad-fg: #a5211b;
-  --c-bad-border: #f3c3c0;
+  --color-info-bg: #eff6ff;
+  --color-info-fg: #1e40af;             /* 6.9:1 sobre info-bg */
+  --color-info-border: #bfdbfe;
 
-  --c-warn-bg: #fdf5e6;
-  --c-warn-fg: #8a5a12;
-  --c-warn-border: #eeddb5;
+  --color-neutral-bg: #f3f4f6;
+  --color-neutral-fg: #4b5563;
+  --color-neutral-border: #e5e7eb;
 
-  --c-idle-bg: #f0f2f5;
-  --c-idle-fg: #5a6675; /*  4.9:1 sobre --c-idle-bg */
-  --c-idle-border: #dde3ea;
+  /* ── Navegación (top nav clara, no sidebar oscuro) ─────────────────────── */
+  --color-nav-bg: var(--color-surface);
+  --color-nav-text: var(--color-text-secondary);
+  --color-nav-text-active: var(--color-text);
+  --color-nav-active-bg: var(--color-primary-soft);
+  --color-nav-active-indicator: var(--color-primary);
+  --color-nav-border: var(--color-border);
+  --color-nav-heading: var(--color-text-tertiary);
+  --color-nav-mark: var(--color-primary);
 
-  /* ── Espaciado. Escala de 4: cualquier valor intermedio es un error ────── */
-  --s-1: 4px;
-  --s-2: 8px;
-  --s-3: 12px;
-  --s-4: 16px;
-  --s-5: 24px;
-  --s-6: 32px;
-  --s-7: 48px;
+  /* ── ALIASES LEGADO: mantener features existentes funcionando ─────────────
+     Durante la migración, los componentes antiguos siguen usando `--c-*`. Todos
+     apuntan a los nuevos tokens semánticos. Cuando una feature se migra a `ui/*`,
+     puede empezar a usar `--color-*` directamente. */
+  --c-accent: var(--color-primary);
+  --c-accent-hover: var(--color-primary-hover);
+  --c-accent-soft: var(--color-primary-soft);
+  --c-accent-ring: var(--color-primary-ring);
+  --c-accent-bright: var(--color-primary-bright);
+  --c-bg: var(--color-background);
+  --c-surface: var(--color-surface);
+  --c-surface-sunken: var(--color-surface-sunken);
+  --c-surface-elevated: var(--color-surface-elevated);
+  --c-surface-brand: var(--color-primary);
+  --c-surface-brand-hover: var(--color-primary-hover);
+  --c-border: var(--color-border);
+  --c-border-strong: var(--color-border-strong);
+  --c-text: var(--color-text);
+  --c-text-muted: var(--color-text-secondary);
+  --c-text-faint: var(--color-text-tertiary);
+  --c-text-on-brand: var(--color-text-on-primary);
+  --c-text-on-brand-muted: rgba(255, 255, 255, 0.78);
+  --c-nav-bg: var(--color-nav-bg);
+  --c-nav-text: var(--color-nav-text);
+  --c-nav-text-active: var(--color-nav-text-active);
+  --c-nav-active-bg: var(--color-nav-active-bg);
+  --c-nav-active-indicator: var(--color-nav-active-indicator);
+  --c-nav-border: var(--color-nav-border);
+  --c-nav-heading: var(--color-nav-heading);
+  --c-nav-mark: var(--color-nav-mark);
+  --c-ok-bg: var(--color-success-bg);
+  --c-ok-fg: var(--color-success-fg);
+  --c-ok-border: var(--color-success-border);
+  --c-bad-bg: var(--color-danger-bg);
+  --c-bad-fg: var(--color-danger-fg);
+  --c-bad-border: var(--color-danger-border);
+  --c-warn-bg: var(--color-warning-bg);
+  --c-warn-fg: var(--color-warning-fg);
+  --c-warn-border: var(--color-warning-border);
+  --c-idle-bg: var(--color-neutral-bg);
+  --c-idle-fg: var(--color-neutral-fg);
+  --c-idle-border: var(--color-neutral-border);
+
+  /* Color del anillo de foco. Es un ALIAS a propósito: todo bloque con fondo de
+     marca lo reasigna a `--c-accent-bright` en una sola línea. */
+  --c-focus: var(--c-accent);
+
+  /* ── Espaciado. Escala de 4 ───────────────────────────────────────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* Aliases legado */
+  --s-1: var(--space-1);
+  --s-2: var(--space-2);
+  --s-3: var(--space-3);
+  --s-4: var(--space-4);
+  --s-5: var(--space-5);
+  --s-6: var(--space-6);
+  --s-7: var(--space-7);
+  --s-8: var(--space-8);
 
   /* ── Radios ────────────────────────────────────────────────────────────── */
-  --r-sm: 6px;
-  --r-md: 10px;
-  --r-lg: 14px;
-  --r-pill: 999px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --radius-pill: 999px;
+  --radius-circle: 50%;
+
+  /* Aliases legado */
+  --r-sm: var(--radius-sm);
+  --r-md: var(--radius-md);
+  --r-lg: var(--radius-lg);
+  --r-xl: var(--radius-xl);
+  --r-xxl: var(--radius-2xl);
+  --r-pill: var(--radius-pill);
+  --r-circle: var(--radius-circle);
 
   /* ── Tipografía ────────────────────────────────────────────────────────── */
-  /* Pila del sistema a propósito: cero peticiones de red, cero FOUT, y funciona sin
-     conexión. Para una herramienta interna la ganancia de una webfont no compensa
-     añadir una dependencia externa al arranque. Ver docs/design-system.md. */
   --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Consolas, monospace;
+  --font-display: var(--font-sans);
 
-  --fs-xs: 12px;
-  --fs-sm: 13px;
-  --fs-base: 14px;
-  --fs-lg: 16px;
-  --fs-xl: 20px;
-  --fs-2xl: 26px;
+  --text-2xs: 10px;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 30px;
+  --text-4xl: 36px;
+  --text-5xl: 48px;
+
+  /* Aliases legado */
+  --fs-2xs: var(--text-2xs);
+  --fs-xs: var(--text-xs);
+  --fs-sm: var(--text-sm);
+  --fs-base: var(--text-base);
+  --fs-lg: var(--text-lg);
+  --fs-xl: var(--text-xl);
+  --fs-2xl: var(--text-2xl);
+  --fs-3xl: var(--text-3xl);
+  --fs-4xl: var(--text-4xl);
 
   --lh-tight: 1.25;
   --lh-base: 1.5;
+  --lh-display: 1.15;
+  --ls-caps: 0.04em;
 
-  /* ── Sombras ───────────────────────────────────────────────────────────── */
-  --shadow-sm: 0 1px 2px rgba(16, 24, 32, 0.06);
-  --shadow-md: 0 2px 8px rgba(16, 24, 32, 0.08);
+  /* ── Sombras sutiles ───────────────────────────────────────────────────── */
+  --shadow-sm: 0 1px 2px rgba(17, 24, 39, 0.04);
+  --shadow-md: 0 4px 12px rgba(17, 24, 39, 0.06);
+  --shadow-lg: 0 12px 32px rgba(17, 24, 39, 0.08);
+  --shadow-xl: 0 20px 48px rgba(17, 24, 39, 0.1);
 
-  /* ── Medidas de layout ─────────────────────────────────────────────────── */
-  --nav-width: 264px;
-  --topbar-height: 56px;
+  /* Aliases legado */
+  --t-fast: 120ms ease;
+  --t-base: 200ms ease;
 
   /* ── Movimiento ────────────────────────────────────────────────────────── */
-  --t-fast: 120ms ease;
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 300ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Medidas de layout ─────────────────────────────────────────────────── */
+  --nav-width: 264px;        /* legado: sidebar, aún usado por media queries */
+  --topbar-height: 64px;
+  --bottom-nav-height: 64px;
+
+  --page-max-width: 1200px;
+  --measure-text: 62ch;
+  --measure-list: 80ch;
+  --auth-card-width: 440px;
+
+  --icon-xs: 16px;
+  --icon-sm: 18px;
+  --icon-md: 20px;
+  --icon-lg: 24px;
+  --icon-xl: 32px;
+  --icon-2xl: 40px;
+
+  /* Aliases legado */
+  --dot-size: 7px;
+  --tag-min-width: 52px;
+  --skip-link-offset: -9999px;
+  --progress-height: 8px;
 }
