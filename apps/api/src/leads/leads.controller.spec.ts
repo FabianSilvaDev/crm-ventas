@@ -1,6 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { AddressInfo } from 'node:net';
+import { rm } from 'node:fs/promises';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import { createApp } from '../app.factory.js';
 import type { Env } from '../config/env.js';
@@ -20,6 +24,7 @@ function testEnv(overrides: Partial<Env> = {}): Env {
     META_GRAPH_TIMEOUT_MS: 3000,
     PUBLIC_RATE_LIMIT_PER_MINUTE: 120,
     DEFAULT_ORGANIZATION_ID: '0198f000-0000-7000-8000-000000000001',
+    DB_PATH: join(tmpdir(), `crm-leads-test-${Date.now()}-${Math.random().toString(36).slice(2)}`),
     DEV_API_TOKEN,
     ...overrides,
   } as Env;
@@ -28,9 +33,11 @@ function testEnv(overrides: Partial<Env> = {}): Env {
 describe('LeadsController (integración)', () => {
   let app: Awaited<ReturnType<typeof createApp>>;
   let baseUrl: string;
+  let env: Env;
 
   beforeAll(async () => {
-    app = await createApp(testEnv(), { shutdownHooks: false });
+    env = testEnv();
+    app = await createApp(env, { shutdownHooks: false });
     await app.listen(0);
     const address = app.getHttpServer().address() as AddressInfo;
     baseUrl = `http://127.0.0.1:${address.port}/api/v1`;
@@ -38,6 +45,9 @@ describe('LeadsController (integración)', () => {
 
   afterAll(async () => {
     await app.close();
+    if (env.DB_PATH !== undefined) {
+      await rm(env.DB_PATH, { recursive: true, force: true });
+    }
   });
 
   it('GET /leads devuelve la lista sembrada', async () => {
@@ -155,5 +165,40 @@ describe('LeadsController (integración)', () => {
     expect(response.status).toBe(401);
     const body = (await response.json()) as { code: string };
     expect(body.code).toBe('AUTH_INVALID_CREDENTIALS');
+  });
+
+  it('persiste los cambios entre reinicios de la app', async () => {
+    // 1. Crear un lead en la instancia actual.
+    const createResponse = await fetch(`${baseUrl}/leads`, {
+      method: 'POST',
+      headers: {
+        'X-Dev-Api-Token': DEV_API_TOKEN,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        identity: { email: 'persistente@ejemplo.com', phone: '+573001111111' },
+        status: 'NEW',
+        source: 'manual',
+        channel: 'MANUAL',
+      }),
+    });
+    expect(createResponse.status).toBe(201);
+    const created = (await createResponse.json()) as { id: string };
+
+    // 2. Cerrar la app y levantar una nueva con la misma DB_PATH.
+    await app.close();
+    app = await createApp(env, { shutdownHooks: false });
+    await app.listen(0);
+    const address = app.getHttpServer().address() as AddressInfo;
+    baseUrl = `http://127.0.0.1:${address.port}/api/v1`;
+
+    // 3. El lead debe existir en la nueva instancia.
+    const findResponse = await fetch(`${baseUrl}/leads/${created.id}`, {
+      headers: { 'X-Dev-Api-Token': DEV_API_TOKEN },
+    });
+    expect(findResponse.status).toBe(200);
+    const found = (await findResponse.json()) as { id: string; identity: { email: string } };
+    expect(found.id).toBe(created.id);
+    expect(found.identity.email).toBe('persistente@ejemplo.com');
   });
 });

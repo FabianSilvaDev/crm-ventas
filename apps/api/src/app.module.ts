@@ -4,6 +4,7 @@ import type { DynamicModule } from '@nestjs/common';
 import { AuthModule } from './auth/auth.module.js';
 import { ConfigModule } from './config/config.module.js';
 import type { Env } from './config/env.js';
+import { DbModule } from './db/db.module.js';
 import { HealthModule } from './health/health.module.js';
 import { LeadsModule } from './leads/leads.module.js';
 import { WebhooksModule } from './webhooks/webhooks.module.js';
@@ -24,7 +25,14 @@ export class AppModule {
   static forRoot(env: Env): DynamicModule {
     return {
       module: AppModule,
-      imports: [ConfigModule.forRoot(env), AuthModule, HealthModule, LeadsModule, WebhooksModule],
+      imports: [
+        ConfigModule.forRoot(env),
+        DbModule.forRoot(env),
+        AuthModule,
+        HealthModule,
+        LeadsModule,
+        WebhooksModule,
+      ],
     };
   }
 }

@@ -1,0 +1,15 @@
+[
+  {
+    "id": "00000000-0000-7000-8000-000000000001",
+    "organizationId": "0198f000-0000-7000-8000-000000000001",
+    "email": "owner@crm-ventas.local",
+    "passwordHash": "",
+    "role": "OWNER",
+    "status": "ACTIVE",
+    "lastLoginAt": null,
+    "failedAttempts": 0,
+    "lockedUntil": null,
+    "createdAt": "2026-10-02T21:29:54.315Z",
+    "updatedAt": "2026-10-02T21:29:54.315Z"
+  }
+]

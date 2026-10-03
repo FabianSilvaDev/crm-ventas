@@ -1,0 +1,80 @@
+[
+  {
+    "id": "01990000-0000-7000-8000-000000000001",
+    "organizationId": "0198f000-0000-7000-8000-000000000001",
+    "identityId": "01990000-0000-7000-8000-000000000011",
+    "contactName": "Ana Gómez",
+    "status": "NEW",
+    "source": "paid",
+    "channel": "META_LEAD_FORM",
+    "score": 82,
+    "ownerUserId": null,
+    "firstResponseAt": null,
+    "convertedAt": null,
+    "closedVia": null,
+    "consent": {
+      "granted": true,
+      "basis": "consent",
+      "textVersion": "privacy-v1",
+      "capturedAt": "2026-10-02T21:29:54.334Z"
+    },
+    "createdAt": "2026-10-02T21:29:54.334Z",
+    "identity": {
+      "id": "01990000-0000-7000-8000-000000000011",
+      "email": "ana.gomez@ejemplo.com",
+      "phone": "+573001112233"
+    }
+  },
+  {
+    "id": "01990000-0000-7000-8000-000000000002",
+    "organizationId": "0198f000-0000-7000-8000-000000000001",
+    "identityId": "01990000-0000-7000-8000-000000000012",
+    "contactName": "Carlos Ruiz",
+    "status": "CONTACTED",
+    "source": "organic",
+    "channel": "WHATSAPP_CLICK",
+    "score": 64,
+    "ownerUserId": "00000000-0000-7000-8000-000000000001",
+    "firstResponseAt": "2026-10-02T21:29:54.334Z",
+    "convertedAt": null,
+    "closedVia": "WHATSAPP",
+    "consent": {
+      "granted": true,
+      "basis": "consent",
+      "textVersion": "privacy-v1",
+      "capturedAt": "2026-10-02T21:29:54.334Z"
+    },
+    "createdAt": "2026-10-02T21:28:54.334Z",
+    "identity": {
+      "id": "01990000-0000-7000-8000-000000000012",
+      "email": "carlos.ruiz@ejemplo.com",
+      "phone": "+573002223344"
+    }
+  },
+  {
+    "id": "01990000-0000-7000-8000-000000000003",
+    "organizationId": "0198f000-0000-7000-8000-000000000001",
+    "identityId": "01990000-0000-7000-8000-000000000013",
+    "contactName": "Lucía Márquez",
+    "status": "QUALIFIED",
+    "source": "referral",
+    "channel": "MANUAL",
+    "score": 91,
+    "ownerUserId": "00000000-0000-7000-8000-000000000001",
+    "firstResponseAt": "2026-10-02T21:27:54.334Z",
+    "convertedAt": null,
+    "closedVia": null,
+    "consent": {
+      "granted": true,
+      "basis": "consent",
+      "textVersion": "privacy-v1",
+      "capturedAt": "2026-10-02T21:29:54.334Z"
+    },
+    "createdAt": "2026-10-02T21:27:54.334Z",
+    "identity": {
+      "id": "01990000-0000-7000-8000-000000000013",
+      "email": "lucia.marquez@ejemplo.com",
+      "phone": "+573003334455"
+    }
+  }
+]

@@ -19,15 +19,15 @@ import { LEAD_REPOSITORY } from './leads.repository.js';
  * Servicio de aplicación de leads.
  *
  * No contiene reglas de negocio profundas (fusión de identidades, consentimiento legal, atribución):
- * esas viven en el caso de uso real con base de datos. Aquí solo orquesta el repositorio en memoria
- * y lanza `RESOURCE_NOT_FOUND` cuando corresponde.
+ * esas viven en el caso de uso real con base de datos. Aquí solo orquesta el repositorio y lanza
+ * `RESOURCE_NOT_FOUND` cuando corresponde.
  */
 @Injectable()
 export class LeadsService {
   constructor(@Inject(LEAD_REPOSITORY) private readonly repository: LeadRepository) {}
 
-  list(query: LeadListQuery): LeadListResponse {
-    const result = this.repository.list({
+  async list(query: LeadListQuery): Promise<LeadListResponse> {
+    const result = await this.repository.list({
       limit: query.limit,
       cursor: query.cursor,
       status: query.status,
@@ -40,15 +40,15 @@ export class LeadsService {
     };
   }
 
-  findById(id: string): Lead {
-    const lead = this.repository.findById(id);
+  async findById(id: string): Promise<Lead> {
+    const lead = await this.repository.findById(id);
     if (lead === undefined) {
       throw new AppError('RESOURCE_NOT_FOUND', `No existe el lead ${id}.`);
     }
     return lead;
   }
 
-  create(data: LeadCreate, organizationId: string): Lead {
+  async create(data: LeadCreate, organizationId: string): Promise<Lead> {
     const identityId = randomUUID();
     const identity = {
       id: identityId,
@@ -65,24 +65,24 @@ export class LeadsService {
     });
   }
 
-  update(id: string, data: LeadUpdate): Lead {
-    const lead = this.repository.update(id, data);
+  async update(id: string, data: LeadUpdate): Promise<Lead> {
+    const lead = await this.repository.update(id, data);
     if (lead === undefined) {
       throw new AppError('RESOURCE_NOT_FOUND', `No existe el lead ${id}.`);
     }
     return lead;
   }
 
-  convert(id: string): Lead {
-    const lead = this.repository.convert(id);
+  async convert(id: string): Promise<Lead> {
+    const lead = await this.repository.convert(id);
     if (lead === undefined) {
       throw new AppError('RESOURCE_NOT_FOUND', `No existe el lead ${id}.`);
     }
     return lead;
   }
 
-  firstResponse(id: string, data: FirstResponseRequest): Lead {
-    const lead = this.repository.firstResponse(id, data.closedVia ?? null);
+  async firstResponse(id: string, data: FirstResponseRequest): Promise<Lead> {
+    const lead = await this.repository.firstResponse(id, data.closedVia ?? null);
     if (lead === undefined) {
       throw new AppError('RESOURCE_NOT_FOUND', `No existe el lead ${id}.`);
     }

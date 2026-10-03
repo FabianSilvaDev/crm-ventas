@@ -51,47 +51,47 @@ export class LeadsController {
 
   @Get()
   @RequirePermission(Permission.READ_CUSTOMER_DATA)
-  list(@Query({ schema: leadListQuerySchema }) query: LeadListQuery) {
+  async list(@Query({ schema: leadListQuerySchema }) query: LeadListQuery) {
     return this.service.list(query);
   }
 
   @Get(':id')
   @RequirePermission(Permission.READ_CUSTOMER_DATA)
-  findById(@Param('id') id: string) {
+  async findById(@Param('id') id: string) {
     return this.service.findById(id);
   }
 
   @Post()
   @HttpCode(201)
   @RequirePermission(Permission.WRITE_CUSTOMER_DATA)
-  create(
+  async create(
     @Body({ schema: leadCreateSchema }) body: LeadCreate,
     @Res({ passthrough: true }) response: Response,
   ) {
     const organizationId =
       this.env.DEFAULT_ORGANIZATION_ID ?? '0198f000-0000-7000-8000-000000000001';
-    const lead = this.service.create(body, organizationId);
+    const lead = await this.service.create(body, organizationId);
     response.location(`/api/v1/leads/${lead.id}`);
     return lead;
   }
 
   @Patch(':id')
   @RequirePermission(Permission.WRITE_CUSTOMER_DATA)
-  update(@Param('id') id: string, @Body({ schema: leadUpdateSchema }) body: LeadUpdate) {
+  async update(@Param('id') id: string, @Body({ schema: leadUpdateSchema }) body: LeadUpdate) {
     return this.service.update(id, body);
   }
 
   @Post(':id/convert')
   @HttpCode(200)
   @RequirePermission(Permission.WRITE_CUSTOMER_DATA)
-  convert(@Param('id') id: string) {
+  async convert(@Param('id') id: string) {
     return this.service.convert(id);
   }
 
   @Post(':id/first-response')
   @HttpCode(200)
   @RequirePermission(Permission.WRITE_CUSTOMER_DATA)
-  firstResponse(
+  async firstResponse(
     @Param('id') id: string,
     @Body({ schema: firstResponseRequestSchema }) body: FirstResponseRequest,
   ) {

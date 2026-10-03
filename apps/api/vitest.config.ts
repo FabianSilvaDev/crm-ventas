@@ -35,5 +35,12 @@ export default defineConfig({
     environment: 'node',
     // Evita correr los tests también en `dist/`, que duplicaría el trabajo y el tiempo de suite.
     exclude: ['**/node_modules/**', '**/dist/**'],
+    // Los tests de integración levantan servidores Nest reales. Con el pool por defecto (`forks`) el
+    // overhead de crear varios workers hace que los `beforeAll` concurrentes superen el timeout de hook
+    // (10 s) cuando se ejecutan todos juntos. `vmThreads` con pocos hilos reduce ese overhead y deja
+    // pasar la suite completa en ~10 s en lugar de fallar por timeout.
+    pool: 'vmThreads',
+    minThreads: 1,
+    maxThreads: 2,
   },
 });

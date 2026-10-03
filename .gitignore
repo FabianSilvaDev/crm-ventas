@@ -33,6 +33,9 @@ npm-debug.log*
 pnpm-debug.log*
 logs/
 
+# Base de datos JSON local (se genera automáticamente al arrancar)
+apps/api/db/*.json
+
 # Backups de base de datos
 backups/
 *.dump

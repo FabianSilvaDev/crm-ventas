@@ -107,6 +107,12 @@ export const envSchema = z.object({
   DEFAULT_ORGANIZATION_ID: z.uuid().optional(),
 
   /**
+   * Ruta de la base de datos JSON. Si no se configura, se usa `apps/api/db` relativo al directorio
+   * de trabajo. En tests se apunta a un directorio temporal para no contaminar datos locales.
+   */
+  DB_PATH: z.string().min(1).optional(),
+
+  /**
    * Token estático de desarrollo para proteger endpoints de negocio antes de que exista
    * autenticación real (`docs/api.md` §9.2 nota). Fail-closed: sin él las rutas devuelven 401.
    *

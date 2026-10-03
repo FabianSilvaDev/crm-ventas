@@ -1,16 +1,15 @@
 import { Module } from '@nestjs/common';
 
+import type { Lead } from '@crm/contracts';
+
 import { AuthModule } from '../auth/auth.module.js';
-import { ENV } from '../config/config.module.js';
-import type { Env } from '../config/env.js';
+import { IDENTITIES_DB, LEADS_DB } from '../db/db.module.js';
+import type { JsonDb } from '../db/json-db.js';
+import type { StoredIdentity } from '../db/types.js';
 
 import { LeadsController } from './leads.controller.js';
-import { InMemoryLeadRepository, LEAD_REPOSITORY, seedLeads } from './leads.repository.js';
+import { JsonLeadRepository, LEAD_REPOSITORY } from './leads.repository.js';
 import { LeadsService } from './leads.service.js';
-
-function defaultOrganizationId(env: Env): string {
-  return env.DEFAULT_ORGANIZATION_ID ?? '0198f000-0000-7000-8000-000000000001';
-}
 
 @Module({
   imports: [AuthModule],
@@ -19,8 +18,9 @@ function defaultOrganizationId(env: Env): string {
     LeadsService,
     {
       provide: LEAD_REPOSITORY,
-      inject: [ENV],
-      useFactory: (env: Env) => new InMemoryLeadRepository(seedLeads(defaultOrganizationId(env))),
+      inject: [LEADS_DB, IDENTITIES_DB],
+      useFactory: (leadsDb: JsonDb<Lead>, identitiesDb: JsonDb<StoredIdentity>) =>
+        new JsonLeadRepository(leadsDb, identitiesDb),
     },
   ],
 })
