@@ -32,18 +32,21 @@ export const envSchema = z.object({
   WEB_ORIGIN: z.url({ protocol: /^https?$/ }).default('http://localhost:4200'),
 
   /**
-   * Aún **sin consumidor**: Prisma no está instalado en este hito. Se validan ya porque un typo
-   * en una URL de conexión es el fallo de despliegue más común, y porque `.env.example` y
-   * `docs/deployment.md` ya las nombran.
+   * URL de conexión a MySQL 8.0+. Es obligatoria porque la Fase 1 ya usa Prisma/MySQL como
+   * persistencia real (ver ADR-026).
    *
-   * Cuando Prisma y BullMQ entren (Hito 2), pasan a ser obligatorias: en ese momento la app no
-   * puede funcionar sin ellas y dejarlas opcionales sería una mentira.
-   *
-   * Se validan como URL con esquema restringido, no como cadena no vacía: un `postgresql://`
-   * mal formado es un fallo de despliegue que solo aparece en la primera consulta, cuando ya hay
-   * un usuario esperando.
+   * Se valida como URL con esquema restringido: un `mysql://` mal formado es un fallo de despliegue
+   * que solo aparece en la primera consulta, cuando ya hay un usuario esperando.
    */
-  DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }).optional(),
+  DATABASE_URL: z.url({ protocol: /^mysql$/ }),
+
+  /**
+   * URL de conexión a la base de datos de tests. Opcional: en tests se puede usar `DATABASE_URL`
+   * apuntando a `crm_test`, pero tener una variable separada evita pisar la base de desarrollo.
+   */
+  TEST_DATABASE_URL: z.url({ protocol: /^mysql$/ }).optional(),
+
+  /** Redis: aún sin consumidor en la Fase 1; se valida para evitar typos futuros. */
   REDIS_URL: z.url({ protocol: /^rediss?$/ }).optional(),
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -107,12 +110,6 @@ export const envSchema = z.object({
   DEFAULT_ORGANIZATION_ID: z.uuid().optional(),
 
   /**
-   * Ruta de la base de datos JSON. Si no se configura, se usa `apps/api/db` relativo al directorio
-   * de trabajo. En tests se apunta a un directorio temporal para no contaminar datos locales.
-   */
-  DB_PATH: z.string().min(1).optional(),
-
-  /**
    * Token estático de desarrollo para proteger endpoints de negocio antes de que exista
    * autenticación real (`docs/api.md` §9.2 nota). Fail-closed: sin él las rutas devuelven 401.
    *
@@ -120,6 +117,41 @@ export const envSchema = z.object({
    * que el modo de autenticación no es el real (JWT + permisos).
    */
   DEV_API_TOKEN: z.string().min(16).optional(),
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Autenticación JWT + refresh token
+  // ───────────────────────────────────────────────────────────────────────────
+
+  /** Secreto HS256 para firmar access tokens. Obligatorio en producción. */
+  JWT_SECRET: z.string().min(32).optional(),
+
+  /** `iss` del access token. */
+  JWT_ISSUER: z.string().min(1).default('crm-ventas.api'),
+
+  /** `aud` del access token. */
+  JWT_AUDIENCE: z.string().min(1).default('crm-ventas.web'),
+
+  /**
+   * Vida del access token en segundos.
+   *
+   * El contrato (`docs/api.md` §3.1) fija 15 minutos (900 s). Se permite configurar en tests y en
+   * desarrollo, pero en producción se fuerza a 900 s para no alargar la ventana de un token robado.
+   */
+  ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().min(60).max(3600).default(900),
+
+  /** Vida del refresh token en días. Contrato: 30 días. */
+  REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(30),
+
+  /** Password del usuario seed `OWNER` (`owner@crm-ventas.local`). Solo en desarrollo/test. */
+  OWNER_PASSWORD: z.string().min(8).optional(),
+
+  /**
+   * Umbral de intentos fallidos antes de bloquear la cuenta.
+   *
+   * Se aplica solo en modo con autenticación real. En desarrollo, con `OWNER_PASSWORD`, el seed ya
+   * crea el usuario; en producción el OWNER debe existir en la base de datos.
+   */
+  MAX_FAILED_ATTEMPTS: z.coerce.number().int().min(3).max(20).default(5),
 })
   // Reglas que **no** se pueden expresar campo a campo, porque dependen de dos valores a la vez.
   .superRefine((env, ctx) => {
@@ -146,6 +178,22 @@ export const envSchema = z.object({
         path: ['DEV_API_TOKEN'],
         message:
           'No se puede usar DEV_API_TOKEN en producción: las rutas de negocio deben usar autenticación real.',
+      });
+    }
+
+    if (env.NODE_ENV === 'production' && env.JWT_SECRET === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['JWT_SECRET'],
+        message: 'JWT_SECRET es obligatorio en producción.',
+      });
+    }
+
+    if (env.NODE_ENV === 'production' && env.ACCESS_TOKEN_TTL_SECONDS !== 900) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['ACCESS_TOKEN_TTL_SECONDS'],
+        message: 'En producción ACCESS_TOKEN_TTL_SECONDS debe ser 900 (15 minutos).',
       });
     }
   });

@@ -1,19 +1,27 @@
 import { Module } from '@nestjs/common';
 
+import { PrismaModule } from '../prisma/prisma.module.js';
+
 import { HealthController } from './health.controller.js';
+import { PrismaReadinessIndicator } from './prisma-readiness.indicator.js';
 import { READINESS_INDICATORS } from './readiness.js';
-import type { ReadinessIndicator } from './readiness.js';
 
 /**
- * Sondas registradas. Vacío en este hito: ver el comentario de `READINESS_INDICATORS`.
+ * Módulo de sondas de infraestructura.
  *
- * Es el único sitio que hay que tocar para añadir una: `{ provide: READINESS_INDICATORS, useValue:
- * [...], multi: true }` o, mejor, una fábrica que inyecte el cliente correspondiente.
+ * Hito 1: solo la sonda de MySQL vía Prisma. Cuando entre Redis/BullMQ (worker) se añadirá aquí
+ * una segunda sonda sin tocar `HealthController`.
  */
-const readinessIndicators: readonly ReadinessIndicator[] = [];
-
 @Module({
+  imports: [PrismaModule],
   controllers: [HealthController],
-  providers: [{ provide: READINESS_INDICATORS, useValue: readinessIndicators }],
+  providers: [
+    PrismaReadinessIndicator,
+    {
+      provide: READINESS_INDICATORS,
+      useFactory: (prisma: PrismaReadinessIndicator) => [prisma],
+      inject: [PrismaReadinessIndicator],
+    },
+  ],
 })
 export class HealthModule {}

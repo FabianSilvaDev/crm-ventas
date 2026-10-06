@@ -1,0 +1,168 @@
+:host {
+  display: block;
+}
+
+/* Layout compartido por login y setup: dos columnas (marca + formulario), luego apilado en móvil.
+   Los valores concretos viven en tokens.css. */
+.acceso {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100dvh;
+}
+
+.acceso__hero {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--s-8);
+  padding: var(--s-8) var(--s-7);
+  background: var(--c-surface-brand);
+  color: var(--c-text-on-brand);
+}
+
+.acceso__hero .brand__sub {
+  color: var(--c-text-on-brand-muted);
+}
+
+.acceso__claim {
+  margin: 0;
+  max-width: var(--measure-text);
+  font-size: var(--fs-3xl);
+  font-weight: 600;
+  line-height: var(--lh-display);
+}
+
+.acceso__facts {
+  display: grid;
+  gap: var(--s-4);
+  margin: 0;
+}
+
+.acceso__fact dt {
+  color: var(--c-text-on-brand-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+}
+
+.acceso__fact dd {
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+
+.acceso__main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s-7) var(--s-5);
+  background: var(--c-bg);
+}
+
+.acceso__card {
+  width: 100%;
+  max-width: var(--auth-card-width);
+  padding: var(--s-6);
+}
+
+.acceso__title {
+  margin: 0 0 var(--s-4);
+  color: var(--c-text);
+  font-size: var(--fs-3xl);
+  line-height: var(--lh-display);
+}
+
+.acceso__form {
+  display: grid;
+  gap: var(--s-4);
+}
+
+.acceso__estado {
+  margin: 0;
+  min-height: calc(var(--fs-sm) * var(--lh-base));
+  color: var(--c-text-muted);
+  font-size: var(--fs-sm);
+}
+
+.acceso__error-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.acceso__error-text {
+  margin: var(--s-1) 0 0;
+}
+
+.acceso__error-meta {
+  margin: var(--s-2) 0 0;
+  font-size: var(--fs-xs);
+}
+
+.acceso__demo {
+  margin-top: var(--s-6);
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--c-border);
+}
+
+.acceso__demo-text {
+  margin: 0;
+  color: var(--c-text-muted);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-base);
+}
+
+.acceso__register {
+  margin-top: var(--s-6);
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--c-border);
+}
+
+.acceso__register-text {
+  margin: 0 0 var(--s-3);
+  color: var(--c-text-muted);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-base);
+}
+
+.dialogo {
+  width: min(100%, var(--auth-card-width));
+  padding: var(--s-6);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg);
+  background: var(--c-surface);
+  color: var(--c-text);
+}
+
+.dialogo::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.dialogo__title {
+  margin: 0 0 var(--s-3);
+  font-size: var(--fs-2xl);
+  line-height: var(--lh-display);
+}
+
+.dialogo__hint {
+  margin: 0 0 var(--s-4);
+  color: var(--c-text-muted);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-base);
+}
+
+.dialogo__actions {
+  display: grid;
+  gap: var(--s-3);
+}
+
+@media (max-width: 900px) {
+  .acceso {
+    grid-template-columns: 1fr;
+  }
+
+  .acceso__hero {
+    gap: var(--s-5);
+    padding: var(--s-6) var(--s-5);
+  }
+}

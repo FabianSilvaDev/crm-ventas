@@ -35,12 +35,14 @@ export default defineConfig({
     environment: 'node',
     // Evita correr los tests también en `dist/`, que duplicaría el trabajo y el tiempo de suite.
     exclude: ['**/node_modules/**', '**/dist/**'],
-    // Los tests de integración levantan servidores Nest reales. Con el pool por defecto (`forks`) el
-    // overhead de crear varios workers hace que los `beforeAll` concurrentes superen el timeout de hook
-    // (10 s) cuando se ejecutan todos juntos. `vmThreads` con pocos hilos reduce ese overhead y deja
-    // pasar la suite completa en ~10 s en lugar de fallar por timeout.
+    // Los tests de integración levantan servidores Nest reales y comparten la misma base MySQL
+    // (`crm_test`). Correrlos en paralelo genera condiciones de carrera en el seed inicial y en
+    // `resetDatabase`, así que se ejecutan secuencialmente. `vmThreads` con un único hilo mantiene
+    // el soporte de decoradores heredados de Nest sin el overhead de procesos `fork`.
     pool: 'vmThreads',
     minThreads: 1,
-    maxThreads: 2,
+    maxThreads: 1,
+    fileParallelism: false,
+    globalSetup: ['./src/prisma/global-setup.ts'],
   },
 });

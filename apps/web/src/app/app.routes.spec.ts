@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { routes } from './app.routes';
 import { AuthApi } from './core/auth-api';
-import type { AuthResult, RefreshBody } from './core/auth-api';
+import type { AuthResult, MeBody, RefreshBody, SetupRequiredBody } from './core/auth-api';
 
 /**
  * Comprobación de la estructura de rutas, no de una pantalla concreta.
@@ -19,9 +19,9 @@ import type { AuthResult, RefreshBody } from './core/auth-api';
  *    cualquier URL. `/entrar` está declarada por delante justo por eso; un reordenado la haría
  *    rebotar contra el redirect en un ciclo, y el acceso sería inalcanzable.
  * 3. **El cierre del shell.** Desde que existe el guard, una URL profunda sin sesión tiene que
- *    acabar en el acceso y **no** montar la navegación. Es lo contrario del punto 1 y hay que
- *    probar los dos lados: un guard que no deja entrar a nadie deja la aplicación inservible y
- *    ninguno de los otros tests se enteraría.
+ *    acabar en el acceso o en setup y **no** montar la navegación. Es lo contrario del punto 1 y
+ *    hay que probar los dos lados: un guard que no deja entrar a nadie deja la aplicación inservible
+ *    y ninguno de los otros tests se enteraría.
  * 4. **La vuelta.** El guard guarda la URL pedida en `returnTo`; si se perdiera, entrar desde un
  *    enlace profundo dejaría al usuario en otra pantalla y parecería que el enlace no funcionó.
  *
@@ -41,6 +41,37 @@ class FakeAuthApi {
 
   refresh(): Promise<AuthResult<RefreshBody>> {
     return Promise.resolve(this.resultadoRefresh);
+  }
+
+  me(): Promise<AuthResult<MeBody>> {
+    return Promise.resolve({
+      outcome: 'ok',
+      httpStatus: 200,
+      traceId: TRACE,
+      body: {
+        id: 'u1',
+        email: 'owner@crm-ventas.local',
+        role: 'OWNER',
+        organization: { id: 'org1', name: 'Demo', slug: 'demo' },
+        permissions: ['READ_PRODUCTS'],
+        lastLoginAt: '2026-01-01T00:00:00.000Z',
+      },
+      problem: null,
+      transportError: null,
+      retryAfterSeconds: null,
+    });
+  }
+
+  setupRequired(): Promise<AuthResult<SetupRequiredBody>> {
+    return Promise.resolve({
+      outcome: 'ok',
+      httpStatus: 200,
+      traceId: TRACE,
+      body: { required: false },
+      problem: null,
+      transportError: null,
+      retryAfterSeconds: null,
+    });
   }
 }
 
@@ -108,7 +139,16 @@ describe('Rutas — el acceso', () => {
     expect(el.querySelector('main.acceso')).not.toBeNull();
     expect(shellMontado(el)).toBe(false);
     expect(el.querySelector('.skip-link')).toBeNull();
-    expect(el.textContent).toContain('todavía no autentica a nadie');
+    expect(el.textContent).toContain('Entrar');
+    expect(el.textContent).not.toContain('todavía no autentica a nadie');
+  });
+
+  it('/setup monta la pantalla de configuración inicial fuera del shell', async () => {
+    const { el } = await montar('/setup');
+
+    expect(el.querySelector('main.acceso')).not.toBeNull();
+    expect(shellMontado(el)).toBe(false);
+    expect(el.textContent).toContain('Configurar primera cuenta');
   });
 });
 
@@ -165,6 +205,7 @@ describe('Rutas — el shell, con sesión', () => {
       { url: '/ai', titulo: 'IA' },
       { url: '/analytics', titulo: 'Analytics' },
       { url: '/settings', titulo: 'Configuración' },
+      { url: '/settings/users', titulo: 'Usuarios' },
     ] as const;
 
     for (const r of rutas) {

@@ -112,6 +112,72 @@ describe('AuthApi', () => {
     await expect(promesa).resolves.toMatchObject({ outcome: 'ok' });
   });
 
+  it('`register` crea un AGENT con el token del OWNER', async () => {
+    const promesa = api.register('token-owner', 'nuevo@crm-ventas.local', 'ContraseñaSegura1!');
+
+    const peticion = http.expectOne('/api/v1/auth/register');
+    expect(peticion.request.method).toBe('POST');
+    expect(peticion.request.headers.get('Authorization')).toBe('Bearer token-owner');
+    expect(peticion.request.body).toEqual({
+      email: 'nuevo@crm-ventas.local',
+      password: 'ContraseñaSegura1!',
+      role: 'AGENT',
+    });
+    expect(peticion.request.withCredentials).toBe(false);
+
+    peticion.flush({
+      id: 'u2',
+      email: 'nuevo@crm-ventas.local',
+      role: 'AGENT',
+      organization: { id: 'org1', name: 'x', slug: 'x' },
+      permissions: ['READ_PRODUCTS'],
+      lastLoginAt: null,
+    });
+
+    await expect(promesa).resolves.toMatchObject({ outcome: 'ok', httpStatus: 200 });
+  });
+
+  it('`register` rechaza una respuesta sin `id` o `email`', async () => {
+    const promesa = api.register('token-owner', 'nuevo@crm-ventas.local', 'ContraseñaSegura1!');
+
+    http.expectOne('/api/v1/auth/register').flush({ role: 'AGENT' });
+
+    const resultado = await promesa;
+    expect(resultado.outcome).toBe('unreachable');
+    expect(resultado.body).toBeNull();
+  });
+
+  it('`setupRequired` consulta si la configuración inicial es necesaria', async () => {
+    const promesa = api.setupRequired();
+
+    const peticion = http.expectOne('/api/v1/auth/setup');
+    expect(peticion.request.method).toBe('GET');
+    expect(peticion.request.withCredentials).toBe(false);
+
+    peticion.flush({ required: true });
+
+    const resultado = await promesa;
+    expect(resultado.outcome).toBe('ok');
+    expect(resultado.body).toEqual({ required: true });
+  });
+
+  it('`setup` crea el OWNER y devuelve una sesión como login', async () => {
+    const promesa = api.setup('owner@crm-ventas.local', 'ContraseñaSegura1!', 'Mi Org');
+
+    const peticion = http.expectOne('/api/v1/auth/setup');
+    expect(peticion.request.method).toBe('POST');
+    expect(peticion.request.body).toEqual({
+      email: 'owner@crm-ventas.local',
+      password: 'ContraseñaSegura1!',
+      organizationName: 'Mi Org',
+    });
+    expect(peticion.request.withCredentials).toBe(true);
+
+    peticion.flush(RESPUESTA_DE_LOGIN);
+
+    await expect(promesa).resolves.toMatchObject({ outcome: 'ok', httpStatus: 200 });
+  });
+
   it('un `accessToken` vacío NO se da por bueno', async () => {
     // Un `""` pasa un `typeof === 'string'`. Aceptarlo dejaría la aplicación «autenticada» sin
     // credencial: no falla al entrar, falla en la primera petición de verdad, lejos de la causa.

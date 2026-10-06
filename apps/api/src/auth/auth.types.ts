@@ -6,7 +6,7 @@ import type { Request } from 'express';
  * controllers lo consumen tipado.
  */
 export interface RequestWithUser {
-  readonly user: AuthenticatedUser;
+  user: AuthenticatedUser;
 }
 
 /** Request de Express con el usuario tipado. */

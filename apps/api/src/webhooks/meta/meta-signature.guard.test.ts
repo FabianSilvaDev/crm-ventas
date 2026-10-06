@@ -9,11 +9,17 @@ import type { MockInstance } from 'vitest';
 import { ProblemDetailsFilter } from '../../common/problem-details.filter.js';
 import { ConfigModule } from '../../config/config.module.js';
 import { loadEnv } from '../../config/env.js';
+import { DEFAULT_TEST_DATABASE_URL } from '../../prisma/test-setup.js';
 import { META_SIGNATURE_HEADER, computeMetaSignature } from './meta-signature.js';
 import { MetaSignatureGuard } from './meta-signature.guard.js';
 
 const SECRET = 'secreto-de-prueba-de-meta-32-caracteres';
-const TEST_ENV = loadEnv({ META_APP_SECRET: SECRET, META_VERIFY_TOKEN: 'token-de-verificacion' });
+const TEST_ENV = loadEnv({
+  NODE_ENV: 'test',
+  DATABASE_URL: process.env['TEST_DATABASE_URL'] ?? DEFAULT_TEST_DATABASE_URL,
+  META_APP_SECRET: SECRET,
+  META_VERIFY_TOKEN: 'token-de-verificacion',
+});
 
 /** Un cuerpo con PII, para poder comprobar que **no** acaba en el log. */
 const CUERPO = JSON.stringify({

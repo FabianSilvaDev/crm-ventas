@@ -24,7 +24,14 @@ import { authGuard } from './shell/auth.guard';
  */
 export const routes: Routes = [
   {
-    // El acceso: la única pantalla que vive fuera del shell.
+    // Setup inicial: también fuera del shell. Se carga antes que /entrar para que, si la BD está
+    // vacía, el login pueda redirigir aquí sin rebotar contra el wildcard del shell.
+    path: 'setup',
+    title: 'Configurar · CRM de Ventas',
+    loadComponent: () => import('./features/setup/setup').then((m) => m.Setup),
+  },
+  {
+    // El acceso: vive fuera del shell.
     path: 'entrar',
     title: 'Entrar · CRM de Ventas',
     loadComponent: () => import('./features/login/login').then((m) => m.Login),
@@ -71,6 +78,11 @@ export const routes: Routes = [
         path: 'settings',
         title: 'Configuración · CRM de Ventas',
         loadComponent: () => import('./features/settings/settings').then((m) => m.Settings),
+      },
+      {
+        path: 'settings/users',
+        title: 'Usuarios · CRM de Ventas',
+        loadComponent: () => import('./features/settings/users/users').then((m) => m.Users),
       },
 
       // ── Rutas legado con datos reales: se mantienen activas ─────────────────

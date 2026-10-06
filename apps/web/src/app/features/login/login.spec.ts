@@ -5,7 +5,8 @@ import { buildProblem } from '@crm/contracts';
 import type { ErrorCode } from '@crm/contracts';
 import { describe, expect, it } from 'vitest';
 
-import type { AuthResult, LoginBody } from '../../core/auth-api';
+import type { AuthResult, LoginBody, RegisterBody, SetupRequiredBody } from '../../core/auth-api';
+import { AuthApi } from '../../core/auth-api';
 import { SessionService } from '../../core/session';
 import { Login } from './login';
 
@@ -38,6 +39,24 @@ class FakeSession {
   abrirDemo = true;
   demos = 0;
 
+  registrados: { email: string; password: string; asOwner: boolean }[] = [];
+  resultadoRegister: AuthResult<RegisterBody> = {
+    outcome: 'ok',
+    httpStatus: 201,
+    traceId: TRACE,
+    body: {
+      id: 'u2',
+      email: 'nuevo@crm-ventas.local',
+      role: 'AGENT',
+      organization: { id: 'org1', name: 'Org', slug: 'org' },
+      permissions: ['READ_PRODUCTS'],
+      lastLoginAt: null,
+    },
+    problem: null,
+    transportError: null,
+    retryAfterSeconds: null,
+  };
+
   #terminar: ((resultado: AuthResult<LoginBody>) => void) | null = null;
 
   login(email: string, password: string, rememberDevice: boolean): Promise<AuthResult<LoginBody>> {
@@ -57,6 +76,21 @@ class FakeSession {
     this.#terminar = null;
   }
 
+  async register(email: string, password: string): Promise<AuthResult<RegisterBody>> {
+    this.registrados.push({ email, password, asOwner: false });
+    return this.resultadoRegister;
+  }
+
+  async registerOwner(email: string, password: string): Promise<AuthResult<RegisterBody>> {
+    this.registrados.push({ email, password, asOwner: true });
+    return {
+      ...this.resultadoRegister,
+      body: this.resultadoRegister.body
+        ? { ...this.resultadoRegister.body, role: 'OWNER' }
+        : null,
+    };
+  }
+
   startDemoSession(): boolean {
     this.demos += 1;
     return this.abrirDemo;
@@ -69,6 +103,22 @@ class FakeRouter {
   navigateByUrl(url: string): Promise<boolean> {
     this.destinos.push(url);
     return Promise.resolve(true);
+  }
+}
+
+class FakeAuthApi {
+  resultadoSetupRequired: AuthResult<SetupRequiredBody> = {
+    outcome: 'ok',
+    httpStatus: 200,
+    traceId: TRACE,
+    body: { required: false },
+    problem: null,
+    transportError: null,
+    retryAfterSeconds: null,
+  };
+
+  async setupRequired(): Promise<AuthResult<SetupRequiredBody>> {
+    return this.resultadoSetupRequired;
   }
 }
 
@@ -89,7 +139,7 @@ class FakeRuta {
   };
 }
 
-function exito(): AuthResult<LoginBody> {
+function exito(permissions: readonly string[] = ['READ_PRODUCTS']): AuthResult<LoginBody> {
   return {
     outcome: 'ok',
     httpStatus: 200,
@@ -104,7 +154,7 @@ function exito(): AuthResult<LoginBody> {
         role: 'OWNER',
         status: 'ACTIVE',
         organizationId: 'org1',
-        permissions: ['READ_PRODUCTS'],
+        permissions,
       },
     },
     problem: null,
@@ -167,6 +217,7 @@ interface Escenario {
   readonly session: FakeSession;
   readonly router: FakeRouter;
   readonly ruta: FakeRuta;
+  readonly auth: FakeAuthApi;
 }
 
 /**
@@ -186,6 +237,7 @@ async function asentar(fixture: ComponentFixture<Login>): Promise<void> {
 async function montar(
   session = new FakeSession(),
   ruta = new FakeRuta(),
+  auth = new FakeAuthApi(),
 ): Promise<Escenario> {
   TestBed.resetTestingModule();
 
@@ -197,13 +249,14 @@ async function montar(
       { provide: SessionService, useValue: session },
       { provide: Router, useValue: router },
       { provide: ActivatedRoute, useValue: ruta },
+      { provide: AuthApi, useValue: auth },
     ],
   });
 
   const fixture = TestBed.createComponent(Login);
   await asentar(fixture);
 
-  return { fixture, el: fixture.nativeElement as HTMLElement, session, router, ruta };
+  return { fixture, el: fixture.nativeElement as HTMLElement, session, router, ruta, auth };
 }
 
 /** Monta con un `returnTo` ya puesto en la URL, como lo dejaría el guard. */
@@ -231,15 +284,14 @@ function enviar(el: HTMLElement, email: string, password: string): void {
 }
 
 describe('Acceso — la honestidad de la pantalla', () => {
-  it('el aviso de que no autentica a nadie está siempre, no solo cuando algo falla', async () => {
-    // Es lo único que separa esta pantalla de una frontera de seguridad falsa. Si este texto
-    // desaparece, la pantalla pasa a afirmar algo que no es cierto.
+  it('ya no muestra el aviso de que no autentica a nadie', async () => {
+    // El backend de autenticación ya existe. El aviso permanente se eliminó; el modo demostración
+    // sigue disponible solo en desarrollo.
     const { el } = await montar();
 
-    const aviso = el.querySelector('.note--warn');
-    expect(aviso?.textContent).toContain('todavía no autentica a nadie');
-    expect(aviso?.textContent).toContain('Hito 2');
-    expect(aviso?.textContent).toContain('404');
+    expect(el.textContent).not.toContain('todavía no autentica a nadie');
+    expect(el.textContent).not.toContain('Hito 2');
+    expect(el.querySelector('.note--warn')).toBeNull();
   });
 
   it('declara la política de contraseña del servidor y el autocompletado correcto', async () => {
@@ -256,6 +308,66 @@ describe('Acceso — la honestidad de la pantalla', () => {
     expect(correo.getAttribute('autocomplete')).toBe('username');
     expect(correo.getAttribute('type')).toBe('email');
     expect(el.querySelector('.field__hint')?.textContent).toContain('12 y 128');
+  });
+});
+
+describe('Acceso — setup inicial', () => {
+  it('muestra el botón de crear primera cuenta cuando no hay usuarios', async () => {
+    const auth = new FakeAuthApi();
+    auth.resultadoSetupRequired = {
+      outcome: 'ok',
+      httpStatus: 200,
+      traceId: TRACE,
+      body: { required: true },
+      problem: null,
+      transportError: null,
+      retryAfterSeconds: null,
+    };
+
+    const { el, router } = await montar(new FakeSession(), new FakeRuta(), auth);
+    const boton = el.querySelector<HTMLButtonElement>('.acceso__register button');
+
+    expect(boton).not.toBeNull();
+    expect(boton?.textContent).toContain('Crear primera cuenta');
+    expect(router.destinos).not.toContain('/setup');
+  });
+
+  it('clic en crear primera cuenta navega a /setup', async () => {
+    const auth = new FakeAuthApi();
+    auth.resultadoSetupRequired = {
+      outcome: 'ok',
+      httpStatus: 200,
+      traceId: TRACE,
+      body: { required: true },
+      problem: null,
+      transportError: null,
+      retryAfterSeconds: null,
+    };
+
+    const { fixture, el, router } = await montar(new FakeSession(), new FakeRuta(), auth);
+
+    el.querySelector<HTMLButtonElement>('.acceso__register button')?.click();
+    await asentar(fixture);
+
+    expect(router.destinos).toEqual(['/setup']);
+  });
+
+  it('no muestra el botón de registro si setup ya no es necesario', async () => {
+    const auth = new FakeAuthApi();
+    auth.resultadoSetupRequired = {
+      outcome: 'ok',
+      httpStatus: 200,
+      traceId: TRACE,
+      body: { required: false },
+      problem: null,
+      transportError: null,
+      retryAfterSeconds: null,
+    };
+
+    const { el, router } = await montar(new FakeSession(), new FakeRuta(), auth);
+
+    expect(el.querySelector('.acceso__register')).toBeNull();
+    expect(router.destinos).not.toContain('/setup');
   });
 });
 
@@ -323,7 +435,7 @@ describe('Acceso — el envío', () => {
 });
 
 describe('Acceso — los fallos', () => {
-  it('el 404 de la ruta sin montar se explica con el estado real del proyecto', async () => {
+  it('el 404 de la ruta sin montar se explica como servicio no disponible', async () => {
     const { fixture, el, session } = await montar();
 
     session.resultadoLogin = sinMontar();
@@ -331,7 +443,7 @@ describe('Acceso — los fallos', () => {
     await asentar(fixture);
 
     const error = el.querySelector('#acceso-error');
-    expect(error?.textContent).toContain('Hito 2');
+    expect(error?.textContent).toContain('no está respondiendo');
     // Tono informativo, no de error: no es culpa de quien lo lee ni tiene arreglo por su parte.
     expect(error?.classList.contains('note--warn')).toBe(true);
     expect(error?.classList.contains('alert--bad')).toBe(false);
@@ -451,6 +563,164 @@ describe('Acceso — la vuelta a la pantalla que pedía sesión', () => {
     await asentar(fixture);
 
     expect(router.destinos).toEqual(['/leads']);
+  });
+});
+
+describe('Acceso — herramienta de consola para registro (solo dev)', () => {
+  beforeEach(() => {
+    try {
+      sessionStorage.removeItem('__crm_reg_lock');
+    } catch {
+      // Ignorar entornos sin sessionStorage.
+    }
+  });
+
+  function abrirModal(
+    el: HTMLElement,
+    session: FakeSession,
+    fixture: ComponentFixture<Login>,
+  ): Promise<void> {
+    const w = window as unknown as Record<string, () => Promise<string>>;
+    return (async () => {
+      const mensaje = await w['__CRM_ENABLE_REGISTRATION']();
+      expect(mensaje).toContain('Diálogo de autorización abierto');
+      await asentar(fixture);
+    })();
+  }
+
+  function enviarModal(el: HTMLElement, email: string, password: string): void {
+    el.querySelector<HTMLInputElement>('#modal-email')!.value = email;
+    el.querySelector<HTMLInputElement>('#modal-password')!.value = password;
+    el.querySelector('dialog form')!.dispatchEvent(
+      new Event('submit', { bubbles: true, cancelable: true }),
+    );
+  }
+
+  it('expone __CRM_ENABLE_REGISTRATION en window tras montar', async () => {
+    await montar();
+
+    const fn = (window as unknown as Record<string, unknown>)['__CRM_ENABLE_REGISTRATION'];
+    expect(typeof fn).toBe('function');
+  });
+
+  it('habilita el formulario de registro para un OWNER con MANAGE_AGENTS', async () => {
+    const { fixture, el, session } = await montar();
+    session.resultadoLogin = exito(['MANAGE_AGENTS', 'READ_PRODUCTS']);
+
+    await abrirModal(el, session, fixture);
+    enviarModal(el, 'owner@crm-ventas.local', 'admin-pass');
+    await asentar(fixture);
+
+    expect(session.enviados).toEqual([
+      { email: 'owner@crm-ventas.local', password: 'admin-pass', rememberDevice: false },
+    ]);
+    expect(el.querySelector('#registro-email')).not.toBeNull();
+  });
+
+  it('rechaza habilitar registro para un AGENT', async () => {
+    const { fixture, el, session } = await montar();
+    session.resultadoLogin = {
+      ...exito(),
+      body: {
+        ...exito().body!,
+        user: {
+          ...exito().body!.user,
+          role: 'AGENT',
+          permissions: ['MANAGE_AGENTS'],
+        },
+      },
+    };
+
+    await abrirModal(el, session, fixture);
+    enviarModal(el, 'agent@crm-ventas.local', 'agent-pass');
+    await asentar(fixture);
+
+    expect(el.textContent).toContain('no es OWNER');
+    expect(el.querySelector('#registro-email')).toBeNull();
+  });
+
+  it('rechaza habilitar registro para un OWNER sin MANAGE_AGENTS', async () => {
+    const { fixture, el, session } = await montar();
+    session.resultadoLogin = exito(['READ_PRODUCTS']);
+
+    await abrirModal(el, session, fixture);
+    enviarModal(el, 'owner@crm-ventas.local', 'admin-pass');
+    await asentar(fixture);
+
+    expect(el.textContent).toContain('no tiene el permiso MANAGE_AGENTS');
+    expect(el.querySelector('#registro-email')).toBeNull();
+  });
+
+  it('bloquea la herramienta tras 3 intentos fallidos', async () => {
+    const { fixture, el, session } = await montar();
+    session.resultadoLogin = delContrato('AUTH_INVALID_CREDENTIALS');
+
+    await abrirModal(el, session, fixture);
+
+    enviarModal(el, 'x@x.com', 'mal');
+    await asentar(fixture);
+    expect(el.textContent).toContain('Te quedan 2 intentos');
+
+    enviarModal(el, 'x@x.com', 'mal');
+    await asentar(fixture);
+    expect(el.textContent).toContain('Te quedan 1 intento');
+
+    enviarModal(el, 'x@x.com', 'mal');
+    await asentar(fixture);
+
+    expect(el.textContent).toContain('se bloqueó por 60 minutos');
+
+    // Tras cerrarse, la función debe rechazar llamadas mientras dure el bloqueo.
+    const w = window as unknown as Record<string, () => Promise<string>>;
+    const mensaje = await w['__CRM_ENABLE_REGISTRATION']();
+    expect(mensaje).toContain('Herramienta bloqueada');
+  });
+
+  it('envía el formulario de registro y muestra el email creado', async () => {
+    const { fixture, el, session } = await montar();
+    session.resultadoLogin = exito(['MANAGE_AGENTS', 'READ_PRODUCTS']);
+
+    await abrirModal(el, session, fixture);
+    enviarModal(el, 'owner@crm-ventas.local', 'admin-pass');
+    await asentar(fixture);
+
+    el.querySelector<HTMLInputElement>('#registro-email')!.value = 'nuevo@crm-ventas.local';
+    el.querySelector<HTMLInputElement>('#registro-password')!.value = 'ContraseñaSegura1!';
+    el.querySelector<HTMLInputElement>('#registro-password-confirm')!.value = 'ContraseñaSegura1!';
+
+    el.querySelectorAll('form')[1]?.dispatchEvent(
+      new Event('submit', { bubbles: true, cancelable: true }),
+    );
+    await asentar(fixture);
+
+    expect(session.registrados).toEqual([
+      { email: 'nuevo@crm-ventas.local', password: 'ContraseñaSegura1!', asOwner: false },
+    ]);
+    expect(el.textContent).toContain('nuevo@crm-ventas.local');
+  });
+
+  it('envía OWNER cuando se marca la casilla de control total', async () => {
+    const { fixture, el, session } = await montar();
+    session.resultadoLogin = exito(['MANAGE_AGENTS', 'READ_PRODUCTS']);
+
+    await abrirModal(el, session, fixture);
+    enviarModal(el, 'owner@crm-ventas.local', 'admin-pass');
+    await asentar(fixture);
+
+    el.querySelector<HTMLInputElement>('#registro-email')!.value = 'nuevo-owner@crm-ventas.local';
+    el.querySelector<HTMLInputElement>('#registro-password')!.value = 'ContraseñaSegura1!';
+    el.querySelector<HTMLInputElement>('#registro-password-confirm')!.value = 'ContraseñaSegura1!';
+    el.querySelector<HTMLInputElement>('#registro-owner')!.checked = true;
+
+    el.querySelectorAll('form')[1]?.dispatchEvent(
+      new Event('submit', { bubbles: true, cancelable: true }),
+    );
+    await asentar(fixture);
+
+    expect(session.registrados).toEqual([
+      { email: 'nuevo-owner@crm-ventas.local', password: 'ContraseñaSegura1!', asOwner: true },
+    ]);
+    expect(el.textContent).toContain('OWNER');
   });
 });
 

@@ -2,8 +2,10 @@ import {
   Component,
   ElementRef,
   Injector,
+  OnInit,
   afterNextRender,
   computed,
+  effect,
   inject,
   isDevMode,
   signal,
@@ -12,6 +14,7 @@ import {
 import { Router, ActivatedRoute } from '@angular/router';
 
 import { environment } from '../../../environments/environment';
+import { AuthApi } from '../../core/auth-api';
 import { destinoSeguro } from '../../core/navigation';
 import { SessionService, puertaDeDemostracionAbierta } from '../../core/session';
 import type { LoginFailure } from './auth-errors';
@@ -22,15 +25,9 @@ import { comoFalloDeAcceso } from './auth-errors';
  *
  * ## Está FUERA del shell, y por eso el shell es una ruta
  *
- * Es la única pantalla del CRM que no lleva barra lateral. Un «Saltar al contenido» en una pantalla
- * que solo tiene un formulario saltaría a sí mismo, y veinte etapas de menú al lado de un formulario
- * de acceso invitan a hacer clic en algo que va a rebotar contra el guard.
- *
- * ## Esta pantalla todavía no autentica a nadie, y lo dice en voz alta
- *
- * El backend de acceso es del Hito 2 y no existe (ver `core/auth-api.ts`). El aviso de honestidad del
- * formulario es **permanente y no descartable**: no está detrás de un «+info» ni en letra pequeña,
- * porque es la única cosa que separa esta pantalla de una frontera de seguridad falsa.
+ * Una de las dos pantallas del CRM que no llevan barra lateral (la otra es `/setup`). Un «Saltar al
+ * contenido» en una pantalla que solo tiene un formulario saltaría a sí mismo, y veinte etapas de
+ * menú al lado de un formulario de acceso invitan a hacer clic en algo que va a rebotar contra el guard.
  *
  * ## Sin `@angular/forms`
  *
@@ -49,14 +46,47 @@ import { comoFalloDeAcceso } from './auth-errors';
   templateUrl: './login.html',
   styleUrl: './login.css',
 })
-export class Login {
+export class Login implements OnInit {
   readonly #session = inject(SessionService);
   readonly #router = inject(Router);
   readonly #ruta = inject(ActivatedRoute);
+  readonly #auth = inject(AuthApi);
   readonly #injector = inject(Injector);
 
   protected readonly enviando = signal(false);
   protected readonly fallo = signal<LoginFailure | null>(null);
+  protected readonly setupNecesario = signal(false);
+
+  /**
+   * Herramienta de desarrollo: registro directo desde el login.
+   *
+   * En desarrollo se expone `window.__CRM_ENABLE_REGISTRATION()` sin argumentos. Abre un diálogo
+   * propio que pide correo y contraseña. Si las credenciales pertenecen a un OWNER con `MANAGE_AGENTS`,
+   * aparece un formulario de registro en la propia pantalla de acceso. Tras 3 intentos fallidos el
+   * diálogo se cierra y la función queda bloqueada por `REGISTRATION_UNLOCK_COOLDOWN_MINUTES`.
+   * En producción la función no existe: `isDevMode()` es `false` y el build optimizado la elimina.
+   */
+  protected readonly registroHabilitado = signal(false);
+  protected readonly registroEnviando = signal(false);
+  protected readonly registroExito = signal<string | null>(null);
+  protected readonly registroFallo = signal<LoginFailure | null>(null);
+
+  /** Diálogo de autorización para la herramienta de consola de desarrollo. */
+  private readonly dialogo = viewChild<ElementRef<HTMLDialogElement>>('dialogoRegistro');
+  protected readonly modalAbierto = signal(false);
+  protected readonly modalEnviando = signal(false);
+  protected readonly modalFallo = signal<LoginFailure | null>(null);
+  protected readonly modalIntentos = signal(3);
+  protected readonly modalBloqueadoHasta = signal<number | null>(null);
+
+  /**
+   * Cooldown de la herramienta de consola, en minutos.
+   *
+   * Es una constante editable a propósito: cambiar este número cambia el tiempo de bloqueo tras 3
+   * intentos fallidos. No se expone al usuario final; solo existe para ajustar el comportamiento en
+   * desarrollo.
+   */
+  readonly #COOLDOWN_MINUTOS = 60;
 
   /**
    * El bloque de error, para poder llevar allí el foco después de un fallo.
@@ -114,6 +144,89 @@ export class Login {
     environment.demoSession,
     isDevMode(),
   );
+
+  /**
+   * Consulta si el backend aún no tiene usuarios. Cuando es así, muestra un botón para crear la
+   * primera cuenta en `/setup`. La redirección no es automática: el usuario debe elegir ir al setup,
+   * lo que evita sorpresas si abre `/entrar` a propósito.
+   */
+  constructor() {
+    /**
+     * Efecto para sincronizar el diálogo nativo con el estado de la señal. Se usa `effect` en vez de
+     * manipular el DOM directamente desde los handlers, porque en zoneless el repintado no es
+     * síncrono y abrir/cerrar el diálogo fuera de la reactividad puede dejarlo colgado.
+     */
+    effect(() => {
+      const abierto = this.modalAbierto();
+      const nativo = this.dialogo()?.nativeElement;
+      if (nativo === undefined) {
+        return;
+      }
+      // `jsdom` (usado en los tests) no implementa `HTMLDialogElement.showModal`. Se protege la
+      // llamada para que el entorno de pruebas no rompa, sin afectar el comportamiento real en
+      // navegadores.
+      if (abierto && !nativo.open && typeof nativo.showModal === 'function') {
+        nativo.showModal();
+      } else if (!abierto && nativo.open && typeof nativo.close === 'function') {
+        nativo.close();
+      }
+    });
+  }
+
+  async ngOnInit(): Promise<void> {
+    const resultado = await this.#auth.setupRequired();
+
+    this.setupNecesario.set(
+      resultado.outcome === 'ok' && resultado.body !== null && resultado.body.required,
+    );
+
+    this.#exponerHerramientaDeRegistro();
+  }
+
+  protected async goToSetup(): Promise<void> {
+    await this.#router.navigateByUrl('/setup');
+  }
+
+  /**
+   * Envía el formulario de registro de AGENT que se desbloquea por la herramienta de consola.
+   */
+  protected async onRegisterSubmit(event: Event): Promise<void> {
+    event.preventDefault();
+
+    if (this.registroEnviando()) {
+      return;
+    }
+
+    const { email, password, passwordConfirm, asOwner } = this.#leerFormularioRegistro(event);
+
+    this.registroFallo.set(null);
+    this.registroExito.set(null);
+
+    const clientError = this.#validarRegistro(password, passwordConfirm);
+    if (clientError !== null) {
+      this.registroFallo.set({
+        kind: 'validacion',
+        titulo: 'Revisa el formulario',
+        detalle: clientError,
+        problem: null,
+      });
+      return;
+    }
+
+    this.registroEnviando.set(true);
+    const resultado = asOwner
+      ? await this.#session.registerOwner(email, password)
+      : await this.#session.register(email, password);
+    this.registroEnviando.set(false);
+
+    if (resultado.outcome === 'ok' && resultado.body !== null) {
+      this.registroExito.set(`${resultado.body.email} (${resultado.body.role})`);
+      (event.target as HTMLFormElement).reset();
+      return;
+    }
+
+    this.registroFallo.set(comoFalloDeAcceso(resultado));
+  }
 
   protected async onSubmit(event: Event): Promise<void> {
     event.preventDefault();
@@ -184,6 +297,143 @@ export class Login {
   }
 
   /**
+   * Expone `window.__CRM_ENABLE_REGISTRATION` solo en desarrollo.
+   *
+   * La función no recibe argumentos: abre un diálogo propio para pedir correo y contraseña. Tras 3
+   * intentos fallidos queda bloqueada por `#COOLDOWN_MINUTOS`. En producción `isDevMode()` es falso,
+   * así que la función no se asigna y no queda rastro en `window`.
+   */
+  #exponerHerramientaDeRegistro(): void {
+    if (!isDevMode()) {
+      return;
+    }
+
+    const w = window as unknown as Record<string, unknown>;
+
+    w['__CRM_ENABLE_REGISTRATION'] = async (): Promise<string> => {
+      const bloqueadoHasta = this.#leerBloqueo();
+      if (bloqueadoHasta !== null && Date.now() < bloqueadoHasta) {
+        const minutosRestantes = Math.ceil((bloqueadoHasta - Date.now()) / 60_000);
+        return `Herramienta bloqueada. Intentá de nuevo en ${minutosRestantes} minutos.`;
+      }
+
+      this.modalBloqueadoHasta.set(null);
+      this.modalIntentos.set(3);
+      this.modalFallo.set(null);
+      this.modalEnviando.set(false);
+      this.modalAbierto.set(true);
+      return 'Diálogo de autorización abierto. Ingresá correo y contraseña.';
+    };
+  }
+
+  protected async onModalSubmit(event: Event): Promise<void> {
+    event.preventDefault();
+
+    if (this.modalEnviando() || this.modalBloqueadoHasta() !== null) {
+      return;
+    }
+
+    const { email, password } = this.#leerFormularioModal(event);
+
+    this.modalEnviando.set(true);
+    this.modalFallo.set(null);
+
+    const resultado = await this.#session.login(email, password, false);
+    this.modalEnviando.set(false);
+
+    if (resultado.outcome === 'ok' && resultado.body !== null) {
+      const user = resultado.body.user;
+      if (user.role !== 'OWNER') {
+        this.#registrarFalloModal(`El usuario ${user.email} no es OWNER (rol: ${user.role}).`);
+        return;
+      }
+      if (!user.permissions.includes('MANAGE_AGENTS')) {
+        this.#registrarFalloModal(`El OWNER ${user.email} no tiene el permiso MANAGE_AGENTS.`);
+        return;
+      }
+
+      this.registroHabilitado.set(true);
+      this.modalAbierto.set(false);
+      this.#limpiarBloqueo();
+      return;
+    }
+
+    const detalle =
+      resultado.problem?.code === 'AUTH_INVALID_CREDENTIALS'
+        ? 'Correo o contraseña incorrectos.'
+        : (resultado.transportError ?? 'No se pudo autenticar.');
+    this.#registrarFalloModal(detalle);
+  }
+
+  protected cerrarModal(): void {
+    this.modalAbierto.set(false);
+  }
+
+  #registrarFalloModal(detalle: string): void {
+    const restantes = this.modalIntentos() - 1;
+    this.modalIntentos.set(restantes);
+
+    if (restantes <= 0) {
+      const hasta = Date.now() + this.#COOLDOWN_MINUTOS * 60_000;
+      this.modalBloqueadoHasta.set(hasta);
+      this.#guardarBloqueo(hasta);
+      this.modalFallo.set({
+        kind: 'otro',
+        titulo: 'Demasiados intentos',
+        detalle: `La herramienta se bloqueó por ${this.#COOLDOWN_MINUTOS} minutos.`,
+        problem: null,
+      });
+      this.modalAbierto.set(false);
+      return;
+    }
+
+    this.modalFallo.set({
+      kind: 'credenciales',
+      titulo: 'No se pudo autorizar',
+      detalle: `${detalle} Te quedan ${restantes} ${restantes === 1 ? 'intento' : 'intentos'}.`,
+      problem: null,
+    });
+  }
+
+  #leerFormularioModal(event: Event): { email: string; password: string } {
+    const datos = new FormData(event.target as HTMLFormElement);
+    return {
+      email: String(datos.get('modal-email') ?? '').trim(),
+      password: String(datos.get('modal-password') ?? ''),
+    };
+  }
+
+  #guardarBloqueo(hasta: number): void {
+    try {
+      sessionStorage.setItem('__crm_reg_lock', String(hasta));
+    } catch {
+      // sessionStorage puede fallar en modo privado con quota excedida. El bloqueo solo afecta a
+      // recargas de página; sin persistencia, la función sigue bloqueada en esta pestaña.
+    }
+  }
+
+  #leerBloqueo(): number | null {
+    try {
+      const raw = sessionStorage.getItem('__crm_reg_lock');
+      if (raw === null) {
+        return null;
+      }
+      const parsed = Number(raw);
+      return Number.isNaN(parsed) ? null : parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  #limpiarBloqueo(): void {
+    try {
+      sessionStorage.removeItem('__crm_reg_lock');
+    } catch {
+      // Ignorar si sessionStorage no está disponible.
+    }
+  }
+
+  /**
    * Lee los valores del formulario **en el momento del envío**.
    *
    * `rememberDevice` va fijo a `false` y no hay casilla que lo active: el contrato documenta el campo
@@ -198,6 +448,60 @@ export class Login {
       email: String(datos.get('email') ?? '').trim(),
       password: String(datos.get('password') ?? ''),
     };
+  }
+
+  /**
+   * Lee los valores del formulario de registro de AGENT u OWNER.
+   */
+  #leerFormularioRegistro(event: Event): {
+    email: string;
+    password: string;
+    passwordConfirm: string;
+    asOwner: boolean;
+  } {
+    const datos = new FormData(event.target as HTMLFormElement);
+
+    return {
+      email: String(datos.get('registro-email') ?? '').trim(),
+      password: String(datos.get('registro-password') ?? ''),
+      passwordConfirm: String(datos.get('registro-password-confirm') ?? ''),
+      asOwner: datos.get('registro-owner') === 'on',
+    };
+  }
+
+  /**
+   * Validación mínima del formulario de registro. El servidor tiene la validación definitiva.
+   */
+  #validarRegistro(password: string, passwordConfirm: string): string | null {
+    if (password.length < 12) {
+      return 'La contraseña debe tener al menos 12 caracteres.';
+    }
+
+    if (password.length > 128) {
+      return 'La contraseña no puede superar los 128 caracteres.';
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      return 'La contraseña debe incluir al menos una mayúscula.';
+    }
+
+    if (!/[a-z]/.test(password)) {
+      return 'La contraseña debe incluir al menos una minúscula.';
+    }
+
+    if (!/\d/.test(password)) {
+      return 'La contraseña debe incluir al menos un número.';
+    }
+
+    if (!/[^A-Za-z0-9]/.test(password)) {
+      return 'La contraseña debe incluir al menos un símbolo.';
+    }
+
+    if (password !== passwordConfirm) {
+      return 'Las dos contraseñas no coinciden.';
+    }
+
+    return null;
   }
 
   /**

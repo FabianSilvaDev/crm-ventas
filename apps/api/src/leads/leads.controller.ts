@@ -27,7 +27,7 @@ import type {
   LeadUpdate,
 } from '@crm/contracts';
 
-import { DevAuthGuard } from '../auth/dev-auth.guard.js';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { PermissionsGuard } from '../auth/permissions.guard.js';
 import { RequirePermission } from '../auth/require-permission.decorator.js';
 import { ENV } from '../config/config.module.js';
@@ -42,7 +42,7 @@ import { LeadsService } from './leads.service.js';
  * ETag/If-Match ni idempotencia: son capas que se añaden cuando la persistencia sea real.
  */
 @Controller('leads')
-@UseGuards(DevAuthGuard, PermissionsGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class LeadsController {
   constructor(
     private readonly service: LeadsService,

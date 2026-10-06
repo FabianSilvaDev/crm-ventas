@@ -3,17 +3,20 @@
   "version": "0.0.0",
   "private": true,
   "description": "CRM de ventas + plataforma de marketing con IA. Uso interno.",
-  "packageManager": "pnpm@12.8.1",
+  "packageManager": "pnpm@12.8.1+sha512.f64ba907507f5ceafe06c8d38e6052d0179444580ec1279ddd5bfc11cb48aa8a2644b66598e07e761da84872a9fc57d5f902b87fa49d024198d558612aabbe45",
   "engines": {
     "node": ">=22.0.0"
   },
   "scripts": {
     "build": "tsc -b",
     "clean": "tsc -b --clean",
-    "typecheck": "corepack pnpm -r typecheck",
-    "test": "corepack pnpm -r --workspace-concurrency=1 test",
-    "dev": "corepack pnpm --filter @crm/api dev",
-    "start": "corepack pnpm --filter @crm/api start"
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r --workspace-concurrency=1 test",
+    "dev": "pnpm --filter @crm/api dev",
+    "start": "pnpm --filter @crm/api start",
+    "stop": "taskkill //F //IM node.exe || true",
+    "dev:all": "bash scripts/start-dev.sh",
+    "stop:all": "bash scripts/stop-dev.sh"
   },
   "devDependencies": {
     "@types/node": "^26.6.3",

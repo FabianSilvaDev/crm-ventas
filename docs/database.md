@@ -1,9 +1,16 @@
 # Database Model
 
-PostgreSQL 17+. Extensiones: `pgvector`, `pg_trgm`, `citext`, `pgcrypto`.
-ORM: Prisma (migraciones versionadas). SQL crudo para agregaciones analíticas.
+**Estado actual (Fase 1):** motor relacional **MySQL 8.0+**, ORM Prisma, migraciones versionadas.
+Ver ADR-026 (`docs/decisions.md`) para la justificación del cambio respecto al diseño original
+PostgreSQL.
 
-> Convenciones: `id` es `uuid` (v7, ordenable por tiempo) salvo donde se indique.
+> El diseño detallado más abajo sigue usando tipos PostgreSQL porque describe el modelo a largo
+> plazo. Las entidades que entran en la Fase 1 (`organizations`, `users`, `refresh_tokens`,
+> `identities`, `leads`) se implementan ahora en MySQL con tipos equivalentes (ver
+> `apps/api/prisma/schema.prisma`).
+
+> Convenciones: `id` es `uuid` (v7 ordenable por tiempo en el diseño; v4 mientras Prisma no lo
+> genere nativamente) salvo donde se indique.
 > `created_at`/`updated_at` en toda tabla. `organization_id` en toda tabla de negocio.
 > Borrado: **soft delete** (`deleted_at`) en entidades de negocio; **nunca** hard delete desde la IA.
 

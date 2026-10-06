@@ -45,13 +45,13 @@ function sinRespuesta(transportError: string, httpStatus: number | null = null):
 
 describe('comoFalloDeAcceso', () => {
   it('el 404 de una ruta sin montar se reconoce ANTES que cualquier otra cosa', () => {
-    // El caso de hoy: el módulo auth no existe. Un 404 sin `problem` también encaja en «no hubo
+    // El caso de hoy: el módulo auth puede no existir. Un 404 sin `problem` también encaja en «no hubo
     // respuesta interpretable», así que sin esta comprobación primero el mensaje sería «no se pudo
-    // contactar con el servidor», que manda a mirar el puerto en vez de a mirar el Hito 2.
+    // contactar con el servidor», que manda a mirar el puerto en vez de a mirar si el servicio de auth está montado.
     const fallo = comoFalloDeAcceso(sinRespuesta('Respuesta de error con un cuerpo que no es problem+json.', 404));
 
     expect(fallo.kind).toBe('servicio-ausente');
-    expect(fallo.detalle).toContain('Hito 2');
+    expect(fallo.detalle).toContain('no está respondiendo');
   });
 
   it('el mensaje de credenciales inválidas no distingue si el correo existe', () => {

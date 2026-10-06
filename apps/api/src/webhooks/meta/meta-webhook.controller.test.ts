@@ -3,12 +3,13 @@ import type { AddressInfo } from 'node:net';
 import { Logger } from '@nestjs/common';
 import type { INestApplication } from '@nestjs/common';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { MockInstance } from 'vitest';
-
 import { createApp } from '../../app.factory.js';
 import { loadEnv } from '../../config/env.js';
-import { respuestaDe } from './meta-webhook.controller.js';
+import { createTestPrisma, DEFAULT_TEST_DATABASE_URL, resetDatabase } from '../../prisma/test-setup.js';
 import { computeMetaSignature, META_SIGNATURE_HEADER } from './meta-signature.js';
+import { respuestaDe } from './meta-webhook.controller.js';
+
+import type { MockInstance } from 'vitest';
 
 const SECRET = 'secreto-de-meta-para-las-pruebas-de-integracion';
 const VERIFY_TOKEN = 'token-de-verificacion-de-pruebas';
@@ -23,8 +24,10 @@ const VERIFY_TOKEN = 'token-de-verificacion-de-pruebas';
  * estas pruebas recibiendo 429.
  */
 const TEST_ENV = loadEnv({
+  NODE_ENV: 'test',
   META_APP_SECRET: SECRET,
   META_VERIFY_TOKEN: VERIFY_TOKEN,
+  DATABASE_URL: process.env['TEST_DATABASE_URL'] ?? DEFAULT_TEST_DATABASE_URL,
 });
 
 const CAMBIOS_VALIDOS = [
@@ -44,6 +47,7 @@ function sobre(cambios: unknown, object = 'page'): string {
 let app: INestApplication;
 let base: string;
 let warnSpy: MockInstance;
+let testPrisma: ReturnType<typeof createTestPrisma>;
 
 interface Respuesta {
   readonly status: number;
@@ -91,6 +95,9 @@ function firmar(cuerpo: string): string {
 }
 
 beforeAll(async () => {
+  testPrisma = createTestPrisma(TEST_ENV.DATABASE_URL);
+  await resetDatabase(testPrisma);
+
   // Los guards y el filtro registran; se silencia y se captura a la vez.
   warnSpy = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
   vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
@@ -103,7 +110,9 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await app.close();
+  await app?.close();
+  await resetDatabase(testPrisma);
+  await testPrisma?.$disconnect();
   vi.restoreAllMocks();
 });
 

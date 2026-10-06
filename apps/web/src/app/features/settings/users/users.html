@@ -1,0 +1,118 @@
+<section class="users" aria-labelledby="users-title">
+  <header class="page__head">
+    <div>
+      <h1 id="users-title" class="page__title">Usuarios y permisos</h1>
+      <p class="page__sub">Crea cuentas de AGENT para tu equipo dentro de esta organización.</p>
+    </div>
+    <button class="btn btn--ghost" type="button" (click)="goBack()">Volver a configuración</button>
+  </header>
+
+  @if (isDemo()) {
+    <div class="banner banner--demo">
+      <p>
+        <strong>Modo demostración.</strong> La sesión es simulada, así que no se pueden crear
+        usuarios reales. En una sesión normal, aquí se registrarían AGENT dentro de la organización.
+      </p>
+    </div>
+  }
+
+  @if (!canManageUsers() && !isDemo()) {
+    <div class="empty">
+      <app-icon class="empty__icon" name="attention" size="lg" />
+      <h2 class="empty__title">No tienes permiso para crear usuarios</h2>
+      <p class="empty__text">
+        Se necesita el permiso <code>MANAGE_AGENTS</code>. Si crees que deberías tenerlo, habla con
+        el OWNER de la organización.
+      </p>
+    </div>
+  } @else {
+    <div class="card users__card">
+      <h2 class="card__title">Registrar nuevo AGENT</h2>
+      <p class="card__hint">Solo se puede crear el rol AGENT. El OWNER sigue siendo seed-only.</p>
+
+      @if (createdEmail(); as email) {
+        <div class="banner banner--info" role="status">
+          <p>
+            <strong>Usuario creado:</strong> {{ email }} puede ahora entrar en
+            <code>/entrar</code> con su correo y contraseña.
+          </p>
+        </div>
+      }
+
+      @if (failure(); as f) {
+        <div
+          #resumen
+          id="users-error"
+          role="alert"
+          tabindex="-1"
+          class="alert alert--bad"
+        >
+          <p class="users__error-title">{{ f.title }}</p>
+          <p class="users__error-text">{{ f.detail }}</p>
+          @if (f.code; as code) {
+            <p class="users__error-meta mono">{{ code }} · traza {{ f.traceId ?? '—' }}</p>
+          }
+        </div>
+      }
+
+      <form class="users__form" (submit)="onSubmit($event)">
+        <div class="field">
+          <label class="field__label" for="users-email">Correo</label>
+          <input
+            #emailInput
+            class="field__input"
+            id="users-email"
+            name="email"
+            type="email"
+            autocomplete="off"
+            required
+            [disabled]="outcome() === 'sending'"
+          />
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="users-password">Contraseña</label>
+          <input
+            class="field__input"
+            id="users-password"
+            name="password"
+            type="password"
+            autocomplete="new-password"
+            required
+            minlength="12"
+            maxlength="128"
+            [disabled]="outcome() === 'sending'"
+          />
+          <span class="field__hint" id="users-password-hint">
+            Mínimo 12 caracteres, mayúscula, minúscula, número y símbolo.
+          </span>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="users-password-confirm">Repetir contraseña</label>
+          <input
+            class="field__input"
+            id="users-password-confirm"
+            name="passwordConfirm"
+            type="password"
+            autocomplete="new-password"
+            required
+            minlength="12"
+            maxlength="128"
+            [disabled]="outcome() === 'sending'"
+          />
+        </div>
+
+        <p class="users__estado" role="status">{{ outcome() === 'sending' ? 'Creando usuario…' : '' }}</p>
+
+        <button
+          class="btn btn--lg btn--block"
+          type="submit"
+          [disabled]="outcome() === 'sending'"
+        >
+          Registrar AGENT
+        </button>
+      </form>
+    </div>
+  }
+</section>

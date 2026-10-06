@@ -5,22 +5,10 @@ import { firstValueFrom } from 'rxjs';
 import type { ProblemDetails } from '@crm/contracts';
 
 /**
- * Cliente de `POST /auth/login`, `/auth/refresh`, `/auth/logout` y `GET /auth/me`
- * (`docs/api.md` §3.2–3.6).
+ * Cliente de `POST /auth/login`, `/auth/refresh`, `/auth/logout`, `GET /auth/me` y
+ * `POST /auth/register` (`docs/api.md` §3.2–3.7).
  *
- * ## Estado real de estos endpoints: NO EXISTEN
- *
- * El backend de autenticación es del **Hito 2**: no hay módulo `auth` en `apps/api`, ni tablas
- * `users`/`refresh_tokens`, ni dependencias de hashing o de JWT. Hoy estas cuatro rutas devuelven el
- * 404 por defecto de Nest, que **no** es problem+json. Eso no es un fallo de este cliente: es el
- * estado del proyecto, y la pantalla de acceso lo dice con esas palabras en vez de disimularlo.
- *
- * Se escriben igualmente, contra el contrato ya congelado, por una razón práctica: la parte difícil
- * de esta pantalla —los desenlaces, el `Retry-After`, la distinción entre «no existe la ruta» y «no
- * hay red»— no se puede validar contra un contrato imaginario. Tenerla escrita y probada antes de
- * que exista el servidor ahorra rehacerla. Lo que NO se hace es fingir que autentica.
- *
- * ## Los tres desenlaces, otra vez
+ * ## Los tres desenlaces
  *
  * Mismos que `core/health.ts` y `core/leads-api.ts`, y por el mismo motivo: `ok`, `problem` (el API
  * respondió un error del contrato) y `unreachable` (no hubo respuesta interpretable) exigen acciones
@@ -30,13 +18,8 @@ import type { ProblemDetails } from '@crm/contracts';
  *
  * ADR-012 dice que los tipos de API viven en `@crm/contracts`, de donde se genera el OpenAPI y el
  * cliente. Ese pipeline **todavía no existe** —el propio `core/leads-api.ts` lo dice de sí mismo—,
- * pero al menos encuentra allí los tipos de leads ya escritos. Los de auth no están, y no deberían
- * estar: el contrato es la promesa de lo que el API **hace**, y declarar un contrato de algo que no
- * está implementado es exactamente el tipo de documento que acaba mintiendo.
- *
- * Consecuencia, dicha sin adornos: **cuando el Hito 2 implemente el módulo `auth`, estas formas deben
- * mudarse a `@crm/contracts` y borrarse de aquí.** Queda escrito junto al código y no en un
- * documento aparte, porque es aquí donde se va a leer.
+ * por lo que los tipos de auth viven aquí de forma provisional. Cuando exista el pipeline de
+ * generación, estas formas deben mudarse a `@crm/contracts` y borrarse de aquí.
  *
  * ## Por qué las cookies importan (`withCredentials`)
  *
@@ -84,7 +67,21 @@ export interface RefreshBody {
   };
 }
 
-/** Usuario de `GET /auth/me` (§3.6). El único que trae la organización y los permisos efectivos. */
+/** Usuario de `POST /auth/register` (§3.6). Crea un AGENT y devuelve su perfil. */
+export interface RegisterBody {
+  readonly id: string;
+  readonly email: string;
+  readonly role: string;
+  readonly organization: {
+    readonly id: string;
+    readonly name: string;
+    readonly slug: string;
+  };
+  readonly permissions: readonly string[];
+  readonly lastLoginAt: string | null;
+}
+
+/** Usuario de `GET /auth/me` (§3.7). El único que trae la organización y los permisos efectivos. */
 export interface MeBody {
   readonly id: string;
   readonly email: string;
@@ -97,6 +94,14 @@ export interface MeBody {
   readonly permissions: readonly string[];
   readonly lastLoginAt: string;
 }
+
+/** Respuesta de `GET /auth/setup` (§3.10). */
+export interface SetupRequiredBody {
+  readonly required: boolean;
+}
+
+/** Cuerpo de éxito de `POST /auth/setup` (§3.11). Igual forma que login. */
+export interface SetupBody extends LoginBody {}
 
 export type AuthOutcome = 'ok' | 'problem' | 'unreachable';
 
@@ -124,6 +129,9 @@ const RETRY_AFTER_HEADER = 'Retry-After';
 const RUTA_LOGIN = '/api/v1/auth/login';
 const RUTA_REFRESH = '/api/v1/auth/refresh';
 const RUTA_LOGOUT = '/api/v1/auth/logout';
+const RUTA_REGISTER = '/api/v1/auth/register';
+const RUTA_REGISTER_OWNER = '/api/v1/auth/register-owner';
+const RUTA_SETUP = '/api/v1/auth/setup';
 const RUTA_ME = '/api/v1/auth/me';
 
 interface OpcionesDePeticion<T> {
@@ -184,7 +192,76 @@ export class AuthApi {
     });
   }
 
-  /** El único método que lleva `Authorization`: los demás se autentican con la cookie. */
+  /**
+   * Crea un usuario AGENT dentro de la organización autenticada (§3.6).
+   *
+   * Requiere access token de un usuario con permiso `MANAGE_AGENTS`. El endpoint no devuelve una
+   * sesión: el nuevo usuario debe entrar por `/entrar` con su correo y contraseña.
+   */
+  async register(
+    accessToken: string,
+    email: string,
+    password: string,
+  ): Promise<AuthResult<RegisterBody>> {
+    return this.#pedir<RegisterBody>(RUTA_REGISTER, {
+      method: 'POST',
+      body: { email, password, role: 'AGENT' },
+      withCredentials: false,
+      headers: { Authorization: `Bearer ${accessToken}` },
+      validar: comoRegister,
+    });
+  }
+
+  /** Detecta si la aplicación necesita configuración inicial (§3.10). Público. */
+  async setupRequired(): Promise<AuthResult<SetupRequiredBody>> {
+    return this.#pedir<SetupRequiredBody>(RUTA_SETUP, {
+      method: 'GET',
+      body: null,
+      withCredentials: false,
+      validar: comoSetupRequired,
+    });
+  }
+
+  /**
+   * Crea el primer OWNER y la organización por defecto (§3.11). Público pero fail-closed: si ya hay
+   * usuarios, el servidor devuelve `409 STATE_CONFLICT`.
+   *
+   * La respuesta tiene la misma forma que login, así que el cliente puede abrir sesión inmediatamente.
+   */
+  async setup(
+    email: string,
+    password: string,
+    organizationName?: string,
+  ): Promise<AuthResult<SetupBody>> {
+    return this.#pedir<SetupBody>(RUTA_SETUP, {
+      method: 'POST',
+      body: { email, password, organizationName },
+      withCredentials: true,
+      validar: comoSetup,
+    });
+  }
+
+  /**
+   * Crea un OWNER adicional dentro de la organización autenticada.
+   *
+   * Requiere access token de un OWNER con `MANAGE_AGENTS`. Es la herramienta de consola de desarrollo;
+   * la UI normal no expone este endpoint.
+   */
+  async registerOwner(
+    accessToken: string,
+    email: string,
+    password: string,
+  ): Promise<AuthResult<RegisterBody>> {
+    return this.#pedir<RegisterBody>(RUTA_REGISTER_OWNER, {
+      method: 'POST',
+      body: { email, password },
+      withCredentials: false,
+      headers: { Authorization: `Bearer ${accessToken}` },
+      validar: comoRegister,
+    });
+  }
+
+  /** El único método de lectura que lleva `Authorization`: los demás se autentican con la cookie. */
   async me(accessToken: string): Promise<AuthResult<MeBody>> {
     return this.#pedir<MeBody>(RUTA_ME, {
       method: 'GET',
@@ -277,11 +354,10 @@ function sinRespuesta<T>(transportError: string): AuthResult<T> {
 /**
  * ¿El 404 significa «esta ruta no está montada» y no «el recurso no existe»?
  *
- * La condición tiene dos brazos a propósito. Con el API arrancado pero sin el módulo `auth`, Nest
- * responde su 404 por defecto, que **no** es problem+json y por tanto llega con `problem === null`.
- * Con el módulo implementado, la misma situación se expresaría con `RESOURCE_NOT_FOUND`. Mirar solo
- * el código del contrato dejaría el caso de hoy sin detectar, y el usuario vería «error 404» en vez
- * de «el servicio de acceso todavía no está desplegado».
+ * La condición tiene dos brazos a propósito. Si una ruta de auth no está montada, Nest responde su
+ * 404 por defecto, que **no** es problem+json y por tanto llega con `problem === null`. Con el
+ * módulo implementado, la misma situación se expresaría con `RESOURCE_NOT_FOUND`. Mirar solo el
+ * código del contrato dejaría el caso de ruta ausente sin detectar.
  *
  * Vive aquí y no en la pantalla porque la usan dos sitios: la pantalla, para elegir el mensaje, y
  * `core/session.ts`, para decidir si merece la pena volver a preguntar el refresh más adelante.
@@ -391,6 +467,36 @@ function comoMe(valor: unknown): MeBody | null {
   }
 
   return valor as MeBody;
+}
+
+function comoRegister(valor: unknown): RegisterBody | null {
+  const campos = comoCampos(valor);
+
+  if (campos === null || typeof campos['id'] !== 'string' || typeof campos['email'] !== 'string') {
+    return null;
+  }
+
+  return valor as RegisterBody;
+}
+
+function comoSetupRequired(valor: unknown): SetupRequiredBody | null {
+  const campos = comoCampos(valor);
+
+  if (campos === null || typeof campos['required'] !== 'boolean') {
+    return null;
+  }
+
+  return valor as SetupRequiredBody;
+}
+
+function comoSetup(valor: unknown): SetupBody | null {
+  const campos = comoCampos(valor);
+
+  if (campos === null || !tieneTokenYUsuario(campos)) {
+    return null;
+  }
+
+  return valor as SetupBody;
 }
 
 /**

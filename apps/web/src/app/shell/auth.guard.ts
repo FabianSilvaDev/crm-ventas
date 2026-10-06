@@ -14,9 +14,8 @@ import { SessionService } from '../core/session';
  * saltárselo: basta con abrir las herramientas del navegador, o llamar al API directamente con `curl`.
  *
  * La autorización de verdad es `@RequirePermission` **en el servidor** (`docs/security.md` §3.4), con
- * el `permission` del token y la política de cada recurso en la base de datos. Y ese control tampoco
- * existe todavía: es del Hito 2. Mientras no exista, cada endpoint nuevo es una puerta abierta y hay
- * que tratarlo como tal. Ver ADR-024.
+ * el `permission` del token y la política de cada recurso en la base de datos. Ese control ya existe
+ * en el módulo de auth (ADR-024 y ADR-025); este guard sigue siendo solo UX, no seguridad.
  *
  * ## Por qué espera a `ensureRestored()` y no lee un booleano
  *

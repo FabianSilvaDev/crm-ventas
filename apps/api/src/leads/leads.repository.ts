@@ -1,15 +1,27 @@
 import { randomUUID } from 'node:crypto';
 
-import type { ClosedVia, Consent, IdentitySummary, Lead, LeadCreate, LeadUpdate } from '@crm/contracts';
+import { Inject, Injectable } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 
-import type { JsonDb } from '../db/json-db.js';
+import type {
+  ClosedVia,
+  Consent,
+  IdentitySummary,
+  Lead,
+  LeadChannel,
+  LeadCreate,
+  LeadStatus,
+  LeadUpdate,
+} from '@crm/contracts';
+
 import type { StoredIdentity } from '../db/types.js';
+import { PrismaService } from '../prisma/prisma.service.js';
 
 /**
  * Puerto de salida del agregado Lead.
  *
- * Es async porque toda persistencia real (JSON hoy, Prisma mañana) es asíncrona. Los controladores y
- * servicios deben esperar las promesas, pero el contrato no cambia cuando se cambie la implementación.
+ * Es async porque toda persistencia real es asíncrona. Los controladores y servicios esperan las
+ * promesas, pero el contrato no cambia cuando se cambie la implementación.
  */
 export interface LeadRepository {
   list(options: ListOptions): Promise<LeadListResult>;
@@ -20,10 +32,6 @@ export interface LeadRepository {
   firstResponse(id: string, closedVia?: ClosedVia | null): Promise<Lead | undefined>;
 }
 
-/**
- * Entrada completa de creación. El contrato solo transporta lo que el cliente envía; el service
- * añade organizationId, identityId, contactName e identity antes de llamar al repositorio.
- */
 export interface CreateLeadInput extends LeadCreate {
   readonly organizationId: string;
   readonly identityId: string;
@@ -34,8 +42,8 @@ export interface CreateLeadInput extends LeadCreate {
 export interface ListOptions {
   readonly limit: number;
   readonly cursor?: string;
-  readonly status?: string;
-  readonly channel?: string;
+  readonly status?: LeadStatus;
+  readonly channel?: LeadChannel;
 }
 
 export interface LeadListResult {
@@ -50,8 +58,7 @@ export const LEAD_REPOSITORY = Symbol('crm:lead-repository');
 /**
  * Repositorio en memoria de leads.
  *
- * Se conserva para tests unitarios rápidos que no necesitan tocar disco. La app real usa
- * `JsonLeadRepository`.
+ * Se conserva para tests unitarios rápidos que no necesitan tocar base de datos.
  */
 export class InMemoryLeadRepository implements LeadRepository {
   private readonly leads = new Map<string, Lead>();
@@ -182,141 +189,223 @@ export class InMemoryLeadRepository implements LeadRepository {
 }
 
 /**
- * Repositorio de leads que persiste en archivos JSON.
- *
- * Mantiene `leads.json` y, para mantener la tabla `identities` sincronizada, `identities.json`.
- * Cuando llegue Prisma, este repositorio se reemplaza por `PrismaLeadRepository` sin tocar el service.
+ * Repositorio de leads que persiste en MySQL a través de Prisma.
  */
-export class JsonLeadRepository implements LeadRepository {
-  constructor(
-    private readonly leadsDb: JsonDb<Lead>,
-    private readonly identitiesDb: JsonDb<StoredIdentity>,
-  ) {}
+type LeadWithIdentity = Prisma.LeadGetPayload<{ include: { identity: true } }>;
+
+@Injectable()
+export class PrismaLeadRepository implements LeadRepository {
+  constructor(private readonly prisma: PrismaService) {}
 
   async list(options: ListOptions): Promise<LeadListResult> {
-    const all = [...(await this.leadsDb.findAll())].sort(compararPorCreatedAtDesc);
+    const where: { status?: LeadStatus; channel?: LeadChannel } = {};
+    if (options.status !== undefined) where.status = options.status;
+    if (options.channel !== undefined) where.channel = options.channel;
 
-    const filtered = all.filter((lead) => {
-      if (options.status !== undefined && lead.status !== options.status) {
-        return false;
-      }
-      if (options.channel !== undefined && lead.channel !== options.channel) {
-        return false;
-      }
-      return true;
-    });
-
-    let startIndex = 0;
+    let skip = 0;
     if (options.cursor !== undefined) {
       const decoded = decodificarCursor(options.cursor);
       if (decoded !== null) {
-        startIndex = this.encontrarIndice(filtered, decoded.createdAt, decoded.id) + 1;
+        const countBefore = await this.prisma.lead.count({
+          where: {
+            ...where,
+            OR: [
+              { createdAt: { gt: new Date(decoded.createdAt) } },
+              { createdAt: new Date(decoded.createdAt), id: { gt: decoded.id } },
+            ],
+          },
+        });
+        skip = countBefore;
       }
     }
 
-    const items = filtered.slice(startIndex, startIndex + options.limit);
-    const hasMore = filtered.length > startIndex + items.length;
-    const nextCursor =
-      hasMore && items.length > 0
-        ? codificarCursor(items[items.length - 1]!.createdAt, items[items.length - 1]!.id)
-        : null;
+    const rows = await this.prisma.lead.findMany({
+      where,
+      include: { identity: true },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      skip,
+      take: options.limit + 1,
+    });
+
+    const hasMore = rows.length > options.limit;
+    const items = rows.slice(0, options.limit).map(toLead);
+    const last = items[items.length - 1];
+    const nextCursor = hasMore && last !== undefined ? codificarCursor(last.createdAt, last.id) : null;
 
     return { items, hasMore, nextCursor };
   }
 
   async findById(id: string): Promise<Lead | undefined> {
-    return this.leadsDb.findById(id);
+    const row = await this.prisma.lead.findUnique({ where: { id }, include: { identity: true } });
+    return row === null ? undefined : toLead(row);
   }
 
   async create(data: CreateLeadInput): Promise<Lead> {
-    const now = new Date().toISOString();
-    const lead: Lead = {
-      id: randomUUID(),
-      organizationId: data.organizationId,
-      identityId: data.identityId,
-      contactName: data.contactName,
-      status: data.status,
-      source: data.source,
-      channel: data.channel,
-      score: data.score ?? null,
-      ownerUserId: data.ownerUserId ?? null,
-      firstResponseAt: null,
-      convertedAt: null,
-      closedVia: null,
-      consent: data.consent ?? null,
-      createdAt: now,
-      identity: data.identity,
-    };
+    const now = new Date();
+    const identityId = data.identityId;
 
-    const identity: StoredIdentity = {
-      id: data.identityId,
-      organizationId: data.organizationId,
-      email: data.identity.email,
-      phone: data.identity.phone,
-      firstSeenAt: now,
-      lastSeenAt: now,
-      createdAt: now,
-      updatedAt: now,
-    };
+    const row = await this.prisma.$transaction(async (tx) => {
+      await tx.identity.create({
+        data: {
+          id: identityId,
+          organizationId: data.organizationId,
+          email: data.identity.email,
+          phone: data.identity.phone,
+          firstSeenAt: now,
+          lastSeenAt: now,
+          createdAt: now,
+          updatedAt: now,
+        },
+      });
 
-    await this.identitiesDb.upsert(identity);
-    await this.leadsDb.insert(lead);
-    return lead;
+      return tx.lead.create({
+        data: {
+          id: randomUUID(),
+          organizationId: data.organizationId,
+          identityId,
+          contactName: data.contactName,
+          status: data.status,
+          source: data.source,
+          channel: data.channel,
+          score: data.score ?? null,
+          ownerUserId: data.ownerUserId ?? null,
+          firstResponseAt: null,
+          convertedAt: null,
+          closedVia: null,
+          consentJson: consentToJson(data.consent ?? null),
+          createdAt: now,
+          updatedAt: now,
+        },
+        include: { identity: true },
+      });
+    });
+
+    return toLead(row);
   }
 
   async update(id: string, data: LeadUpdate): Promise<Lead | undefined> {
-    const lead = await this.leadsDb.findById(id);
-    if (lead === undefined) {
-      return undefined;
+    try {
+      const row = await this.prisma.lead.update({
+        where: { id },
+        data: {
+          ...(data.status !== undefined && { status: data.status }),
+          ...(data.ownerUserId !== undefined && { ownerUserId: data.ownerUserId }),
+          ...(data.score !== undefined && { score: data.score }),
+          ...(data.closedVia !== undefined && data.closedVia !== null && { closedVia: data.closedVia }),
+          ...(data.consent !== undefined && {
+            consentJson: consentToJson(data.consent),
+          }),
+          updatedAt: new Date(),
+        },
+        include: { identity: true },
+      });
+      return toLead(row);
+    } catch (err) {
+      if (isRecordNotFound(err)) {
+        return undefined;
+      }
+      throw err;
     }
-
-    const actualizado: Lead = {
-      ...lead,
-      ...(data.status !== undefined && { status: data.status }),
-      ...(data.ownerUserId !== undefined && { ownerUserId: data.ownerUserId }),
-      ...(data.score !== undefined && { score: data.score }),
-      ...(data.closedVia !== undefined && { closedVia: data.closedVia }),
-      ...(data.consent !== undefined && { consent: data.consent }),
-    };
-
-    return this.leadsDb.update(id, actualizado);
   }
 
   async convert(id: string): Promise<Lead | undefined> {
-    const lead = await this.leadsDb.findById(id);
-    if (lead === undefined) {
+    const existing = await this.findById(id);
+    if (existing === undefined) {
       return undefined;
     }
 
-    const ahora = new Date().toISOString();
-    return this.leadsDb.update(id, {
-      status: 'CONVERTED',
-      convertedAt: lead.convertedAt ?? ahora,
-    });
+    try {
+      const row = await this.prisma.lead.update({
+        where: { id },
+        data: {
+          status: 'CONVERTED',
+          convertedAt: existing.convertedAt === null ? new Date() : new Date(existing.convertedAt),
+          updatedAt: new Date(),
+        },
+        include: { identity: true },
+      });
+      return toLead(row);
+    } catch (err) {
+      if (isRecordNotFound(err)) {
+        return undefined;
+      }
+      throw err;
+    }
   }
 
   async firstResponse(id: string, closedVia?: ClosedVia | null): Promise<Lead | undefined> {
-    const lead = await this.leadsDb.findById(id);
-    if (lead === undefined) {
+    const existing = await this.findById(id);
+    if (existing === undefined) {
       return undefined;
     }
 
-    const ahora = new Date().toISOString();
-    const patch: Partial<Lead> = {
-      firstResponseAt: lead.firstResponseAt ?? ahora,
+    const data: {
+      firstResponseAt: Date;
+      updatedAt: Date;
+      closedVia?: ClosedVia;
+    } = {
+      firstResponseAt: existing.firstResponseAt === null ? new Date() : new Date(existing.firstResponseAt),
+      updatedAt: new Date(),
     };
-    if (closedVia !== undefined && lead.closedVia === null) {
-      patch.closedVia = closedVia;
+    if (closedVia !== undefined && closedVia !== null && existing.closedVia === null) {
+      data.closedVia = closedVia;
     }
 
-    return this.leadsDb.update(id, patch);
+    try {
+      const row = await this.prisma.lead.update({
+        where: { id },
+        data,
+        include: { identity: true },
+      });
+      return toLead(row);
+    } catch (err) {
+      if (isRecordNotFound(err)) {
+        return undefined;
+      }
+      throw err;
+    }
   }
+}
 
-  private encontrarIndice(leads: readonly Lead[], createdAt: string, id: string): number {
-    return leads.findIndex(
-      (lead) => lead.createdAt < createdAt || (lead.createdAt === createdAt && lead.id < id),
-    );
-  }
+function toLead(row: LeadWithIdentity): Lead {
+  return {
+    id: row.id,
+    organizationId: row.organizationId,
+    identityId: row.identityId,
+    contactName: row.contactName,
+    status: row.status,
+    source: row.source as Lead['source'],
+    channel: row.channel,
+    score: row.score,
+    ownerUserId: row.ownerUserId,
+    firstResponseAt: toIsoNullable(row.firstResponseAt),
+    convertedAt: toIsoNullable(row.convertedAt),
+    closedVia: row.closedVia,
+    consent: row.consentJson === null ? null : (row.consentJson as unknown as Consent),
+    createdAt: row.createdAt.toISOString(),
+    identity: {
+      id: row.identity.id,
+      email: row.identity.email,
+      phone: row.identity.phone,
+    },
+  };
+}
+
+function consentToJson(consent: Consent | null): Prisma.InputJsonValue | undefined {
+  return consent === null ? undefined : (consent as unknown as Prisma.InputJsonValue);
+}
+
+function toIsoNullable(value: Date | null | undefined): string | null {
+  return value === null || value === undefined ? null : value.toISOString();
+}
+
+function isRecordNotFound(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'code' in err &&
+    (err as { code: string }).code === 'P2025'
+  );
 }
 
 function compararPorCreatedAtDesc(a: Lead, b: Lead): number {

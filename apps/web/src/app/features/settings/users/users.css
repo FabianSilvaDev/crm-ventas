@@ -1,0 +1,40 @@
+:host {
+  display: block;
+}
+
+.users {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+}
+
+.users__card {
+  max-width: var(--measure-form);
+}
+
+.users__form {
+  display: grid;
+  gap: var(--s-4);
+  margin-top: var(--s-4);
+}
+
+.users__estado {
+  margin: 0;
+  min-height: calc(var(--fs-sm) * var(--lh-base));
+  color: var(--c-text-muted);
+  font-size: var(--fs-sm);
+}
+
+.users__error-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.users__error-text {
+  margin: var(--s-1) 0 0;
+}
+
+.users__error-meta {
+  margin: var(--s-2) 0 0;
+  font-size: var(--fs-xs);
+}

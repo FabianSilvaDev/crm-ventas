@@ -98,11 +98,10 @@ export function comoFalloDeAcceso(resultado: AuthResult<unknown>): LoginFailure 
   if (esRutaAusente(resultado)) {
     return {
       kind: 'servicio-ausente',
-      titulo: 'El servicio de acceso todavía no está desplegado',
+      titulo: 'El servicio de acceso no responde',
       detalle:
-        'El API de autenticación es del Hito 2 y todavía no existe, así que ahora mismo no puede ' +
-        'entrar nadie. Esta pantalla está escrita contra el contrato de docs/api.md §3 para no ' +
-        'tener que rehacerse cuando llegue.',
+        'El API de autenticación no está respondiendo o la ruta no está montada. Verifica que el ' +
+        'backend esté arrancado y que el módulo de auth esté registrado.',
       problem: null,
     };
   }
@@ -159,8 +158,8 @@ export function comoFalloDeAcceso(resultado: AuthResult<unknown>): LoginFailure 
         titulo: 'Revisa el correo y la contraseña',
         detalle:
           'El servidor ha rechazado el formato. La contraseña debe tener entre 12 y 128 ' +
-          'caracteres (docs/security.md §2.1). No hay reglas de composición: no hacen falta ' +
-          'mayúsculas, dígitos ni símbolos.',
+          'caracteres, al menos una mayúscula, una minúscula, un dígito y un símbolo ' +
+          '(docs/api.md §3.2 y ADR-025).',
         problem: null,
       };
 

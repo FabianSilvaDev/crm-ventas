@@ -1,15 +1,18 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { AddressInfo } from 'node:net';
-import { rm } from 'node:fs/promises';
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 
 import { createApp } from '../app.factory.js';
 import type { Env } from '../config/env.js';
+import {
+  createTestPrisma,
+  DEFAULT_TEST_DATABASE_URL,
+  resetDatabase,
+} from '../prisma/test-setup.js';
 
-const DEV_API_TOKEN = 'dev-token-valido-12345';
+const OWNER_EMAIL = 'owner@crm-ventas.local';
+const OWNER_PASSWORD = 'test-owner-password-12345';
+const JWT_SECRET = 'test-secret-for-jwt-must-be-at-least-32-bytes-long';
 
 function testEnv(overrides: Partial<Env> = {}): Env {
   return {
@@ -24,35 +27,57 @@ function testEnv(overrides: Partial<Env> = {}): Env {
     META_GRAPH_TIMEOUT_MS: 3000,
     PUBLIC_RATE_LIMIT_PER_MINUTE: 120,
     DEFAULT_ORGANIZATION_ID: '0198f000-0000-7000-8000-000000000001',
-    DB_PATH: join(tmpdir(), `crm-leads-test-${Date.now()}-${Math.random().toString(36).slice(2)}`),
-    DEV_API_TOKEN,
+    DATABASE_URL: process.env['TEST_DATABASE_URL'] ?? DEFAULT_TEST_DATABASE_URL,
+    JWT_SECRET,
+    JWT_ISSUER: 'crm-ventas.api',
+    JWT_AUDIENCE: 'crm-ventas.web',
+    ACCESS_TOKEN_TTL_SECONDS: 900,
+    REFRESH_TOKEN_TTL_DAYS: 30,
+    MAX_FAILED_ATTEMPTS: 5,
+    OWNER_PASSWORD,
     ...overrides,
   } as Env;
+}
+
+async function fetchAccessToken(baseUrl: string): Promise<string> {
+  const response = await fetch(`${baseUrl}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: OWNER_EMAIL, password: OWNER_PASSWORD }),
+  });
+  expect(response.status).toBe(200);
+  const body = (await response.json()) as { accessToken: string };
+  return body.accessToken;
 }
 
 describe('LeadsController (integración)', () => {
   let app: Awaited<ReturnType<typeof createApp>>;
   let baseUrl: string;
   let env: Env;
+  let testPrisma: ReturnType<typeof createTestPrisma>;
+
+  let token: string;
 
   beforeAll(async () => {
     env = testEnv();
+    testPrisma = createTestPrisma(env.DATABASE_URL);
+    await resetDatabase(testPrisma);
     app = await createApp(env, { shutdownHooks: false });
     await app.listen(0);
     const address = app.getHttpServer().address() as AddressInfo;
     baseUrl = `http://127.0.0.1:${address.port}/api/v1`;
+    token = await fetchAccessToken(baseUrl);
   });
 
   afterAll(async () => {
-    await app.close();
-    if (env.DB_PATH !== undefined) {
-      await rm(env.DB_PATH, { recursive: true, force: true });
-    }
+    await app?.close();
+    await resetDatabase(testPrisma);
+    await testPrisma?.$disconnect();
   });
 
   it('GET /leads devuelve la lista sembrada', async () => {
     const response = await fetch(`${baseUrl}/leads`, {
-      headers: { 'X-Dev-Api-Token': DEV_API_TOKEN },
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     expect(response.status).toBe(200);
@@ -63,7 +88,7 @@ describe('LeadsController (integración)', () => {
 
   it('GET /leads filtra por status', async () => {
     const response = await fetch(`${baseUrl}/leads?status=NEW`, {
-      headers: { 'X-Dev-Api-Token': DEV_API_TOKEN },
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     expect(response.status).toBe(200);
@@ -73,7 +98,7 @@ describe('LeadsController (integración)', () => {
 
   it('GET /leads/:id devuelve un lead existente', async () => {
     const response = await fetch(`${baseUrl}/leads/01990000-0000-7000-8000-000000000001`, {
-      headers: { 'X-Dev-Api-Token': DEV_API_TOKEN },
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     expect(response.status).toBe(200);
@@ -84,7 +109,7 @@ describe('LeadsController (integración)', () => {
 
   it('GET /leads/:id desconocido devuelve 404', async () => {
     const response = await fetch(`${baseUrl}/leads/00000000-0000-7000-8000-000000000000`, {
-      headers: { 'X-Dev-Api-Token': DEV_API_TOKEN },
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     expect(response.status).toBe(404);
@@ -96,7 +121,7 @@ describe('LeadsController (integración)', () => {
     const response = await fetch(`${baseUrl}/leads`, {
       method: 'POST',
       headers: {
-        'X-Dev-Api-Token': DEV_API_TOKEN,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -118,7 +143,7 @@ describe('LeadsController (integración)', () => {
     const response = await fetch(`${baseUrl}/leads/01990000-0000-7000-8000-000000000001`, {
       method: 'PATCH',
       headers: {
-        'X-Dev-Api-Token': DEV_API_TOKEN,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ status: 'QUALIFIED', score: 95 }),
@@ -133,7 +158,7 @@ describe('LeadsController (integración)', () => {
   it('POST /leads/:id/convert marca el lead como convertido', async () => {
     const response = await fetch(`${baseUrl}/leads/01990000-0000-7000-8000-000000000003/convert`, {
       method: 'POST',
-      headers: { 'X-Dev-Api-Token': DEV_API_TOKEN, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
     });
 
@@ -148,7 +173,7 @@ describe('LeadsController (integración)', () => {
       `${baseUrl}/leads/01990000-0000-7000-8000-000000000001/first-response`,
       {
         method: 'POST',
-        headers: { 'X-Dev-Api-Token': DEV_API_TOKEN, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ closedVia: 'WHATSAPP' }),
       },
     );
@@ -159,12 +184,12 @@ describe('LeadsController (integración)', () => {
     expect(body.closedVia).toBe('WHATSAPP');
   });
 
-  it('rechaza la petición sin token de desarrollo', async () => {
+  it('rechaza la petición sin access token', async () => {
     const response = await fetch(`${baseUrl}/leads`);
 
     expect(response.status).toBe(401);
     const body = (await response.json()) as { code: string };
-    expect(body.code).toBe('AUTH_INVALID_CREDENTIALS');
+    expect(body.code).toBe('AUTH_TOKEN_INVALID');
   });
 
   it('persiste los cambios entre reinicios de la app', async () => {
@@ -172,7 +197,7 @@ describe('LeadsController (integración)', () => {
     const createResponse = await fetch(`${baseUrl}/leads`, {
       method: 'POST',
       headers: {
-        'X-Dev-Api-Token': DEV_API_TOKEN,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -185,7 +210,7 @@ describe('LeadsController (integración)', () => {
     expect(createResponse.status).toBe(201);
     const created = (await createResponse.json()) as { id: string };
 
-    // 2. Cerrar la app y levantar una nueva con la misma DB_PATH.
+    // 2. Cerrar la app y levantar una nueva conectada a la misma base de datos.
     await app.close();
     app = await createApp(env, { shutdownHooks: false });
     await app.listen(0);
@@ -194,7 +219,7 @@ describe('LeadsController (integración)', () => {
 
     // 3. El lead debe existir en la nueva instancia.
     const findResponse = await fetch(`${baseUrl}/leads/${created.id}`, {
-      headers: { 'X-Dev-Api-Token': DEV_API_TOKEN },
+      headers: { Authorization: `Bearer ${token}` },
     });
     expect(findResponse.status).toBe(200);
     const found = (await findResponse.json()) as { id: string; identity: { email: string } };

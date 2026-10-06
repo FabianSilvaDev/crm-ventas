@@ -5,7 +5,7 @@ import type { ProblemDetails } from '@crm/contracts';
 
 import { environment } from '../../environments/environment';
 import { environment as environmentDeProduccion } from '../../environments/environment.production';
-import type { AuthResult, LoginBody, RefreshBody } from './auth-api';
+import type { AuthResult, LoginBody, MeBody, RefreshBody, RegisterBody, SetupBody } from './auth-api';
 import { AuthApi } from './auth-api';
 import { SessionService, puertaDeDemostracionAbierta } from './session';
 
@@ -43,10 +43,45 @@ class FakeAuthApi {
 
   logoutResultado: AuthResult<null> = ok(null);
 
+  registerResultado: AuthResult<RegisterBody> = ok({
+    id: 'u2',
+    email: 'agente@crm-ventas.local',
+    role: 'AGENT',
+    organization: { id: 'org1', name: 'x', slug: 'x' },
+    permissions: ['READ_PRODUCTS'],
+    lastLoginAt: null,
+  });
+
+  setupResultado: AuthResult<SetupBody> = ok({
+    accessToken: 'token-de-setup',
+    tokenType: 'Bearer',
+    expiresIn: 900,
+    user: {
+      id: 'u1',
+      email: 'owner@crm-ventas.local',
+      role: 'OWNER',
+      status: 'ACTIVE',
+      organizationId: 'org1',
+      permissions: ['MANAGE_AGENTS', 'READ_PRODUCTS'],
+    },
+  });
+
+  meResultado: AuthResult<MeBody> = ok({
+    id: 'u1',
+    email: 'owner@crm-ventas.local',
+    role: 'OWNER',
+    organization: { id: 'org1', name: 'x', slug: 'x' },
+    permissions: ['READ_PRODUCTS'],
+    lastLoginAt: '2026-01-01T00:00:00.000Z',
+  });
+
   /** Se cuentan porque la mitad de estas pruebas son sobre **cuántas veces** se pregunta. */
   llamadasRefresh = 0;
   llamadasLogin = 0;
   llamadasLogout = 0;
+  llamadasRegister = 0;
+  llamadasSetup = 0;
+  llamadasMe = 0;
 
   async login(): Promise<AuthResult<LoginBody>> {
     this.llamadasLogin += 1;
@@ -63,8 +98,19 @@ class FakeAuthApi {
     return this.logoutResultado;
   }
 
-  async me(): Promise<never> {
-    throw new Error('`me` no se usa en estas pruebas');
+  async register(): Promise<AuthResult<RegisterBody>> {
+    this.llamadasRegister += 1;
+    return this.registerResultado;
+  }
+
+  async setup(): Promise<AuthResult<SetupBody>> {
+    this.llamadasSetup += 1;
+    return this.setupResultado;
+  }
+
+  async me(): Promise<AuthResult<MeBody>> {
+    this.llamadasMe += 1;
+    return this.meResultado;
   }
 }
 
@@ -111,7 +157,9 @@ describe('SessionService', () => {
   beforeEach(() => {
     TestBed.resetTestingModule();
     fake = new FakeAuthApi();
-    TestBed.configureTestingModule({ providers: [{ provide: AuthApi, useValue: fake }] });
+    TestBed.configureTestingModule({
+      providers: [SessionService, { provide: AuthApi, useValue: fake }],
+    });
 
     session = TestBed.inject(SessionService);
   });
@@ -145,11 +193,24 @@ describe('SessionService', () => {
     expect(fake.llamadasRefresh).toBe(1);
   });
 
-  it('tras un refresh, el usuario llega incompleto y se dice que lo está', async () => {
+  it('tras un refresh, `me` completa la identidad con email y role', async () => {
     await session.ensureRestored();
 
-    // `/auth/refresh` solo devuelve `id` y `permissions` (docs/api.md §3.4). Rellenar el email con una
-    // cadena vacía o con un valor por defecto sería inventar identidad.
+    expect(fake.llamadasMe).toBe(1);
+    expect(session.user()).toEqual({
+      id: 'u1',
+      permissions: ['READ_PRODUCTS'],
+      email: 'owner@crm-ventas.local',
+      role: 'OWNER',
+    });
+  });
+
+  it('si `me` falla tras un refresh, la sesión sigue autenticada con los datos parciales', async () => {
+    fake.meResultado = sinRespuesta('No hubo respuesta del API.');
+
+    await session.ensureRestored();
+
+    expect(session.status()).toBe('autenticado');
     expect(session.user()).toEqual({
       id: 'u1',
       permissions: ['READ_PRODUCTS'],
@@ -187,8 +248,8 @@ describe('SessionService', () => {
   });
 
   it('el 404 de la ruta sin montar tampoco cierra la puerta para siempre', async () => {
-    // Es el estado ACTUAL del proyecto: `/auth/refresh` no existe. Se trata como no concluyente para
-    // que, el día que el Hito 2 despliegue el módulo, la pestaña abierta lo note.
+    // `/auth/refresh` ya existe, pero un 404 sin `problem` sigue siendo no concluyente: si el módulo
+    // de auth no estuviera montado, la siguiente navegación debe volver a intentarlo.
     fake.refreshResultado = {
       ...sinRespuesta<RefreshBody>('Respuesta de error con un cuerpo que no es problem+json.'),
       httpStatus: 404,
@@ -239,6 +300,43 @@ describe('SessionService', () => {
     expect(session.authenticated()).toBe(false);
     expect(session.authorizationHeader()).toBeNull();
     expect(session.user()).toBeNull();
+  });
+
+  it('register pasa el access token actual al API', async () => {
+    await session.login('owner@crm-ventas.local', 'secreta', false);
+
+    await session.register('nuevo@crm-ventas.local', 'ContraseñaSegura1!');
+
+    expect(fake.llamadasRegister).toBe(1);
+  });
+
+  it('register no abre sesión: solo delega en AuthApi', async () => {
+    await session.login('owner@crm-ventas.local', 'secreta', false);
+
+    await session.register('nuevo@crm-ventas.local', 'ContraseñaSegura1!');
+
+    expect(session.user()?.email).toBe('owner@crm-ventas.local');
+  });
+
+  it('setup crea el OWNER y abre sesión real', async () => {
+    await session.setup('owner@crm-ventas.local', 'ContraseñaSegura1!', 'Mi Org');
+
+    expect(session.authenticated()).toBe(true);
+    expect(session.isDemo()).toBe(false);
+    expect(session.user()?.email).toBe('owner@crm-ventas.local');
+    expect(session.user()?.role).toBe('OWNER');
+    expect(session.authorizationHeader()).toBe('Bearer token-de-setup');
+    expect(fake.llamadasSetup).toBe(1);
+  });
+
+  it('permissions refleja los del usuario autenticado', async () => {
+    await session.login('owner@crm-ventas.local', 'secreta', false);
+
+    expect(session.permissions()).toEqual(['READ_PRODUCTS']);
+  });
+
+  it('permissions está vacío sin sesión', () => {
+    expect(session.permissions()).toEqual([]);
   });
 
   it('la sesión de demostración entra, se marca como tal y NO trae credencial', () => {

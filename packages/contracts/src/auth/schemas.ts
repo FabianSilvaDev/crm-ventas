@@ -40,6 +40,63 @@ export const authenticatedUserSchema = z.object({
 export type AuthenticatedUser = z.infer<typeof authenticatedUserSchema>;
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Setup de primera cuenta (MVP: crea el OWNER y la organización por defecto)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const passwordSchema = z
+  .string()
+  .min(12, 'La contraseña debe tener al menos 12 caracteres.')
+  .regex(/[A-Z]/, 'Debe incluir al menos una mayúscula.')
+  .regex(/[a-z]/, 'Debe incluir al menos una minúscula.')
+  .regex(/\d/, 'Debe incluir al menos un número.')
+  .regex(/[^A-Za-z0-9]/, 'Debe incluir al menos un símbolo.');
+
+export const setupRequiredResponseSchema = z.strictObject({
+  required: z.boolean(),
+});
+
+export type SetupRequiredResponse = z.infer<typeof setupRequiredResponseSchema>;
+
+export const setupRequestSchema = z.strictObject({
+  email: emailSchema,
+  password: passwordSchema,
+  organizationName: z.string().min(1).max(120).optional(),
+});
+
+export type SetupRequest = z.infer<typeof setupRequestSchema>;
+
+export type SetupResponse = z.infer<typeof loginResponseSchema>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Register (MVP: intra-organización, sin verificación de email)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const registerRequestSchema = z.strictObject({
+  email: emailSchema,
+  password: passwordSchema,
+  role: z.literal('AGENT'),
+});
+
+export type RegisterRequest = z.infer<typeof registerRequestSchema>;
+
+export type RegisterResponse = z.infer<typeof meResponseSchema>;
+
+/**
+ * Registro de OWNER adicional dentro de la organización.
+ *
+ * Solo existe como herramienta de desarrollo/control total: el endpoint exige que el usuario
+ * autenticado sea OWNER y tenga `MANAGE_AGENTS`. No se expone en la UI normal del CRM.
+ */
+export const registerOwnerRequestSchema = z.strictObject({
+  email: emailSchema,
+  password: passwordSchema,
+});
+
+export type RegisterOwnerRequest = z.infer<typeof registerOwnerRequestSchema>;
+
+export type RegisterOwnerResponse = z.infer<typeof meResponseSchema>;
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Login
 // ─────────────────────────────────────────────────────────────────────────────
 

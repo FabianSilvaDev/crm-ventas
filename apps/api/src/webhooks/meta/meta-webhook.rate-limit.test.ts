@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { createApp } from '../../app.factory.js';
 import { loadEnv } from '../../config/env.js';
+import { DEFAULT_TEST_DATABASE_URL } from '../../prisma/test-setup.js';
 import { InMemoryRateLimiter } from '../../common/rate-limit/in-memory-rate-limiter.js';
 
 /**
@@ -19,6 +20,8 @@ const VERIFY_TOKEN = 'token-de-verificacion-de-pruebas';
 const LIMITE = 3;
 
 const TEST_ENV = loadEnv({
+  NODE_ENV: 'test',
+  DATABASE_URL: process.env['TEST_DATABASE_URL'] ?? DEFAULT_TEST_DATABASE_URL,
   META_APP_SECRET: 'secreto-de-meta-para-las-pruebas-de-rate-limit',
   META_VERIFY_TOKEN: VERIFY_TOKEN,
   PUBLIC_RATE_LIMIT_PER_MINUTE: String(LIMITE),

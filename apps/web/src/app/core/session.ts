@@ -2,7 +2,7 @@ import { Injectable, computed, inject, isDevMode, signal } from '@angular/core';
 
 import { environment } from '../../environments/environment';
 import { AuthApi, esRutaAusente } from './auth-api';
-import type { AuthResult, LoginBody } from './auth-api';
+import type { AuthResult, LoginBody, RegisterBody, SetupBody } from './auth-api';
 
 /**
  * Estado de la sesión del CRM.
@@ -20,9 +20,8 @@ import type { AuthResult, LoginBody } from './auth-api';
  *
  * ## Qué NO es esto
  *
- * Un backend de autenticación. **Ninguno de los cuatro endpoints existe** (ver `core/auth-api.ts`).
- * Este servicio es el estado del cliente escrito contra el contrato; la autorización real es
- * `@RequirePermission` en el servidor (`docs/security.md` §3.4), que tampoco existe todavía.
+ * Un backend de autenticación. Este servicio es el estado del cliente escrito contra el contrato;
+ * la autorización real es `@RequirePermission` en el servidor (`docs/security.md` §3.4).
  */
 
 export type SessionStatus = 'anonimo' | 'restaurando' | 'autenticado';
@@ -94,9 +93,24 @@ export class SessionService {
   readonly authenticated = computed(() => this.#status() === 'autenticado');
 
   /**
+   * Conjunto de permisos del usuario autenticado. Vacío si no hay sesión.
+   */
+  readonly permissions = computed(
+    () => this.#identity()?.permissions ?? ([] as readonly string[]),
+  );
+
+  /**
    * Hay sesión, pero es simulada. La barra lateral pinta un banner fijo mientras esto sea cierto.
    */
   readonly isDemo = computed(() => this.#origin() === 'demostracion');
+
+  /**
+   * Token de acceso sin prefijo. Para peticiones que lo necesiten sin armar una cabecera
+   * completa, como `AuthApi.register` o `AuthApi.registerOwner`, que añaden `Bearer` ellos mismos.
+   */
+  accessToken(): string | null {
+    return this.#accessToken();
+  }
 
   /**
    * Cabecera `Authorization` para la siguiente petición al API.
@@ -139,6 +153,62 @@ export class SessionService {
   }
 
   /**
+   * Configuración inicial: crea el primer OWNER y abre sesión.
+   *
+   * La respuesta tiene la misma forma que login, así que reutiliza el mismo cierre de sesión. Si el
+   * setup ya fue completado, el servidor devuelve `STATE_CONFLICT` y el estado local no cambia.
+   */
+  async setup(
+    email: string,
+    password: string,
+    organizationName?: string,
+  ): Promise<AuthResult<SetupBody>> {
+    const resultado = await this.#auth.setup(email, password, organizationName);
+
+    if (resultado.outcome === 'ok' && resultado.body !== null) {
+      this.#accessToken.set(resultado.body.accessToken);
+      this.#identity.set({
+        id: resultado.body.user.id,
+        permissions: resultado.body.user.permissions,
+        email: resultado.body.user.email,
+        role: resultado.body.user.role,
+      });
+      this.#origin.set('real');
+      this.#status.set('autenticado');
+      this.#intentoDeRestauracion = null;
+    }
+
+    return resultado;
+  }
+
+  /**
+   * Crea un AGENT dentro de la organización del usuario autenticado. Requiere `MANAGE_AGENTS`.
+   *
+   * No toca el estado local: es una operación de administración, no de sesión.
+   */
+  async register(
+    email: string,
+    password: string,
+  ): Promise<AuthResult<RegisterBody>> {
+    const token = this.accessToken();
+
+    return this.#auth.register(token ?? '', email, password);
+  }
+
+  /**
+   * Crea un OWNER adicional dentro de la organización. Requiere que el usuario autenticado sea OWNER
+   * y tenga `MANAGE_AGENTS`. Es la herramienta de consola de desarrollo.
+   */
+  async registerOwner(
+    email: string,
+    password: string,
+  ): Promise<AuthResult<RegisterBody>> {
+    const token = this.accessToken();
+
+    return this.#auth.registerOwner(token ?? '', email, password);
+  }
+
+  /**
    * ¿Hay sesión? Se llama **desde el guard**, no desde `provideAppInitializer`.
    *
    * La diferencia importa: un inicializador bloquearía el arranque de la aplicación entera en una
@@ -168,12 +238,19 @@ export class SessionService {
 
     if (resultado.outcome === 'ok' && resultado.body !== null) {
       this.#accessToken.set(resultado.body.accessToken);
+
+      // `/auth/refresh` no trae email ni role (docs/api.md §3.4). Completamos la identidad con
+      // `GET /auth/me` para que la barra lateral y los mensajes de bienvenida tengan datos reales.
+      const me = await this.#auth.me(resultado.body.accessToken);
+      const email = me.outcome === 'ok' && me.body !== null ? me.body.email : null;
+      const role = me.outcome === 'ok' && me.body !== null ? me.body.role : null;
+
       this.#identity.set({
         id: resultado.body.user.id,
         permissions: resultado.body.user.permissions,
-        // `/auth/refresh` no los devuelve (docs/api.md §3.4). Ver `SessionIdentity`.
-        email: null,
-        role: null,
+        // `null` sigue siendo un valor válido: significa «el endpoint no respondió o no está montado».
+        email,
+        role,
       });
       this.#origin.set('real');
       this.#status.set('autenticado');

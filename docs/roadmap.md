@@ -54,8 +54,9 @@ rediseñar después.
 > de la persistencia (handshake, firma HMAC, rate limit, cliente de Graph API con fixtures), más la
 > pantalla de leads.
 >
-> **No hecho, de esta fase:** nada de auth, nada de Prisma, nada del worker, nada de `apps/site`,
-> nada de observabilidad (pino/OTel), nada de ESLint ni CI, y el rate limit es en memoria.
+> **No hecho, de esta fase:** nada del worker, nada de `apps/site`, nada de observabilidad
+> (pino/OTel), nada de ESLint ni CI, y el rate limit es en memoria. Auth y persistencia Prisma/MySQL
+> se están cerrando ahora.
 >
 > **Por qué se adelantó lo de la Fase 5-BIS:** la verificación del *handshake* con Meta es lo que la
 > app de Meta necesita para dar por bueno el endpoint, **no necesita base de datos**, y los trámites
@@ -73,7 +74,7 @@ rediseñar después.
 - Filtro global de errores RFC 9457
 - OpenTelemetry (HTTP, Prisma, Redis)
 - `/health/live`, `/health/ready` (verifican DB y Redis de verdad)
-- Prisma + migración `001_core`
+- Prisma + migración inicial sobre **MySQL 8.0+** (ver ADR-026)
 - `POST /auth/login`, `/auth/refresh`, `/auth/logout`, `GET /auth/me`
 - argon2id + rotación de refresh con detección de reuso por familia
 - `PermissionsGuard` + `@RequirePermission()` + enum `Permission`
@@ -99,8 +100,8 @@ rediseñar después.
 - `packages/contracts` (Zod → OpenAPI → cliente generado)
 - `packages/domain` (sin I/O), `packages/config`, `packages/ui` (4 componentes base)
 
-**Docker:** Compose con postgres+pgvector, redis, api, worker, web, site, adminer.
-Ollama nativo (ADR-015) alcanzable vía `host.docker.internal`.
+**Docker:** Compose con MySQL 8.0, redis, api, worker, web, site (Postgres/pgvector se
+reevalúa en Fase 3/4; ver ADR-026). Ollama nativo (ADR-015) alcanzable vía `host.docker.internal`.
 
 **Tests**
 - Unit: hashing, generación/validación de JWT, permisos

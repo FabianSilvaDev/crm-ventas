@@ -11,6 +11,7 @@ import { envSchema, loadEnv } from './env.js';
 const BASE = {
   META_APP_SECRET: 'a'.repeat(32),
   META_VERIFY_TOKEN: 'b'.repeat(16),
+  DATABASE_URL: 'mysql://crm:secret@localhost:3306/crm',
 } as const;
 
 describe('loadEnv', () => {
@@ -21,7 +22,7 @@ describe('loadEnv', () => {
     expect(env.PORT).toBe(3000);
     expect(env.LOG_LEVEL).toBe('info');
     expect(env.WEB_ORIGIN).toBe('http://localhost:4200');
-    expect(env.DATABASE_URL).toBeUndefined();
+    expect(env.DATABASE_URL).toBe('mysql://crm:secret@localhost:3306/crm');
   });
 
   it('convierte PORT de string a número', () => {
@@ -64,11 +65,11 @@ describe('loadEnv', () => {
   it('acepta DATABASE_URL y REDIS_URL cuando están presentes', () => {
     const env = loadEnv({
       ...BASE,
-      DATABASE_URL: 'postgresql://crm:secret@localhost:5432/crm',
+      DATABASE_URL: 'mysql://crm:secret@localhost:3306/crm',
       REDIS_URL: 'redis://localhost:6379',
     });
 
-    expect(env.DATABASE_URL).toBe('postgresql://crm:secret@localhost:5432/crm');
+    expect(env.DATABASE_URL).toBe('mysql://crm:secret@localhost:3306/crm');
     expect(env.REDIS_URL).toBe('redis://localhost:6379');
   });
 
@@ -78,7 +79,7 @@ describe('loadEnv', () => {
     // El valor es inválido por el espacio en el host, de modo que hay algo que citar en el error.
     let message = '';
     try {
-      loadEnv({ ...BASE, DATABASE_URL: 'postgresql://crm:sup3r-s3cret@local host:5432/crm' });
+      loadEnv({ ...BASE, DATABASE_URL: 'mysql://crm:sup3r-s3cret@local host:3306/crm' });
     } catch (error) {
       message = error instanceof Error ? error.message : '';
     }

@@ -1,0 +1,128 @@
+<main class="acceso">
+  <section class="acceso__hero">
+    <p class="brand">
+      <svg class="brand__mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M4 19V9m5 10V5m5 14v-7m5 7V8" />
+      </svg>
+      <span class="brand__text">
+        <span class="brand__name">CRM de Ventas</span>
+        <span class="brand__sub">Plataforma interna</span>
+      </span>
+    </p>
+
+    <p class="acceso__claim">Configura la primera cuenta y empieza a gestionar tu operación.</p>
+
+    <dl class="acceso__facts">
+      <div class="acceso__fact">
+        <dt>Paso 1</dt>
+        <dd>Crear el OWNER</dd>
+      </div>
+      <div class="acceso__fact">
+        <dt>Paso 2</dt>
+        <dd>Entrar automáticamente</dd>
+      </div>
+      <div class="acceso__fact">
+        <dt>Uso</dt>
+        <dd>Una sola vez</dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="acceso__main">
+    <div class="card acceso__card">
+      <h1 class="acceso__title">Configurar primera cuenta</h1>
+
+      @if (failure(); as f) {
+        <div
+          #resumen
+          id="setup-error"
+          role="alert"
+          tabindex="-1"
+          class="acceso__error alert alert--bad"
+        >
+          <p class="acceso__error-title">{{ f.title }}</p>
+          <p class="acceso__error-text">{{ f.detail }}</p>
+          @if (f.code; as code) {
+            <p class="acceso__error-meta mono">{{ code }} · traza {{ f.traceId ?? '—' }}</p>
+          }
+        </div>
+      }
+
+      <form class="acceso__form" (submit)="onSubmit($event)">
+        <div class="field">
+          <label class="field__label" for="setup-email">Correo del OWNER</label>
+          <input
+            class="field__input"
+            id="setup-email"
+            name="email"
+            type="email"
+            autocomplete="username"
+            required
+            [disabled]="outcome() === 'sending'"
+          />
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="setup-organization">Nombre de la organización</label>
+          <input
+            class="field__input"
+            id="setup-organization"
+            name="organizationName"
+            type="text"
+            autocomplete="off"
+            placeholder="Organización principal"
+            [disabled]="outcome() === 'sending'"
+          />
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="setup-password">Contraseña</label>
+          <input
+            class="field__input"
+            id="setup-password"
+            name="password"
+            type="password"
+            autocomplete="new-password"
+            required
+            minlength="12"
+            maxlength="128"
+            [disabled]="outcome() === 'sending'"
+          />
+          <span class="field__hint" id="setup-password-hint">Mínimo 12 caracteres, mayúscula, minúscula, número y símbolo.</span>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="setup-password-confirm">Repetir contraseña</label>
+          <input
+            class="field__input"
+            id="setup-password-confirm"
+            name="passwordConfirm"
+            type="password"
+            autocomplete="new-password"
+            required
+            minlength="12"
+            maxlength="128"
+            [disabled]="outcome() === 'sending'"
+          />
+        </div>
+
+        <p class="acceso__estado" role="status">{{ outcome() === 'sending' ? 'Creando cuenta…' : '' }}</p>
+
+        <button
+          class="btn btn--lg btn--block"
+          type="submit"
+          [disabled]="outcome() === 'sending'"
+        >
+          Crear OWNER y entrar
+        </button>
+      </form>
+
+      <div class="acceso__demo">
+        <p class="acceso__demo-text">
+          <strong>¿Ya tienes una cuenta?</strong>
+          <button type="button" class="btn btn--ghost" (click)="goToLogin()">Entrar aquí</button>.
+        </p>
+      </div>
+    </div>
+  </section>
+</main>

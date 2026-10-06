@@ -349,8 +349,9 @@ siempre `422`.
 
 ## 3. Autenticación
 
-Decisiones de `architecture-review.md` §K.2 y `database.md` §2 (`users`, `refresh_tokens`).
-MVP de un solo usuario con rol `OWNER`; sin SSO/OAuth (la puerta queda abierta, no se implementa).
+Decisiones de `architecture-review.md` §K.2, `database.md` §2 (`users`, `refresh_tokens`) y ADR-025.
+MVP: un `OWNER` creado por seed, con capacidad de registrar `AGENT`s dentro de su propia
+organización. Sin SSO/OAuth (la puerta queda abierta, no se implementa).
 
 ### 3.1 Resumen del flujo
 
@@ -494,7 +495,69 @@ Set-Cookie: __Host-crm_rt=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0
 
 - Es idempotente: llamarlo dos veces devuelve `204` las dos veces. No exige `Idempotency-Key`.
 
-### 3.6 `GET /api/v1/auth/me`
+### 3.6 `POST /api/v1/auth/register`
+
+- **Autenticación:** access token de un usuario con permiso `MANAGE_AGENTS`.
+- **Autorización:** `@RequirePermission(Permission.MANAGE_AGENTS)`.
+- Crea un nuevo usuario `AGENT` dentro de la organización autenticada.
+- El único rol aceptado en el body es `"AGENT"`; cualquier otro valor devuelve `422 VALIDATION_FAILED`.
+- El nuevo usuario nace con `status: ACTIVE` porque el MVP no tiene verificación de email
+  (ADR-025 y deuda registrada).
+
+Cuerpo:
+
+```json
+{
+  "email": "agente@crm-ventas.local",
+  "password": "Mínimo12ConSímbolo!",
+  "role": "AGENT"
+}
+```
+
+- Éxito `201 Created`:
+
+```json
+{
+  "id": "0198f0aa-1b2c-7d3e-9f40-5a6b7c8d9e02",
+  "email": "agente@crm-ventas.local",
+  "role": "AGENT",
+  "organization": {
+    "id": "0198f000-0000-7000-8000-000000000001",
+    "name": "Operación principal",
+    "slug": "principal"
+  },
+  "permissions": ["READ_PRODUCTS", "WRITE_PRODUCTS", "…"],
+  "lastLoginAt": null
+}
+```
+
+- Errores: `401 AUTH_TOKEN_INVALID` / `AUTH_TOKEN_EXPIRED`, `403 FORBIDDEN_PERMISSION`,
+  `409 STATE_CONFLICT` (email duplicado en la organización), `422 VALIDATION_FAILED`.
+
+### 3.6a `POST /api/v1/auth/register-owner`
+
+- **Autenticación:** access token de un usuario `OWNER` con permiso `MANAGE_AGENTS`.
+- **Autorización:** `@RequirePermission(Permission.MANAGE_AGENTS)` + verificación de que
+  `req.user.role === 'OWNER'`.
+- Crea un nuevo usuario `OWNER` dentro de la organización autenticada.
+- Este endpoint no está expuesto en la UI normal; solo se consume desde la herramienta de desarrollo
+  del login (`window.__CRM_ENABLE_REGISTRATION`) en modo desarrollo (ADR-025).
+
+Cuerpo:
+
+```json
+{
+  "email": "owner2@crm-ventas.local",
+  "password": "Mínimo12ConSímbolo!"
+}
+```
+
+- Éxito `201 Created`: respuesta idéntica en forma a `/auth/register`, con `role: "OWNER"` y todos los
+  permisos efectivos.
+- Errores: `401 AUTH_TOKEN_INVALID` / `AUTH_TOKEN_EXPIRED`, `403 FORBIDDEN_PERMISSION` (falta permiso o
+  no es OWNER), `409 STATE_CONFLICT` (email duplicado en la organización), `422 VALIDATION_FAILED`.
+
+### 3.7 `GET /api/v1/auth/me`
 
 - Requiere access token. No exige `@RequirePermission` (solo autenticación).
 - Devuelve el usuario, su organización y el **conjunto efectivo de permisos del usuario**:
@@ -514,7 +577,7 @@ Set-Cookie: __Host-crm_rt=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0
 }
 ```
 
-### 3.7 Notas de seguridad
+### 3.8 Notas de seguridad
 
 | Tema | Decisión |
 |---|---|
@@ -532,12 +595,44 @@ Set-Cookie: __Host-crm_rt=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0
 | Errores | `AUTH_INVALID_CREDENTIALS` no distingue email inexistente de password incorrecta |
 | CORS | Allowlist explícita de orígenes (`apps/web`); `credentials: true`; sin `*` |
 
-### 3.8 Fuera del MVP (explícito)
+### 3.9 Fuera del MVP (explícito)
 
 - SSO / OAuth de terceros — descartado en §M.2.
 - Recuperación de password por email — no hay proveedor de email; se resetea por CLI con auditoría.
 - MFA / TOTP — no previsto en el MVP.
 - Revocación por dispositivo desde la UI — el modelo (`family_id`, `user_agent`, `ip`) ya lo permite.
+
+### 3.10 `GET /api/v1/auth/setup`
+
+- **Autenticación:** ninguna. Endpoint público, solo lectura.
+- Devuelve si la aplicación necesita configuración inicial:
+
+```json
+{ "required": true }
+```
+
+- `required: true` cuando **no existe ningún usuario** en la base de datos. `false` en cualquier otro caso.
+- El frontend lo consulta al cargar `/entrar`; si es `true`, redirige a `/setup`.
+
+### 3.11 `POST /api/v1/auth/setup`
+
+- **Autenticación:** ninguna. Endpoint público pero fail-closed: si ya existe un usuario, devuelve `409 STATE_CONFLICT`.
+- Crea la primera organización y el primer usuario con rol `OWNER`.
+- Cuerpo:
+
+```json
+{
+  "email": "owner@crm-ventas.local",
+  "password": "Mínimo12ConSímbolo!",
+  "organizationName": "Operación principal"
+}
+```
+
+- `organizationName` es opcional; por defecto "Organización principal".
+- Éxito `200 OK`: mismo cuerpo que `POST /auth/login`, incluyendo `accessToken`, `expiresIn` y el bloque `user`.
+- Cabeceras de respuesta: igual que login (`Set-Cookie: __Host-crm_rt`, `Cache-Control: no-store`).
+- Errores: `409 STATE_CONFLICT` (setup ya completado), `422 VALIDATION_FAILED`.
+- Tras el setup exitoso, `GET /auth/setup` devuelve `required: false`.
 
 ---
 
@@ -1306,6 +1401,8 @@ Todas las rutas llevan el prefijo `/api/v1` (omitido en la tabla por legibilidad
 | POST | `/auth/login` | — (público) | No | No | 1 | Rate limit `auth-login`; argon2id |
 | POST | `/auth/refresh` | — (cookie) | No | No | 1 | Rotación + detección de reuso |
 | POST | `/auth/logout` | — (cookie) | No | No | 1 | Idempotente; revoca la familia |
+| POST | `/auth/register` | `MANAGE_AGENTS` | No | No | 1 | Solo rol `AGENT`; intra-organización (ADR-025) |
+| POST | `/auth/register-owner` | `MANAGE_AGENTS` + `OWNER` | No | No | 1 | Herramienta de desarrollo; crea OWNER adicional (ADR-025) |
 | GET | `/auth/me` | autenticado | No | — | 1 | Usuario + permisos efectivos |
 
 ### 9.2 crm

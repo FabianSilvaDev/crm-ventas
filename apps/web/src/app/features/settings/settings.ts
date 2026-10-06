@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { Router } from '@angular/router';
 
 import {
   BadgeComponent,
@@ -24,14 +25,13 @@ import {
  *
  * El backend no expone aún:
  *   - gestión de workspace (nombre, zona horaria, idioma, marca);
- *   - usuarios, roles y permisos;
  *   - integraciones con Meta Ads, Google Ads, TikTok, email, etc.;
  *   - proveedores de IA (API keys, modelos, límites de presupuesto);
  *   - preferencias de notificaciones (canales, frecuencia, umbrales);
  *   - branding (logo, colores, dominios).
  *
- * Todas las acciones de "configurar" en esta pantalla se registran como
- * `FRONTEND DATA GAP`.
+ * La creación de usuarios AGENT **sí está implementada** (`POST /auth/register`, ADR-025);
+ * el resto de acciones de "configurar" se registran como `FRONTEND DATA GAP`.
  */
 
 interface SettingsSection {
@@ -57,6 +57,8 @@ interface SettingsSection {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Settings {
+  readonly #router = inject(Router);
+
   protected readonly sections: readonly SettingsSection[] = [
     {
       id: 'workspace',
@@ -78,7 +80,7 @@ export class Settings {
       status: '1 usuario',
       statusVariant: 'neutral',
       actions: [
-        { id: 'invite-user', label: 'Invitar', primary: true },
+        { id: 'register-user', label: 'Registrar usuario', primary: true },
         { id: 'manage-roles', label: 'Roles' },
       ],
     },
@@ -130,6 +132,11 @@ export class Settings {
   ];
 
   protected onSectionAction(sectionId: string, actionId: string): void {
+    if (sectionId === 'users' && actionId === 'register-user') {
+      void this.#router.navigateByUrl('/settings/users');
+      return;
+    }
+
     console.log(
       `FRONTEND DATA GAP: no backend endpoint for settings action "${actionId}" in "${sectionId}"`,
     );

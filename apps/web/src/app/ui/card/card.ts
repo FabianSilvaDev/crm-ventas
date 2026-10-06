@@ -24,3 +24,4 @@ export class CardComponent {
     return ['card', `card--padding-${this.padding()}`, this.interactive() ? 'card--interactive' : ''].join(' ');
   }
 }
+  

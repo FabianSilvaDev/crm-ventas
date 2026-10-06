@@ -222,6 +222,7 @@
   --page-max-width: 1200px;
   --measure-text: 62ch;
   --measure-list: 80ch;
+  --measure-form: 520px;
   --auth-card-width: 440px;
 
   --icon-xs: 16px;

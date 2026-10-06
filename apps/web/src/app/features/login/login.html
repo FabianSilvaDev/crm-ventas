@@ -43,18 +43,6 @@
       <h1 class="acceso__title">Entrar</h1>
 
       <!--
-        Aviso permanente, no descartable y sin letra pequeña. Es lo único que separa esta pantalla de
-        una frontera de seguridad falsa: sin él, un formulario de acceso que no autentica a nadie se
-        lee como «el control de acceso está hecho». Si algún día molesta, la respuesta NO es
-        esconderlo, es implementar el Hito 2 y borrarlo.
-      -->
-      <p class="note note--warn">
-        <strong>Esta pantalla todavía no autentica a nadie.</strong> El API de acceso no existe: es
-        del Hito 2. Ahora mismo recibirás un <code>404</code>. Está construida contra el contrato de
-        <code>docs/api.md</code> §3 para no tener que rehacerse.
-      </p>
-
-      <!--
         `role="alert"` para que se anuncie solo, y `tabindex="-1"` para poder llevar allí el foco:
         sin lo segundo, quien navega con teclado se queda en un formulario que acaba de fallar sin
         saber por qué. El foco se mueve después del repintado (ver `login.ts`).
@@ -119,12 +107,111 @@
         <button class="btn btn--lg btn--block" type="submit" [disabled]="enviando()">Entrar</button>
       </form>
 
+      @if (registroHabilitado()) {
+        <div class="acceso__register">
+          <p class="acceso__register-text">
+            <strong>Crear cuenta de AGENT.</strong>
+            El usuario quedará activo inmediatamente y podrá entrar con su correo y contraseña.
+          </p>
+
+          @if (registroFallo(); as rf) {
+            <div class="acceso__error alert alert--bad" role="alert">
+              <p class="acceso__error-title">{{ rf.titulo }}</p>
+              <p class="acceso__error-text">{{ rf.detalle }}</p>
+            </div>
+          }
+
+          @if (registroExito(); as email) {
+            <div class="banner banner--info" role="status">
+              <p><strong>Usuario creado:</strong> {{ email }} puede ahora entrar en /entrar.</p>
+            </div>
+          }
+
+          <form class="acceso__form" (submit)="onRegisterSubmit($event)">
+            <div class="field">
+              <label class="field__label" for="registro-email">Correo del nuevo usuario</label>
+              <input
+                class="field__input"
+                id="registro-email"
+                name="registro-email"
+                type="email"
+                autocomplete="off"
+                required
+              />
+            </div>
+
+            <div class="field">
+              <label class="field__label" for="registro-password">Contraseña</label>
+              <input
+                class="field__input"
+                id="registro-password"
+                name="registro-password"
+                type="password"
+                autocomplete="new-password"
+                required
+                minlength="12"
+                maxlength="128"
+              />
+              <span class="field__hint" id="registro-password-hint">Mínimo 12 caracteres, mayúscula, minúscula, número y símbolo.</span>
+            </div>
+
+            <div class="field">
+              <label class="field__label" for="registro-password-confirm">Repetir contraseña</label>
+              <input
+                class="field__input"
+                id="registro-password-confirm"
+                name="registro-password-confirm"
+                type="password"
+                autocomplete="new-password"
+                required
+                minlength="12"
+                maxlength="128"
+              />
+            </div>
+
+            <div class="field field--checkbox">
+              <label class="field__label" for="registro-owner">
+                <input
+                  id="registro-owner"
+                  name="registro-owner"
+                  type="checkbox"
+                  value="on"
+                />
+                Crear como OWNER (control total)
+              </label>
+            </div>
+
+            <p class="acceso__estado" role="status">
+              {{ registroEnviando() ? 'Creando usuario…' : '' }}
+            </p>
+
+            <button
+              class="btn btn--lg btn--block"
+              type="submit"
+              [disabled]="registroEnviando()"
+            >
+              Crear cuenta
+            </button>
+          </form>
+        </div>
+      } @else if (setupNecesario()) {
+        <div class="acceso__register">
+          <p class="acceso__register-text">
+            <strong>No hay ninguna cuenta creada todavía.</strong>
+            Creá el OWNER para empezar a usar el CRM.
+          </p>
+          <button type="button" class="btn btn--ghost btn--block" (click)="goToSetup()">
+            Crear primera cuenta
+          </button>
+        </div>
+      }
+
       @if (demoDisponible) {
         <div class="acceso__demo">
           <p class="acceso__demo-text">
-            <strong>Puerta de demostración.</strong> Existe porque todavía no hay backend de acceso.
-            Entra sin credencial y solo en desarrollo; la sesión queda marcada en pantalla mientras
-            dure, para que ninguna captura se confunda con una sesión real.
+            <strong>Puerta de demostración.</strong> Entra sin credencial y solo en desarrollo; la
+            sesión queda marcada en pantalla mientras dure, para que ninguna captura se confunda con
+            una sesión real. No reemplaza al login real.
           </p>
           <button type="button" class="btn btn--ghost btn--block" (click)="enterDemo()">
             Entrar en modo demostración
@@ -134,3 +221,68 @@
     </div>
   </section>
 </main>
+
+<!--
+  Diálogo de autorización para la herramienta de consola de desarrollo.
+  Solo se abre desde `window.__CRM_ENABLE_REGISTRATION()` en desarrollo.
+-->
+<dialog #dialogoRegistro class="dialogo dialogo--registro" (close)="cerrarModal()">
+  <form class="acceso__form" method="dialog" (submit)="onModalSubmit($event)">
+    <h2 class="dialogo__title">Autorizar registro de usuarios</h2>
+    <p class="dialogo__hint">
+      Esta herramienta es solo desarrollo. Ingresá como OWNER con permiso MANAGE_AGENTS para
+      desbloquear el formulario de registro.
+    </p>
+
+    @if (modalFallo(); as mf) {
+      <div class="acceso__error alert alert--bad" role="alert">
+        <p class="acceso__error-title">{{ mf.titulo }}</p>
+        <p class="acceso__error-text">{{ mf.detalle }}</p>
+      </div>
+    }
+
+    <div class="field">
+      <label class="field__label" for="modal-email">Correo</label>
+      <input
+        class="field__input"
+        id="modal-email"
+        name="modal-email"
+        type="email"
+        autocomplete="username"
+        required
+      />
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="modal-password">Contraseña</label>
+      <input
+        class="field__input"
+        id="modal-password"
+        name="modal-password"
+        type="password"
+        autocomplete="current-password"
+        required
+        minlength="12"
+        maxlength="128"
+      />
+    </div>
+
+    <p class="acceso__estado" role="status">
+      {{ modalEnviando() ? 'Autorizando…' : '' }}
+    </p>
+
+    <div class="dialogo__actions">
+      <button class="btn btn--lg btn--block" type="submit" [disabled]="modalEnviando()">
+        Autorizar
+      </button>
+      <button
+        class="btn btn--ghost btn--block"
+        type="button"
+        [disabled]="modalEnviando()"
+        (click)="cerrarModal()"
+      >
+        Cancelar
+      </button>
+    </div>
+  </form>
+</dialog>
