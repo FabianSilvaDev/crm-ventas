@@ -5,34 +5,34 @@
 .home {
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--s-6);
 }
 
 /* ── Hero ──────────────────────────────────────────────────────────────────── */
 .home__hero {
   display: grid;
   grid-template-columns: 1fr;
-  gap: var(--space-4);
+  gap: var(--s-4);
   align-items: start;
 }
 
 .home__hero-text {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--s-1);
 }
 
 .home__greeting {
   margin: 0;
-  color: var(--color-text-secondary);
-  font-size: var(--text-lg);
+  color: var(--c-text-muted);
+  font-size: var(--fs-lg);
   font-weight: 500;
 }
 
 .home__title {
   margin: 0;
-  color: var(--color-text);
-  font-size: var(--text-3xl);
+  color: var(--c-text);
+  font-size: var(--fs-3xl);
   font-weight: 700;
   line-height: var(--lh-display);
 }
@@ -44,114 +44,106 @@
 .home__hero-link {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  margin-top: var(--space-3);
-  color: var(--color-primary);
-  font-size: var(--text-sm);
+  gap: var(--s-1);
+  margin-top: var(--s-3);
+  color: var(--c-accent);
+  font-size: var(--fs-sm);
   font-weight: 600;
   text-decoration: none;
 }
 
 .home__hero-link:hover {
-  color: var(--color-primary-hover);
+  color: var(--c-accent-hover);
 }
 
-/* ── AI Recommendations ──────────────────────────────────────────────────── */
-.home__ai-card {
-  display: block;
+/* ── Acquisition Journey ─────────────────────────────────────────────────── */
+.home__journey-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s-4);
 }
 
-.home__ai-inner {
+/* ── Trabajo activo ──────────────────────────────────────────────────────── */
+.work-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  height: 100%;
-}
-
-.home__ai-main {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  flex: 1;
-}
-
-.home__ai-header {
-  display: flex;
-  gap: var(--space-3);
-  align-items: flex-start;
-}
-
-.home__ai-header app-icon {
-  flex: none;
-  color: var(--color-primary);
-}
-
-.home__ai-title {
+  gap: var(--s-2);
   margin: 0;
-  color: var(--color-text);
-  font-size: var(--text-base);
+  padding: 0;
+  list-style: none;
+}
+
+.work-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-2) 0;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.work-list__item:last-child {
+  border-bottom: none;
+}
+
+.work-list__info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.work-list__title {
+  margin: 0;
+  color: var(--c-text);
+  font-size: var(--fs-sm);
   font-weight: 600;
 }
 
-.home__ai-what {
-  margin: var(--space-1) 0 0;
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
-}
-
-.home__ai-list {
+.work-list__meta {
   margin: 0;
-  padding-left: var(--space-4);
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
-}
-
-.home__ai-list li + li {
-  margin-top: var(--space-1);
-}
-
-.home__ai-row {
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: var(--space-3);
-}
-
-.home__ai-confidence {
-  margin: 0;
-  color: var(--color-primary);
-  font-size: var(--text-2xl);
-  font-weight: 700;
-}
-
-.home__ai-actions {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-  flex-wrap: wrap;
+  color: var(--c-text-muted);
+  font-size: var(--fs-xs);
 }
 
 /* ── Skeletons de leads ──────────────────────────────────────────────────── */
 .home__leads {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--s-3);
 }
 
 .home__leads-row {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--s-3);
 }
 
 .home__leads-text {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--s-1);
 }
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (min-width: 640px) {
+  .home__journey-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (min-width: 768px) {
   .home__hero {
     grid-template-columns: 1fr auto;
+  }
+
+  .home__journey-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .home__journey-grid {
+    grid-template-columns: repeat(4, 1fr);
   }
 }

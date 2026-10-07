@@ -102,6 +102,18 @@ export class Growth {
 
   protected readonly campaigns: readonly Campaign[] = [
     {
+      id: 'c-submarino-azul',
+      name: 'Submarino Azul — Lujo accesible',
+      status: 'active',
+      channel: 'Meta Ads',
+      budget: 2500,
+      spend: 980,
+      leads: 67,
+      ctr: 0.047,
+      roas: 3.6,
+      daysLeft: 21,
+    },
+    {
       id: 'c-verano',
       name: 'Verano 2025',
       status: 'active',
@@ -141,6 +153,22 @@ export class Growth {
 
   protected readonly creatives: readonly Creative[] = [
     {
+      id: 'cr-submarino-hero',
+      name: 'Submarino Azul — Close-up esfera',
+      format: 'video',
+      campaignName: 'Submarino Azul — Lujo accesible',
+      impressions: 32_100,
+      ctr: 0.052,
+    },
+    {
+      id: 'cr-submarino-carousel',
+      name: 'Submarino Azul — Detalles 3 slides',
+      format: 'carousel',
+      campaignName: 'Submarino Azul — Lujo accesible',
+      impressions: 18_400,
+      ctr: 0.039,
+    },
+    {
       id: 'cr-hero',
       name: 'Hero Verano',
       format: 'video',
@@ -167,6 +195,13 @@ export class Growth {
   ];
 
   protected readonly audiences: readonly Audience[] = [
+    {
+      id: 'a-lujo-nicho',
+      name: 'Interés Réplicas de Lujo',
+      size: 156_000,
+      conversionRate: 0.034,
+      channel: 'Meta Ads',
+    },
     {
       id: 'a-lookalike',
       name: 'Lookalike Compradores',

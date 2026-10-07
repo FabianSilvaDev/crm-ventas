@@ -4,6 +4,8 @@ export { CardComponent } from './card/card';
 export { EmptyStateComponent } from './empty-state/empty-state';
 export { ErrorStateComponent } from './error-state/error-state';
 export { IconComponent } from './icon/icon';
+export { JourneyStageCardComponent } from './journey-stage-card/journey-stage-card';
 export { LoadingStateComponent } from './loading-state/loading-state';
 export { MetricComponent } from './metric/metric';
+export { RecommendationCardComponent } from './recommendation-card/recommendation-card';
 export { SkeletonComponent } from './skeleton/skeleton';

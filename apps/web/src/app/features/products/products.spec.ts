@@ -38,8 +38,9 @@ describe('Products', () => {
 
     expect(el.textContent).toContain('Oportunidades destacadas');
     expect(el.textContent).toContain('Demo');
+    expect(el.textContent).toContain('Reloj Rolex Submariner réplica azul');
+    expect(el.textContent).toContain('91');
     expect(el.textContent).toContain('Auriculares inalámbricos premium');
-    expect(el.textContent).toContain('87');
     expect(el.textContent).toContain('Cargador solar portátil');
     expect(el.textContent).toContain('Insight de IA');
     expect(el.textContent).toContain('Crear campaña');
@@ -67,7 +68,7 @@ describe('Products', () => {
     const fixture = await render();
     const el = fixture.nativeElement as HTMLElement;
 
-    expect(el.textContent).toContain('Auriculares inalámbricos premium');
+    expect(el.textContent).toContain('Reloj Rolex Submariner réplica azul');
 
     const ignoreButtons = [...el.querySelectorAll('app-button button')].filter(
       (b) => b.textContent?.trim() === 'Ignorar',
@@ -77,7 +78,8 @@ describe('Products', () => {
     (ignoreButtons[0] as HTMLButtonElement).click();
     fixture.detectChanges();
 
-    expect(el.textContent).not.toContain('Auriculares inalámbricos premium');
+    expect(el.textContent).not.toContain('Reloj Rolex Submariner réplica azul');
+    expect(el.textContent).toContain('Auriculares inalámbricos premium');
     expect(el.textContent).toContain('Cargador solar portátil');
   });
 });

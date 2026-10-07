@@ -7,11 +7,18 @@ import {
   ButtonComponent,
   CardComponent,
   EmptyStateComponent,
-  ErrorStateComponent,
   IconComponent,
+  JourneyStageCardComponent,
   MetricComponent,
+  RecommendationCardComponent,
   SkeletonComponent,
 } from '../../ui';
+import {
+  ActiveWorkStore,
+  JourneyStore,
+  RecommendationStore,
+  type Recommendation,
+} from '../../domain';
 import { HealthService, type Probe } from '../../core/health';
 import type { LivenessResponse } from '../../core/health';
 import { LeadsApi, type LeadsResult } from '../../core/leads-api';
@@ -19,14 +26,14 @@ import { SessionService } from '../../core/session';
 import type { Lead } from '@crm/contracts';
 
 /**
- * Home / Business Overview.
+ * Home / AI Acquisition & Growth Control Center.
  *
- * Punto de entrada del CRM transformado en centro de control comercial. Muestra:
- *   - saludo contextual y métrica principal;
- *   - alertas que requieren atención (salud del sistema, fallo de datos clave);
- *   - recomendaciones de IA de demostración (etiquetadas como tales);
- *   - grid de métricas secundarias con datos reales donde existen;
- *   - trabajo activo (leads recientes, campañas, tareas de IA).
+ * Centro de gravedad del CRM. Muestra:
+ *   - saludo contextual y métrica principal (leads reales);
+ *   - estado del Acquisition Journey como grid de fases;
+ *   - recomendaciones del copiloto de IA con acciones de aprobación/descarte;
+ *   - trabajo activo generado por recomendaciones aprobadas y leads recientes;
+ *   - origen explícito de cada dato: real, demo o gap.
  *
  * ## FRONTEND DATA GAP
  *
@@ -34,12 +41,12 @@ import type { Lead } from '@crm/contracts';
  * ROAS, campañas activas, tareas de IA). Esta pantalla NO inventa esos números:
  *   - "Leads activos" y la lista de leads recientes vienen de `LeadsApi` (`GET /api/v1/leads`).
  *   - El estado del sistema viene de `HealthService` (`/health/live`).
- *   - Las recomendaciones de IA son **visuales de demostración** con badge `Demo` y nota
- *     explicitando que no provienen de un agente real.
- *   - Revenue, orders, campañas y AI tasks usan empty states accionables en vez de guiones.
+ *   - El Acquisition Journey, las recomendaciones de IA y el trabajo activo son
+ *     **visuales de demostración** con badge `Demo` y nota explicitando que no
+ *     provienen de agentes reales.
  *
- * Cuando existan los endpoints de resumen, este componente se conectará a ellos
- * sin reescribir la estructura visual.
+ * Cuando existan los endpoints de resumen y agentes, los stores de dominio se
+ * conectarán a ellos sin reescribir la estructura visual.
  */
 
 type AttentionSeverity = 'warning' | 'danger' | 'info';
@@ -49,17 +56,6 @@ interface AttentionItem {
   readonly severity: AttentionSeverity;
   readonly title: string;
   readonly message: string;
-  readonly actionLabel: string;
-  readonly actionPath: string;
-}
-
-interface AiRecommendation {
-  readonly id: string;
-  readonly title: string;
-  readonly what: string;
-  readonly why: readonly string[];
-  readonly confidence: number;
-  readonly impact: string;
   readonly actionLabel: string;
   readonly actionPath: string;
 }
@@ -76,6 +72,8 @@ interface AiRecommendation {
     IconComponent,
     SkeletonComponent,
     EmptyStateComponent,
+    JourneyStageCardComponent,
+    RecommendationCardComponent,
   ],
   templateUrl: './home.html',
   styleUrl: './home.css',
@@ -85,10 +83,18 @@ export class Home {
   readonly #session = inject(SessionService);
   readonly #leadsApi = inject(LeadsApi);
   readonly #health = inject(HealthService);
+  readonly #journey = inject(JourneyStore);
+  readonly #recommendations = inject(RecommendationStore);
+  readonly #activeWork = inject(ActiveWorkStore);
 
   protected readonly loading = signal(true);
   protected readonly leadsResult = signal<LeadsResult | null>(null);
   protected readonly healthResult = signal<Probe<LivenessResponse> | null>(null);
+
+  protected readonly journeyStages = this.#journey.stages;
+  protected readonly pendingRecommendations = this.#recommendations.pendingRecommendations;
+  protected readonly approvedRecommendations = this.#recommendations.approvedRecommendations;
+  protected readonly activeWorkItems = this.#activeWork.items;
 
   /** Nombre corto para el saludo. En sesión demo no hay usuario, así que usamos un fallback neutral. */
   protected readonly userName = computed(() => {
@@ -146,6 +152,18 @@ export class Home {
       });
     }
 
+    const pending = this.#recommendations.pendingRecommendations().length;
+    if (pending > 0) {
+      items.push({
+        id: 'ai-recommendations',
+        severity: 'info',
+        title: `${pending} recomendaciones de IA pendientes`,
+        message: 'Revisa y aprueba las acciones que el copiloto propone para el ciclo de adquisición.',
+        actionLabel: 'Ver recomendaciones',
+        actionPath: '/home',
+      });
+    }
+
     return items;
   });
 
@@ -156,33 +174,6 @@ export class Home {
     const responded = leads.filter((l) => l.firstResponseAt !== null).length;
     return `${Math.round((responded / leads.length) * 100)}%`;
   });
-
-  /** Recomendaciones de IA de demostración, nunca presentadas como datos reales. */
-  protected readonly aiRecommendations: readonly AiRecommendation[] = [
-    {
-      id: 'ai-1',
-      title: 'Aumentar presupuesto de campaña',
-      what: 'La campaña "Verano 2025" muestra CPA mejorado y CTR en crecimiento.',
-      why: ['CTR aumentó 31% en los últimos 7 días.', 'CPA disminuyó 18% en el mismo periodo.'],
-      confidence: 82,
-      impact: 'Potencialmente más conversiones con el mismo ROAS.',
-      actionLabel: 'Revisar campaña',
-      actionPath: '/growth',
-    },
-    {
-      id: 'ai-2',
-      title: 'Segmento de alto interés detectado',
-      what: 'Un grupo de leads de Instagram responde 2.4x más que el promedio.',
-      why: [
-        '72% de este segmento abrió el primer mensaje.',
-        'La conversación a oportunidad es 1.8x superior.',
-      ],
-      confidence: 76,
-      impact: 'Crear una audiencia similar podría reducir el CPL general.',
-      actionLabel: 'Ver leads',
-      actionPath: '/sales',
-    },
-  ];
 
   constructor() {
     void this.load();
@@ -195,7 +186,27 @@ export class Home {
 
     this.leadsResult.set(leads);
     this.healthResult.set(health);
+
+    // Sincroniza el contador de ventas con los leads reales recibidos.
+    this.#journey.updateCount('sales', this.activeLeads());
+
     this.loading.set(false);
+  }
+
+  protected onApproveRecommendation(recommendation: Recommendation): void {
+    const action = this.#recommendations.approve(recommendation.id);
+    if (action !== null && action.workItem !== null) {
+      this.#activeWork.addFromRecommendation(action.recommendation);
+      this.#journey.updateCount(recommendation.stageId, 1);
+    }
+  }
+
+  protected onDismissRecommendation(recommendation: Recommendation): void {
+    this.#recommendations.dismiss(recommendation.id);
+  }
+
+  protected onCompleteWork(id: string): void {
+    this.#activeWork.complete(id);
   }
 
   protected trackByLead(_index: number, lead: Lead): string {

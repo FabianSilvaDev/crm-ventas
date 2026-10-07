@@ -219,8 +219,9 @@ describe('Home / Business Overview', () => {
 
     expect(el.textContent).toContain('Recomendaciones de IA');
     expect(el.textContent).toContain('Demo');
-    expect(el.textContent).toContain('Aumentar presupuesto de campaña');
-    expect(el.textContent).toContain('82%');
+    expect(el.textContent).toContain('Lanzar campaña para Rolex Submariner azul');
+    expect(el.textContent).toContain('91%');
+    expect(el.textContent).toContain('Acquisition Journey');
   });
 
   it('declara qué datos son reales y cuáles son demo', async () => {
@@ -233,13 +234,26 @@ describe('Home / Business Overview', () => {
     expect(el.textContent).toContain('FRONTEND DATA GAP');
   });
 
-  it('muestra un empty state para campañas y tareas de IA', async () => {
+  it('muestra trabajo activo vacío hasta aprobar una recomendación', async () => {
     const fixture = await render(conLeads([]));
     const el = fixture.nativeElement as HTMLElement;
 
-    expect(el.textContent).toContain('No hay campañas activas');
-    expect(el.textContent).toContain('Crear campaña');
+    expect(el.textContent).toContain('Trabajo activo');
     expect(el.textContent).toContain('Sin tareas activas');
-    expect(el.textContent).toContain('Explorar IA');
+    expect(el.textContent).toContain('Aprueba una recomendación de IA para generar tu primera tarea');
+  });
+
+  it('genera trabajo activo al aprobar una recomendación', async () => {
+    const fixture = await render(conLeads([]));
+    const el = fixture.nativeElement as HTMLElement;
+
+    const approveButton = el.querySelector('app-recommendation-card app-button') as HTMLButtonElement;
+    approveButton?.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(el.textContent).toContain('Pendientes de ejecución');
+    expect(el.textContent).toContain('Lanzar campaña para Rolex Submariner azul');
+    expect(el.textContent).toContain('Aprobada');
   });
 });

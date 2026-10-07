@@ -1,5 +1,5 @@
 <section class="home" aria-label="Resumen del negocio">
-  <!-- ── Saludo + métrica principal ─────────────────────────────────────────── -->
+  <!-- ── Saludo + métrica principal + estado del journey ─────────────────────── -->
   <header class="home__hero">
     <div class="home__hero-text">
       <p class="home__greeting">{{ greeting() }}, {{ userName() }}</p>
@@ -42,8 +42,8 @@
               <div class="attention-card__inner">
                 <div class="attention-card__body">
                   <app-badge
-                    [variant]="item.severity === 'danger' ? 'danger' : 'warning'"
-                    [label]="item.severity === 'danger' ? 'Crítico' : 'Revisar'"
+                    [variant]="item.severity === 'danger' ? 'danger' : item.severity === 'info' ? 'info' : 'warning'"
+                    [label]="item.severity === 'danger' ? 'Crítico' : item.severity === 'info' ? 'IA' : 'Revisar'"
                   />
                   <h3 class="attention-card__title">{{ item.title }}</h3>
                   <p class="muted">{{ item.message }}</p>
@@ -59,7 +59,26 @@
     }
   }
 
-  <!-- ── AI Recommendations (demostración visual) ─────────────────────────────── -->
+  <!-- ── Acquisition Journey ─────────────────────────────────────────────────── -->
+  <section class="home__section" aria-labelledby="journey-heading">
+    <div class="section-head">
+      <app-icon name="target" size="sm" />
+      <h2 id="journey-heading" class="section-title">Acquisition Journey</h2>
+      <app-badge variant="info" label="Demo" />
+    </div>
+    <p class="section-note">
+      Estado de las fases del ciclo de adquisición. Los contadores son de demostración hasta que
+      el backend exponga resúmenes por fase.
+    </p>
+
+    <div class="home__journey-grid">
+      @for (stage of journeyStages(); track stage.id) {
+        <app-journey-stage-card [stage]="stage" />
+      }
+    </div>
+  </section>
+
+  <!-- ── AI Recommendations ─────────────────────────────────────────────────── -->
   <section class="home__section" aria-labelledby="ai-heading">
     <div class="section-head">
       <app-icon name="sparkles" size="sm" />
@@ -67,61 +86,32 @@
       <app-badge variant="info" label="Demo" />
     </div>
     <p class="section-note">
-      Estas recomendaciones son visuales de demostración. Cuando los agentes de IA estén activos,
-      aparecerán aquí con datos reales de tu negocio.
+      El copiloto propone acciones basadas en los datos del negocio. Aprueba las que quieras ejecutar;
+      el resto quedan descartadas.
     </p>
 
-    <div class="dashboard-grid">
-      @for (rec of aiRecommendations; track rec.id) {
-        <app-card class="home__ai-card" padding="md">
-          <div class="home__ai-inner">
-            <div class="home__ai-main">
-              <div class="home__ai-header">
-                <app-icon name="robot" size="md" />
-                <div>
-                  <h3 class="home__ai-title">{{ rec.title }}</h3>
-                  <p class="home__ai-what">{{ rec.what }}</p>
-                </div>
-              </div>
-
-              <div>
-                <p class="label">¿Por qué?</p>
-                <ul class="home__ai-list">
-                  @for (reason of rec.why; track reason) {
-                    <li>{{ reason }}</li>
-                  }
-                </ul>
-              </div>
-
-              <div class="home__ai-row">
-                <div>
-                  <p class="label">Confianza</p>
-                  <p class="home__ai-confidence">{{ rec.confidence }}%</p>
-                </div>
-                <div>
-                  <p class="label">Impacto esperado</p>
-                  <p class="muted">{{ rec.impact }}</p>
-                </div>
-              </div>
-            </div>
-
-            <div class="home__ai-actions">
-              <a [routerLink]="rec.actionPath" class="btn btn--primary">
-                {{ rec.actionLabel }}
-              </a>
-              <app-button variant="ghost" size="sm">Ignorar</app-button>
-            </div>
-          </div>
-        </app-card>
-      }
-    </div>
+    @if (pendingRecommendations().length === 0) {
+      <app-empty-state
+        icon="sparkles"
+        title="Sin recomendaciones pendientes"
+        text="Has revisado todas las recomendaciones demo. Cuando los agentes de IA estén activos, aparecerán nuevas propuestas aquí."
+      />
+    } @else {
+      <div class="dashboard-grid">
+        @for (rec of pendingRecommendations(); track rec.id) {
+          <app-recommendation-card
+            [recommendation]="rec"
+            (approve)="onApproveRecommendation($event)"
+            (dismiss)="onDismissRecommendation($event)"
+          />
+        }
+      </div>
+    }
   </section>
 
   <!-- ── Performance ─────────────────────────────────────────────────────────── -->
   <section class="home__section" aria-labelledby="performance-heading">
-    <h2 id="performance-heading" class="section-title section-title--solo">
-      Performance
-    </h2>
+    <h2 id="performance-heading" class="section-title section-title--solo">Performance</h2>
 
     @if (loading()) {
       <div class="metric-grid">
@@ -157,19 +147,68 @@
         <app-card padding="md">
           <app-metric
             label="Campañas activas"
-            value="0"
-            hint="No hay campañas configuradas"
+            value="2"
+            hint="Campañas demo activas en Growth"
           />
         </app-card>
       </div>
     }
   </section>
 
-  <!-- ── Active Work ───────────────────────────────────────────────────────── -->
+  <!-- ── Active Work ─────────────────────────────────────────────────────────── -->
   <section class="home__section" aria-labelledby="active-heading">
-    <h2 id="active-heading" class="section-title section-title--solo">Trabajo activo</h2>
+    <div class="section-head">
+      <app-icon name="checkCircle" size="sm" />
+      <h2 id="active-heading" class="section-title">Trabajo activo</h2>
+      <app-badge variant="info" label="Demo" />
+    </div>
+    <p class="section-note">
+      Acciones aprobadas pendientes de ejecución. Cuando marques una como hecha, se moverá al
+      historial.
+    </p>
 
     <div class="dashboard-grid">
+      <!-- Tareas aprobadas -->
+      <app-card padding="md">
+        <div class="work-card__head">
+          <h3 class="work-card__title">Pendientes de ejecución</h3>
+          <a routerLink="/ai" class="work-link">
+            Ir a IA
+            <app-icon name="arrowRight" size="xs" />
+          </a>
+        </div>
+
+        @if (activeWorkItems().length > 0) {
+          <ul class="work-list">
+            @for (item of activeWorkItems(); track item.id) {
+              <li class="work-list__item">
+                <div class="work-list__info">
+                  <p class="work-list__title">{{ item.title }}</p>
+                  <p class="work-list__meta">{{ item.description }}</p>
+                </div>
+                <app-button
+                  variant="ghost"
+                  size="sm"
+                  [iconLeft]="item.status === 'done' ? 'check' : null"
+                  (click)="onCompleteWork(item.id)"
+                  [disabled]="item.status === 'done'"
+                >
+                  {{ item.status === 'done' ? 'Hecho' : 'Completar' }}
+                </app-button>
+              </li>
+            }
+          </ul>
+        } @else {
+          <app-empty-state
+            icon="robot"
+            title="Sin tareas activas"
+            text="Aprueba una recomendación de IA para generar tu primera tarea."
+            actionLabel="Ver recomendaciones"
+            actionPath="/ai"
+          />
+        }
+      </app-card>
+
       <!-- Leads recientes -->
       <app-card padding="md">
         <div class="work-card__head">
@@ -225,40 +264,35 @@
         }
       </app-card>
 
-      <!-- Campañas -->
+      <!-- Recomendaciones aprobadas -->
       <app-card padding="md">
         <div class="work-card__head">
-          <h3 class="work-card__title">Campañas</h3>
-          <a routerLink="/growth" class="work-link">
-            Ir a Growth
-            <app-icon name="arrowRight" size="xs" />
-          </a>
-        </div>
-        <app-empty-state
-          icon="campaign"
-          title="No hay campañas activas"
-          text="Lanza tu primera campaña y empieza a medir qué canales convierten."
-          actionLabel="Crear campaña"
-          actionPath="/growth"
-        />
-      </app-card>
-
-      <!-- AI Tasks -->
-      <app-card padding="md">
-        <div class="work-card__head">
-          <h3 class="work-card__title">Tareas de IA</h3>
+          <h3 class="work-card__title">Aprobadas recientemente</h3>
           <a routerLink="/ai" class="work-link">
-            Ir a IA
+            Historial
             <app-icon name="arrowRight" size="xs" />
           </a>
         </div>
-        <app-empty-state
-          icon="robot"
-          title="Sin tareas activas"
-          text="Cuando los agentes de IA tengan trabajos pendientes los verás aquí."
-          actionLabel="Explorar IA"
-          actionPath="/ai"
-        />
+
+        @if (approvedRecommendations().length > 0) {
+          <ul class="work-list">
+            @for (rec of approvedRecommendations(); track rec.id) {
+              <li class="work-list__item">
+                <div class="work-list__info">
+                  <p class="work-list__title">{{ rec.title }}</p>
+                  <p class="work-list__meta">{{ rec.agentName }}</p>
+                </div>
+                <app-badge variant="success" label="Aprobada" />
+              </li>
+            }
+          </ul>
+        } @else {
+          <app-empty-state
+            icon="checkCircle"
+            title="Nada aprobado aún"
+            text="Las recomendaciones aprobadas se listarán aquí."
+          />
+        }
       </app-card>
     </div>
   </section>
@@ -277,7 +311,7 @@
       </li>
       <li class="origin-box__item">
         <app-badge variant="info" label="Demo" />
-        <span>Las recomendaciones de IA y las campañas son visuales de demostración; no hay backend aún.</span>
+        <span>El Acquisition Journey, las recomendaciones de IA y el trabajo activo son visuales de demostración; no hay backend aún.</span>
       </li>
       <li class="origin-box__item">
         <app-badge variant="neutral" label="Pendiente" />

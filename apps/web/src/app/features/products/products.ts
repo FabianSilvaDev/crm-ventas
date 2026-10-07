@@ -66,6 +66,24 @@ export class Products {
   /** Oportunidades de demostración. Se marcan como Demo en pantalla. */
   protected readonly opportunities: readonly ProductOpportunity[] = [
     {
+      id: 'demo-rolex-submarino-azul',
+      name: 'Reloj Rolex Submariner réplica azul',
+      score: 91,
+      demand: 'high',
+      competition: 'medium',
+      margin: 65,
+      trend: 'up',
+      trendValue: '↑ 41%',
+      aiInsight: 'Alta intención de compra en búsquedas de réplicas de lujo; margen superior al 60%.',
+      actions: [
+        { id: 'analyze', label: 'Analizar', primary: true },
+        { id: 'campaign', label: 'Crear campaña', primary: false },
+        { id: 'content', label: 'Generar contenido', primary: false },
+        { id: 'landing', label: 'Crear landing', primary: false },
+        { id: 'ignore', label: 'Ignorar', primary: false },
+      ],
+    },
+    {
       id: 'demo-1',
       name: 'Auriculares inalámbricos premium',
       score: 87,
