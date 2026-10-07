@@ -1,0 +1,1453 @@
+<title>Frontend Restructure Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f8f7fb;
+    --fg: #1f1b2e;
+    --muted: #6b6578;
+    --faint: #9d98a8;
+    --surface: #ffffff;
+    --surface-sunken: #f2f0f7;
+    --border: #e2e0e9;
+    --border-strong: #cac7d5;
+    --accent: #7c3aed;
+    --accent-hover: #5b21b6;
+    --accent-soft: #ede9fe;
+    --accent-ring: #ddd6fe;
+    --ok: #10b981;
+    --ok-bg: #ecfdf5;
+    --warn: #f59e0b;
+    --warn-bg: #fffbeb;
+    --bad: #ef4444;
+    --bad-bg: #fef2f2;
+    --shadow: 0 1px 3px rgba(31, 27, 46, 0.08), 0 4px 12px rgba(31, 27, 46, 0.05);
+    --shadow-lg: 0 4px 6px rgba(31, 27, 46, 0.06), 0 10px 24px rgba(31, 27, 46, 0.08);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+    --space-7: 48px;
+    --max-width: 980px;
+    --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14121c;
+      --fg: #f4f2fa;
+      --muted: #a7a2b6;
+      --faint: #77728a;
+      --surface: #1c1926;
+      --surface-sunken: #252230;
+      --border: #363246;
+      --border-strong: #4e4663;
+      --accent: #a78bfa;
+      --accent-hover: #c4b5fd;
+      --accent-soft: #2e2650;
+      --accent-ring: #3f3569;
+      --ok: #34d399;
+      --ok-bg: rgba(16, 185, 129, 0.12);
+      --warn: #fbbf24;
+      --warn-bg: rgba(245, 158, 11, 0.12);
+      --bad: #f87171;
+      --bad-bg: rgba(239, 68, 68, 0.12);
+      color-scheme: dark;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #14121c;
+    --fg: #f4f2fa;
+    --muted: #a7a2b6;
+    --faint: #77728a;
+    --surface: #1c1926;
+    --surface-sunken: #252230;
+    --border: #363246;
+    --border-strong: #4e4663;
+    --accent: #a78bfa;
+    --accent-hover: #c4b5fd;
+    --accent-soft: #2e2650;
+    --accent-ring: #3f3569;
+    --ok: #34d399;
+    --ok-bg: rgba(16, 185, 129, 0.12);
+    --warn: #fbbf24;
+    --warn-bg: rgba(245, 158, 11, 0.12);
+    --bad: #f87171;
+    --bad-bg: rgba(239, 68, 68, 0.12);
+    color-scheme: dark;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .page {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: var(--space-5) var(--space-4) var(--space-7);
+  }
+
+  header {
+    margin-bottom: var(--space-6);
+    padding-bottom: var(--space-5);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-2);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .eyebrow::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  h1 {
+    margin: 0 0 var(--space-2);
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.15;
+    text-wrap: balance;
+  }
+
+  .subtitle {
+    margin: 0;
+    color: var(--muted);
+    font-size: 17px;
+    line-height: 1.5;
+    max-width: 720px;
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+    font-size: 13px;
+    color: var(--faint);
+  }
+
+  .meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 2px var(--space-3);
+    border-radius: 999px;
+    background: var(--warn-bg);
+    color: var(--warn);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .status-pill::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4) var(--space-5);
+    margin-bottom: var(--space-6);
+    box-shadow: var(--shadow);
+  }
+
+  .toc h2 {
+    margin: 0 0 var(--space-3);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .toc ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    columns: 2;
+    column-gap: var(--space-5);
+  }
+
+  .toc li {
+    break-inside: avoid;
+    margin-bottom: var(--space-2);
+  }
+
+  .toc a {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    color: var(--fg);
+    text-decoration: none;
+    font-size: 14px;
+  }
+
+  .toc a:hover {
+    color: var(--accent);
+  }
+
+  .toc a::before {
+    content: attr(data-num);
+    color: var(--faint);
+    font-size: 12px;
+    font-weight: 700;
+    min-width: 22px;
+  }
+
+  section {
+    margin-bottom: var(--space-7);
+  }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 14px;
+    font-weight: 700;
+    flex: none;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  h3 {
+    margin: var(--space-5) 0 var(--space-2);
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--fg);
+  }
+
+  p {
+    margin: 0 0 var(--space-3);
+    color: var(--muted);
+  }
+
+  p strong {
+    color: var(--fg);
+  }
+
+  ul, ol {
+    margin: 0 0 var(--space-4);
+    padding-left: var(--space-5);
+    color: var(--muted);
+  }
+
+  li {
+    margin-bottom: var(--space-2);
+  }
+
+  li::marker {
+    color: var(--faint);
+  }
+
+  a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    margin-bottom: var(--space-4);
+    box-shadow: var(--shadow);
+  }
+
+  .card-title {
+    margin: 0 0 var(--space-2);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--fg);
+  }
+
+  .card p {
+    margin: 0;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    margin-bottom: var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+  }
+
+  table {
+    width: 100%;
+    min-width: 640px;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+
+  thead th {
+    text-align: left;
+    padding: var(--space-3) var(--space-4);
+    background: var(--surface-sunken);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  tbody td, tbody th {
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  tbody tr:last-child td,
+  tbody tr:last-child th {
+    border-bottom: none;
+  }
+
+  tbody tr:hover td {
+    background: var(--surface-sunken);
+  }
+
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 12px;
+    background: var(--surface-sunken);
+    padding: 1px 4px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    color: var(--fg);
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  .tag--real {
+    background: var(--ok-bg);
+    color: var(--ok);
+  }
+
+  .tag--demo {
+    background: var(--warn-bg);
+    color: var(--warn);
+  }
+
+  .tag--gap {
+    background: var(--bad-bg);
+    color: var(--bad);
+  }
+
+  .tag--legacy {
+    background: var(--surface-sunken);
+    color: var(--faint);
+  }
+
+  .mermaid {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-4);
+  }
+
+  .phase {
+    border-left: 3px solid var(--accent);
+    padding-left: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+
+  .phase h4 {
+    margin: 0 0 var(--space-2);
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .phase p {
+    margin: 0 0 var(--space-2);
+  }
+
+  .checklist {
+    list-style: none;
+    padding-left: 0;
+  }
+
+  .checklist li {
+    position: relative;
+    padding-left: var(--space-5);
+  }
+
+  .checklist li::before {
+    content: '☐';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .note {
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-ring);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
+    color: var(--fg);
+  }
+
+  .note p:last-child {
+    margin-bottom: 0;
+  }
+
+  @media (max-width: 720px) {
+    .page {
+      padding: var(--space-4) var(--space-3) var(--space-6);
+    }
+
+    h1 {
+      font-size: 26px;
+    }
+
+    .toc ol {
+      columns: 1;
+    }
+
+    .section-header {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    h2 {
+      font-size: 20px;
+    }
+
+    table {
+      min-width: 560px;
+    }
+  }
+</style>
+
+<div class="page">
+  <header>
+    <p class="eyebrow">AI Acquisition & Growth Control Center</p>
+    <h1>Frontend Restructure Plan</h1>
+    <p class="subtitle">
+      Audit completo del frontend de <code>apps/web</code> y plan de migración para transformar el CRM administrativo en un centro de control de adquisición y crecimiento asistido por IA. No se reconstruye backend; solo se reorganiza, consolida y da coherencia a la capa de presentación.
+    </p>
+    <div class="meta">
+      <span class="status-pill">Pendiente de aprobación</span>
+      <span>Ámbito: <code>apps/web</code></span>
+      <span>Angular 22 · zoneless · signals · ESM</span>
+      <span>Generado para revisión antes de implementar</span>
+    </div>
+  </header>
+
+  <nav class="toc" aria-labelledby="toc-title">
+    <h2 id="toc-title">Contenido</h2>
+    <ol>
+      <li><a href="#s1" data-num="01">Current Frontend Audit</a></li>
+      <li><a href="#s2" data-num="02">Current Architecture</a></li>
+      <li><a href="#s3" data-num="03">Current Routes</a></li>
+      <li><a href="#s4" data-num="04">Current Components</a></li>
+      <li><a href="#s5" data-num="05">Current State Management</a></li>
+      <li><a href="#s6" data-num="06">Current API Integration</a></li>
+      <li><a href="#s7" data-num="07">Current Design System</a></li>
+      <li><a href="#s8" data-num="08">UX Problems</a></li>
+      <li><a href="#s9" data-num="09">Technical Debt</a></li>
+      <li><a href="#s10" data-num="10">Target Architecture</a></li>
+      <li><a href="#s11" data-num="11">Target Navigation</a></li>
+      <li><a href="#s12" data-num="12">Acquisition Journey</a></li>
+      <li><a href="#s13" data-num="13">Agent-to-Frontend Mapping</a></li>
+      <li><a href="#s14" data-num="14">Design System</a></li>
+      <li><a href="#s15" data-num="15">Migration Plan</a></li>
+      <li><a href="#s16" data-num="16">First Sprint</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <section id="s1">
+      <div class="section-header">
+        <span class="section-number">01</span>
+        <h2>Current Frontend Audit</h2>
+      </div>
+
+      <p>
+        El frontend ya ha sido parcialmente modernizado. Existe un shell responsive, un design system basado en tokens CSS, componentes UI primitivos y una navegación orientada a modelos mentales. Sin embargo, la mayoría de las pantallas de negocio aún muestran datos de demostración o secciones vacías documentadas como <code>FRONTEND DATA GAP</code>. El backend permanece intacto y no se inventarán APIs.
+      </p>
+
+      <div class="grid-2">
+        <div class="card">
+          <h4 class="card-title">Lo que ya funciona</h4>
+          <p>
+            Shell con topbar, navegación principal, bottom nav en móvil, drawers de "Más" y búsqueda; autenticación real con access token en memoria y refresh en cookie <code>HttpOnly</code>; leads reales desde <code>/api/v1/leads</code>; health checks reales; design system con tokens, foco visible, alto contraste y <code>prefers-reduced-motion</code>.
+          </p>
+        </div>
+        <div class="card">
+          <h4 class="card-title">Lo que aún es simulado</h4>
+          <p>
+            Revenue, órdenes, ROAS, pipelines de ventas, campañas, creativos, audiencias, experimentos, recomendaciones de IA, actividad de agentes, funnel, cohortes, atribución, configuraciones de workspace e integraciones. Todo está etiquetado como demo o gap.
+          </p>
+        </div>
+      </div>
+
+      <h3>Estado por área funcional</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Área</th>
+              <th>Ruta</th>
+              <th>Datos</th>
+              <th>Observación</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Home</td>
+              <td><code>/home</code></td>
+              <td><span class="tag tag--real">reales</span> leads, health</td>
+              <td>Mix real/demo. Métricas financieras y tareas AI simuladas.</td>
+            </tr>
+            <tr>
+              <td>Leads</td>
+              <td><code>/leads</code></td>
+              <td><span class="tag tag--real">reales</span></td>
+              <td>Lista completa con estados, canales, consentimiento y enlaces.</td>
+            </tr>
+            <tr>
+              <td>Sales</td>
+              <td><code>/sales</code></td>
+              <td><span class="tag tag--demo">demo</span></td>
+              <td>Leads reales, pero pipeline, clientes, órdenes y seguimientos son mock.</td>
+            </tr>
+            <tr>
+              <td>Products</td>
+              <td><code>/products</code></td>
+              <td><span class="tag tag--demo">demo</span></td>
+              <td>Oportunidades de producto con scoring simulado.</td>
+            </tr>
+            <tr>
+              <td>Growth</td>
+              <td><code>/growth</code></td>
+              <td><span class="tag tag--demo">demo</span></td>
+              <td>Campañas, creativos, audiencias y experimentos simulados; SEO vacío.</td>
+            </tr>
+            <tr>
+              <td>AI</td>
+              <td><code>/ai</code></td>
+              <td><span class="tag tag--gap">gap</span></td>
+              <td>Recomendaciones y agentes demo; costos y automatizaciones vacíos.</td>
+            </tr>
+            <tr>
+              <td>Analytics</td>
+              <td><code>/analytics</code></td>
+              <td><span class="tag tag--demo">demo</span></td>
+              <td>Métricas, funnel y canales demo; atribución y export vacíos.</td>
+            </tr>
+            <tr>
+              <td>Settings</td>
+              <td><code>/settings</code></td>
+              <td><span class="tag tag--gap">gap</span></td>
+              <td>Secciones estáticas; usuarios real pero resto de gaps.</td>
+            </tr>
+            <tr>
+              <td>System Status</td>
+              <td><code>/sistema</code></td>
+              <td><span class="tag tag--real">reales</span></td>
+              <td>Tabla de dependencias reales desde <code>/health</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="s2">
+      <div class="section-header">
+        <span class="section-number">02</span>
+        <h2>Current Architecture</h2>
+      </div>
+
+      <p>
+        El frontend es una SPA Angular 22 dentro del monorepo <code>crm-ventas</code>. Usa componentes standalone, carga perezosa por ruta y change detection sin zonas. No hay NgRx ni otro store global: el estado vive en servicios inyectables con <code>signal()</code>.
+      </p>
+
+      <h3>Capas actuales</h3>
+      <ol>
+        <li>
+          <strong>Shell</strong> (<code>app/shell/layout.ts</code>): layout global, navegación desktop/mobile, drawers, menú de usuario y banner de demo.
+        </li>
+        <li>
+          <strong>Core</strong> (<code>app/core/</code>): servicios de autenticación, sesión, leads y health. Aquí vive el patrón de respuesta <code>ok | problem | unreachable</code>.
+        </li>
+        <li>
+          <strong>Features</strong> (<code>app/features/</code>): una carpeta por módulo mental (home, sales, products, growth, ai, analytics, settings, leads, system-status).
+        </li>
+        <li>
+          <strong>UI primitives</strong> (<code>app/ui/</code>): componentes reutilizables mínimos (button, card, badge, icon, metric) exportados desde <code>index.ts</code>.
+        </li>
+        <li>
+          <strong>Styles</strong> (<code>src/styles/</code>): tokens CSS y primitivas globales compartidas entre pantallas.
+        </li>
+        <li>
+          <strong>Contracts</strong> (<code>@crm/contracts</code>): tipos compartidos; se usa solo como referencia de tipos para no arrastrar Zod al bundle.
+        </li>
+      </ol>
+
+      <h3>Decisiones arquitectónicas vigentes</h3>
+      <ul>
+        <li>Standalone components y <code>loadComponent</code> en rutas.</li>
+        <li>Access token solo en memoria; refresh token en cookie <code>__Host-crm_rt</code>.</li>
+        <li>Validación de formularios manual para evitar dependencias pesadas.</li>
+        <li>Respuestas API modeladas con tres desenlaces: <code>ok</code>, <code>problem</code>, <code>unreachable</code>.</li>
+      </ul>
+    </section>
+
+    <section id="s3">
+      <div class="section-header">
+        <span class="section-number">03</span>
+        <h2>Current Routes</h2>
+      </div>
+
+      <p>
+        Las rutas activas reflejan la nueva navegación mental. Aún existen rutas legacy redirigidas hacia las nuevas pantallas y componentes antiguos vacíos que no se borraron.
+      </p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Ruta</th>
+              <th>Componente</th>
+              <th>Estado</th>
+              <th>Notas</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>/setup</code></td>
+              <td><code>setup.ts</code></td>
+              <td><span class="tag tag--real">activo</span></td>
+              <td>Configuración inicial de workspace.</td>
+            </tr>
+            <tr>
+              <td><code>/entrar</code></td>
+              <td><code>login.ts</code></td>
+              <td><span class="tag tag--real">activo</span></td>
+              <td>Acceso con email/contraseña; refresh en cookie.</td>
+            </tr>
+            <tr>
+              <td><code>/home</code></td>
+              <td><code>features/home/home.ts</code></td>
+              <td><span class="tag tag--demo">activo/demo</span></td>
+              <td>Centro de control parcial.</td>
+            </tr>
+            <tr>
+              <td><code>/growth</code></td>
+              <td><code>features/growth/growth.ts</code></td>
+              <td><span class="tag tag--demo">activo/demo</span></td>
+              <td>Pipeline de crecimiento con datos simulados.</td>
+            </tr>
+            <tr>
+              <td><code>/sales</code></td>
+              <td><code>features/sales/sales.ts</code></td>
+              <td><span class="tag tag--demo">activo/demo</span></td>
+              <td>Pipeline comercial con datos simulados.</td>
+            </tr>
+            <tr>
+              <td><code>/products</code></td>
+              <td><code>features/products/products.ts</code></td>
+              <td><span class="tag tag--demo">activo/demo</span></td>
+              <td>Descubrimiento de oportunidades de producto.</td>
+            </tr>
+            <tr>
+              <td><code>/ai</code></td>
+              <td><code>features/ai/ai.ts</code></td>
+              <td><span class="tag tag--gap">activo/gap</span></td>
+              <td>Copiloto de IA con recomendaciones estáticas.</td>
+            </tr>
+            <tr>
+              <td><code>/analytics</code></td>
+              <td><code>features/analytics/analytics.ts</code></td>
+              <td><span class="tag tag--demo">activo/demo</span></td>
+              <td>Dashboard analítico con datos simulados.</td>
+            </tr>
+            <tr>
+              <td><code>/settings</code>, <code>/settings/users</code></td>
+              <td><code>features/settings/settings.ts</code></td>
+              <td><span class="tag tag--gap">activo/gap</span></td>
+              <td>Configuración estática excepto usuarios.</td>
+            </tr>
+            <tr>
+              <td><code>/leads</code></td>
+              <td><code>features/leads/leads.ts</code></td>
+              <td><span class="tag tag--real">activo</span></td>
+              <td>Listado de leads con datos reales.</td>
+            </tr>
+            <tr>
+              <td><code>/sistema</code></td>
+              <td><code>features/system-status/system-status.ts</code></td>
+              <td><span class="tag tag--real">activo</span></td>
+              <td>Estado de servicios reales.</td>
+            </tr>
+            <tr>
+              <td><code>/dashboard</code>, <code>/research</code>, <code>/strategy</code>, <code>/acquisition</code>, <code>/crm</code></td>
+              <td>—</td>
+              <td><span class="tag tag--legacy">legacy redirect</span></td>
+              <td>Redirigen a <code>/home</code>, <code>/products</code>, <code>/growth</code>, <code>/sales</code> o <code>/analytics</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="s4">
+      <div class="section-header">
+        <span class="section-number">04</span>
+        <h2>Current Components</h2>
+      </div>
+
+      <p>
+        Hay dos familias de componentes: primitivas globales reutilizables y componentes de feature que suelen mezclar presentación con datos demo.
+      </p>
+
+      <h3>UI primitives</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Componente</th>
+              <th>Archivo</th>
+              <th>Uso</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Button</td>
+              <td><code>ui/button.ts</code></td>
+              <td>Acciones primarias, secundarias y de icono.</td>
+            </tr>
+            <tr>
+              <td>Card</td>
+              <td><code>ui/card/card.ts</code></td>
+              <td>Contenedores elevados de contenido.</td>
+            </tr>
+            <tr>
+              <td>Badge</td>
+              <td><code>ui/badge.ts</code></td>
+              <td>Etiquetas de contexto como "Uso interno".</td>
+            </tr>
+            <tr>
+              <td>Icon</td>
+              <td><code>ui/icon.ts</code></td>
+              <td>SVG inline con selectores configurables.</td>
+            </tr>
+            <tr>
+              <td>Metric</td>
+              <td><code>ui/metric.ts</code></td>
+              <td>Cifra grande + etiqueta.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Componentes de feature</h3>
+      <ul>
+        <li><code>features/home/home.ts</code>: centro de control con métricas, recomendaciones AI, trabajo activo y leads recientes.</li>
+        <li><code>features/products/products.ts</code>: pipeline Discover → Analyze → Score → Select → Sell.</li>
+        <li><code>features/growth/growth.ts</code>: pipeline Atraer → Enganchar → Convertir → Retener → Optimizar.</li>
+        <li><code>features/sales/sales.ts</code>: leads, pipeline, oportunidades, clientes, seguimientos y órdenes.</li>
+        <li><code>features/ai/ai.ts</code>: recomendaciones, agentes, actividad y uso/costos.</li>
+        <li><code>features/analytics/analytics.ts</code>: métricas, funnel, canales, cohortes y atribución.</li>
+        <li><code>features/settings/settings.ts</code>: workspace, usuarios, integraciones, proveedores IA, notificaciones, seguridad.</li>
+      </ul>
+
+      <h3>Componentes legacy</h3>
+      <p>
+        Existen componentes vacíos o estáticos en <code>features/dashboard/</code>, <code>research.ts</code>, <code>strategy.ts</code>, <code>acquisition.ts</code> y <code>crm.ts</code>. Deben eliminarse una vez consolidadas las redirecciones.
+      </p>
+    </section>
+
+    <section id="s5">
+      <div class="section-header">
+        <span class="section-number">05</span>
+        <h2>Current State Management</h2>
+      </div>
+
+      <p>
+        La aplicación usa <code>signal()</code> como primitiva de estado obligatoria. No hay store central; cada servicio expone signals privadas y computadas públicas. Eso funciona para el alcance actual, pero dificulta compartir el estado del <em>Acquisition Journey</em> entre Home, Growth, Sales, Products y AI.
+      </p>
+
+      <h3>Servicios con estado real</h3>
+      <ul>
+        <li><code>core/session.ts</code>: usuario, demo mode, token de acceso en memoria, lógica de refresh.</li>
+        <li><code>core/auth-api.ts</code>: estado de login/signup/recover y manejo de <code>Retry-After</code>.</li>
+        <li><code>core/leads-api.ts</code>: lista de leads y estado de carga/error.</li>
+        <li><code>core/health.ts</code>: probes de live/ready.</li>
+      </ul>
+
+      <h3>Servicios de estado simulado</h3>
+      <p>
+        Cada feature page declara su propio mock inline: oportunidades de producto, campañas, recomendaciones, funnel, etc. Esto genera duplicación y hace imposible mantener coherencia narrativa entre Home y el resto del journey.
+      </p>
+    </section>
+
+    <section id="s6">
+      <div class="section-header">
+        <span class="section-number">06</span>
+        <h2>Current API Integration</h2>
+      </div>
+
+      <p>
+        La integración con backend sigue un patrón propio de tres desenlaces. La validación es superficial y manual para no incluir Zod en el bundle del frontend.
+      </p>
+
+      <h3>Clientes existentes</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Endpoint</th>
+              <th>Uso</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>auth-api.ts</code></td>
+              <td><code>/api/v1/auth/*</code></td>
+              <td>Login, signup, recover, refresh, logout.</td>
+            </tr>
+            <tr>
+              <td><code>leads-api.ts</code></td>
+              <td><code>/api/v1/leads</code></td>
+              <td>Listado paginado de leads.</td>
+            </tr>
+            <tr>
+              <td><code>health.ts</code></td>
+              <td><code>/health/live</code>, <code>/health/ready</code></td>
+              <td>Estado del sistema y dependencias.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Patrones vigentes</h3>
+      <ul>
+        <li><strong>ok</strong>: respuesta exitosa con datos tipados.</li>
+        <li><strong>problem</strong>: error estructurado RFC 9457 con <code>title</code>, <code>code</code>, <code>detail</code>, <code>traceId</code>.</li>
+        <li><strong>unreachable</strong>: backend no disponible; se muestra UI de estado caído.</li>
+      </ul>
+    </section>
+
+    <section id="s7">
+      <div class="section-header">
+        <span class="section-number">07</span>
+        <h2>Current Design System</h2>
+      </div>
+
+      <p>
+        El design system está documentado en <code>docs/design-system.md</code> e implementado a través de <code>styles/tokens.css</code> y <code>styles/components.css</code>. La base es sólida: tokens semánticos, primitivas globales, foco visible, alto contraste forzado y respeto a <code>prefers-reduced-motion</code>.
+      </p>
+
+      <h3>Hallazgos de auditoría</h3>
+      <div class="card">
+        <h4 class="card-title">Inconsistencia de tokens</h4>
+        <p>
+          <code>styles/components.css</code> mezcla dos sistemas de tokens. En la sección "Primitivas de navegación y paneles" y "Business Overview/Dashboard" aparecen tokens antiguos como <code>--space-2</code>, <code>--radius-md</code>, <code>--color-primary</code> y <code>--color-text-secondary</code>, que no existen en <code>tokens.css</code> (donde el namespace es <code>--s-*</code>, <code>--r-*</code>, <code>--c-*</code>). Esto puede provocar visual bugs silenciosos.
+        </p>
+      </div>
+      <div class="card">
+        <h4 class="card-title">Doble definición de <code>.metric-grid</code></h4>
+        <p>
+          La clase <code>.metric-grid</code> se define dos veces en <code>components.css</code> con reglas distintas (auto-fit 180px vs. 2 columnas fijas). La segunda definición puede anular intencionalmente la primera o generar cascadas impredecibles.
+        </p>
+      </div>
+
+      <h3>Fortalezas</h3>
+      <ul>
+        <li>No se usa Tailwind ni librerías de componentes con estilos propios.</li>
+        <li>Separación por elevación en lugar de bordes.</li>
+        <li>El color de marca se usa con moderación.</li>
+        <li>Reglas de accesibilidad explícitas (focus-visible, forced-colors, reduced motion).</li>
+      </ul>
+    </section>
+
+    <section id="s8">
+      <div class="section-header">
+        <span class="section-number">08</span>
+        <h2>UX Problems</h2>
+      </div>
+
+      <p>
+        La experiencia actual funciona como un conjunto de pantallas aisladas en lugar de un flujo de adquisición continuo. Esto contradice el modelo mental del "AI Acquisition & Growth Control Center".
+      </p>
+
+      <ul>
+        <li>
+          <strong>Datos demo sin distinción clara:</strong> aunque muchas pantallas declaran el origen de los datos, las recomendaciones AI y las métricas simuladas no siempre se presentan como acciones pendientes de aprobación.
+        </li>
+        <li>
+          <strong>No hay centro de control unificado:</strong> Home muestra un resumen, pero no conecta visualmente las fases del journey ni indica dónde requiere intervención humana.
+        </li>
+        <li>
+          <strong>Human-in-the-loop invisible:</strong> el patrón AI recommend → user review → user approve → system execute no tiene una representación UI coherente.
+        </li>
+        <li>
+          <strong>AI como catálogo estático:</strong> la pantalla <code>/ai</code> lista agentes y recomendaciones, pero no actúa como copiloto contextual dentro de Sales, Growth o Products.
+        </li>
+        <li>
+          <strong>Navegación deprecada residual:</strong> <code>nav-items.ts</code> aún conserva <code>NAV_GROUPS</code> legacy que confunde la estructura mental.
+        </li>
+        <li>
+          <strong>Páginas con muchos gaps vacíos:</strong> mostrar secciones enteramente vacías (SEO, usage/costs, attribution, export) sin una acción clara genera la sensación de producto inacabado.
+        </li>
+      </ul>
+    </section>
+
+    <section id="s9">
+      <div class="section-header">
+        <span class="section-number">09</span>
+        <h2>Technical Debt</h2>
+      </div>
+
+      <ol>
+        <li>
+          <strong>Tokens CSS duplicados/inconsistentes.</strong> Dos namespaces conviven en <code>components.css</code>; hay clases duplicadas.
+        </li>
+        <li>
+          <strong>Componentes legacy sin borrar.</strong> Dashboard, research, strategy, acquisition, crm siguen en el árbol aunque redirigidos.
+        </li>
+        <li>
+          <strong>Rutas legacy.</strong> Las redirecciones resuelven URLs antiguas pero mantienen deuda semántica.
+        </li>
+        <li>
+          <strong>Mocks dispersos.</strong> Datos demo repetidos en cada feature; no hay una fuente única de verdad para el estado del journey.
+        </li>
+        <li>
+          <strong>Falta de modelo de dominio compartido.</strong> No existe un tipo/estado unificado para Opportunity, Journey Stage, Recommendation o Approval.
+        </li>
+        <li>
+          <strong>Cobertura de tests desconocida.</strong> Vitest 5 está configurado, pero no se observan tests de los componentes nuevos.
+        </li>
+      </ol>
+    </section>
+
+    <section id="s10">
+      <div class="section-header">
+        <span class="section-number">10</span>
+        <h2>Target Architecture</h2>
+      </div>
+
+      <p>
+        El objetivo es que el frontend se sienta como un solo centro de control: el usuario llega a Home, ve el estado del ciclo de adquisición, recibe recomendaciones de IA con acciones contextuales, y puede navegar a cualquier fase del journey sin perder el contexto.
+      </p>
+
+      <h3>Principios de la arquitectura objetivo</h3>
+      <ul>
+        <li><strong>Home como centro de gravedad:</strong> todo empieza y vuelve a Home.</li>
+        <li><strong>Journey como lenguaje común:</strong> cada módulo representa una fase del Acquisition Journey.</li>
+        <li><strong>AI como copiloto, no como pantalla aparte:</strong> las recomendaciones aparecen donde se necesitan.</li>
+        <li><strong>Human-in-the-loop visible:</strong> cualquier acción propuesta por IA requiere aprobación explícita.</li>
+        <li><strong>Datos con origen explícito:</strong> real, estimado, inferencia AI o declarado.</li>
+      </ul>
+
+      <h3>Nuevas capas conceptuales</h3>
+      <div class="grid-2">
+        <div class="card">
+          <h4 class="card-title">Domain state</h4>
+          <p>
+            Servicios de dominio para <code>Opportunity</code>, <code>JourneyStage</code>, <code>Recommendation</code>, <code>Campaign</code>, <code>Approval</code>. Viven como signals y se consumen desde cualquier feature.
+          </p>
+        </div>
+        <div class="card">
+          <h4 class="card-title">AI presentation layer</h4>
+          <p>
+            Componentes de recomendación, aprobación y actividad de agentes reutilizables en Home, Growth, Sales, Products y AI.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="s11">
+      <div class="section-header">
+        <span class="section-number">11</span>
+        <h2>Target Navigation</h2>
+      </div>
+
+      <p>
+        La navegación se mantiene casi igual en superficie, pero cada ítem adquiere un significado de fase del journey. Se eliminan los grupos deprecados.
+      </p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Ítem</th>
+              <th>Ruta</th>
+              <th>Rol en el journey</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Home</td>
+              <td><code>/home</code></td>
+              <td>Centro de control y resumen del ciclo.</td>
+            </tr>
+            <tr>
+              <td>Growth</td>
+              <td><code>/growth</code></td>
+              <td>Atraer, Enganchar, Convertir, Retener, Optimizar.</td>
+            </tr>
+            <tr>
+              <td>Sales</td>
+              <td><code>/sales</code></td>
+              <td>Pipeline comercial y cierre.</td>
+            </tr>
+            <tr>
+              <td>Products</td>
+              <td><code>/products</code></td>
+              <td>Discover, Analyze, Score, Select, Sell.</td>
+            </tr>
+            <tr>
+              <td>AI</td>
+              <td><code>/ai</code></td>
+              <td>Copiloto, agentes, costos y aprobaciones pendientes.</td>
+            </tr>
+            <tr>
+              <td>Analytics</td>
+              <td><code>/analytics</code></td>
+              <td>Retrospectiva: funnel, canales, cohortes, atribución.</td>
+            </tr>
+            <tr>
+              <td>Settings</td>
+              <td><code>/settings</code></td>
+              <td>Workspace, usuarios, integraciones, proveedores IA.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="s12">
+      <div class="section-header">
+        <span class="section-number">12</span>
+        <h2>Acquisition Journey</h2>
+      </div>
+
+      <p>
+        El journey de adquisición es el modelo mental que unifica el producto. Cada fase se mapea a una pantalla o a una acción dentro de una pantalla. El ciclo termina en aprendizaje que alimenta la siguiente iteración.
+      </p>
+
+      <div class="mermaid">
+graph LR
+    A[Opportunity] --> B[Intelligence]
+    B --> C[Validation]
+    C --> D[Offer]
+    D --> E[Content]
+    E --> F[Creative]
+    F --> G[Landing]
+    G --> H[Campaign]
+    H --> I[Sales]
+    I --> J[Analytics]
+    J --> K[Optimization]
+    K --> L[Learning]
+    L --> A
+      </div>
+
+      <h3>Descripción de fases</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Fase</th>
+              <th>Responsable principal</th>
+              <th>Representación en frontend</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Opportunity</td>
+              <td>Products / AI product_research</td>
+              <td>Lista de oportunidades de producto con score.</td>
+            </tr>
+            <tr>
+              <td>Intelligence</td>
+              <td>AI marketing_strategy</td>
+              <td>Resumen de mercado, audiencias y mensajes en Home / AI.</td>
+            </tr>
+            <tr>
+              <td>Validation</td>
+              <td>AI + human review</td>
+              <td>Cards de aprobación con evidencia y acciones.</td>
+            </tr>
+            <tr>
+              <td>Offer</td>
+              <td>Sales / Products</td>
+              <td>Propuesta de valor y pricing en Sales.</td>
+            </tr>
+            <tr>
+              <td>Content</td>
+              <td>AI content</td>
+              <td>Borradores de copy, emails, posts en Growth / AI.</td>
+            </tr>
+            <tr>
+              <td>Creative</td>
+              <td>AI creative</td>
+              <td>Variantes de creativos pendientes de aprobación.</td>
+            </tr>
+            <tr>
+              <td>Landing</td>
+              <td>Growth</td>
+              <td>Páginas de captura y experimentos en Growth.</td>
+            </tr>
+            <tr>
+              <td>Campaign</td>
+              <td>Growth</td>
+              <td>Campañas activas, presupuesto, ROAS.</td>
+            </tr>
+            <tr>
+              <td>Sales</td>
+              <td>Sales</td>
+              <td>Leads, pipeline, oportunidades, órdenes.</td>
+            </tr>
+            <tr>
+              <td>Analytics</td>
+              <td>Analytics</td>
+              <td>Métricas, funnel, canales, cohortes.</td>
+            </tr>
+            <tr>
+              <td>Optimization</td>
+              <td>AI + Analytics</td>
+              <td>Recomendaciones de mejora en Home / AI.</td>
+            </tr>
+            <tr>
+              <td>Learning</td>
+              <td>AI + human</td>
+              <td>Insights del ciclo cerrado que alimentan Opportunity.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="s13">
+      <div class="section-header">
+        <span class="section-number">13</span>
+        <h2>Agent-to-Frontend Mapping</h2>
+      </div>
+
+      <p>
+        La capa de IA define nueve agentes especializados y un orquestador. A continuación se mapea cada agente a las pantallas que consumirán sus recomendaciones.
+      </p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Agente</th>
+              <th>Entrega al frontend</th>
+              <th>Pantallas consumidoras</th>
+              <th>Estado actual</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>orchestrator</td>
+              <td>Plan de acción, priorización, resumen</td>
+              <td>Home, AI</td>
+              <td><span class="tag tag--gap">gap</span></td>
+            </tr>
+            <tr>
+              <td>product_research</td>
+              <td>Oportunidades, scoring, demanda, competencia</td>
+              <td>Products, Home</td>
+              <td><span class="tag tag--demo">demo</span></td>
+            </tr>
+            <tr>
+              <td>marketing_strategy</td>
+              <td>Audiencias, mensajes, canales, presupuesto</td>
+              <td>Growth, AI</td>
+              <td><span class="tag tag--demo">demo</span></td>
+            </tr>
+            <tr>
+              <td>content</td>
+              <td>Copy, emails, posts, variantes de mensaje</td>
+              <td>Growth, AI</td>
+              <td><span class="tag tag--gap">gap</span></td>
+            </tr>
+            <tr>
+              <td>creative</td>
+              <td>Variantes creativas, briefs</td>
+              <td>Growth, AI</td>
+              <td><span class="tag tag--gap">gap</span></td>
+            </tr>
+            <tr>
+              <td>landing_optimizer</td>
+              <td>Sugerencias de landing, experimentos</td>
+              <td>Growth</td>
+              <td><span class="tag tag--gap">gap</span></td>
+            </tr>
+            <tr>
+              <td>campaign_manager</td>
+              <td>Campañas, presupuesto, ROAS, alertas</td>
+              <td>Growth, Analytics</td>
+              <td><span class="tag tag--demo">demo</span></td>
+            </tr>
+            <tr>
+              <td>sales_assistant</td>
+              <td>Siguiente acción sobre leads, follow-ups</td>
+              <td>Sales, Home</td>
+              <td><span class="tag tag--gap">gap</span></td>
+            </tr>
+            <tr>
+              <td>analytics_insights</td>
+              <td>Insights, cohortes, atribución</td>
+              <td>Analytics, AI</td>
+              <td><span class="tag tag--demo">demo</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="s14">
+      <div class="section-header">
+        <span class="section-number">14</span>
+        <h2>Design System</h2>
+      </div>
+
+      <p>
+        El design system debe consolidar tokens, eliminar duplicados y extenderse con patrones propios del control center. Se mantiene la filosofía Nubank: simplicidad, jerarquía por elevación, disclosure progresiva y acciones contextuales.
+      </p>
+
+      <h3>Acciones de consolidación</h3>
+      <ol>
+        <li>Elegir un único namespace de tokens y migrar todas las referencias antiguas.</li>
+        <li>Eliminar la doble definición de <code>.metric-grid</code> y otras clases duplicadas.</li>
+        <li>Documentar regla de decisión: primitiva global si la necesitan dos o más pantallas.</li>
+      </ol>
+
+      <h3>Nuevos componentes y patrones</h3>
+      <ul>
+        <li><strong>Journey-stage card:</strong> muestra el estado de una fase, indicador de atención y acción principal.</li>
+        <li><strong>Recommendation card:</strong> propuesta de IA con contexto, riesgo, evidencia y botones Aprobar / Descartar / Ver más.</li>
+        <li><strong>Approval timeline:</strong> historial de decisiones human-in-the-loop.</li>
+        <li><strong>Data-origin tag:</strong> real / estimado / inferencia IA / declarado.</li>
+        <li><strong>Copiloto ribbon:</strong> barra contextual de IA dentro de Sales, Growth y Products.</li>
+      </ul>
+    </section>
+
+    <section id="s15">
+      <div class="section-header">
+        <span class="section-number">15</span>
+        <h2>Migration Plan</h2>
+      </div>
+
+      <p>
+        La migración se divide en cinco fases. Cada fase entrega valor de usuario visible y no requiere cambios en el backend. Los datos demo se mantienen documentados hasta que el backend exponga el endpoint correspondiente.
+      </p>
+
+      <div class="phase">
+        <h4>Fase 0 — Foundation</h4>
+        <p>Consolidar tokens CSS, eliminar componentes legacy, limpiar rutas redirigidas y establecer servicios de dominio vacíos pero tipados.</p>
+      </div>
+      <div class="phase">
+        <h4>Fase 1 — Home Control Center</h4>
+        <p>Transformar <code>/home</code> en el centro de gravedad: estado del journey, feed de recomendaciones con aprobación y trabajo activo. Es el primer sprint.</p>
+      </div>
+      <div class="phase">
+        <h4>Fase 2 — Journeys</h4>
+        <p>Reestructurar Growth, Sales y Products como pipelines del Acquisition Journey con datos demo coherentes entre sí.</p>
+      </div>
+      <div class="phase">
+        <h4>Fase 3 — AI Copiloto</h4>
+        <p>Introducir copiloto contextual en las pantallas de negocio y mejorar <code>/ai</code> como panel de agentes, aprobaciones y costos.</p>
+      </div>
+      <div class="phase">
+        <h4>Fase 4 — Analytics & Polish</h4>
+        <p>Completar Analytics con funnel, atribución y export; pulir responsive, a11y y tests.</p>
+      </div>
+
+      <h3>Criterios de éxito generales</h3>
+      <ul>
+        <li>El usuario puede entender el estado del ciclo de adquisición desde Home.</li>
+        <li>Toda recomendación de IA muestra su origen y requiere aprobación explícita.</li>
+        <li>Ninguna pantalla muestra un gap vacío sin una acción clara de cómo llenarlo.</li>
+        <li>El design system tiene un único namespace de tokens y pasa auditoría visual.</li>
+      </ul>
+    </section>
+
+    <section id="s16">
+      <div class="section-header">
+        <span class="section-number">16</span>
+        <h2>First Sprint</h2>
+      </div>
+
+      <p>
+        El primer sprint convierte <code>/home</code> en un centro de control funcional: muestra el estado del Acquisition Journey, presenta recomendaciones de IA con acciones de aprobación y lista el trabajo activo. Todo con datos demo documentados; no se toca backend.
+      </p>
+
+      <div class="note">
+        <p>
+          <strong>Regla de oro del sprint:</strong> no implementar APIs nuevas. Cualquier dato que aún no venga del backend se representa como demo o gap con el tag de origen correspondiente, siguiendo el patrón <code>FRONTEND DATA GAP</code>.
+        </p>
+      </div>
+
+      <h3>Tareas del sprint</h3>
+      <ol>
+        <li>
+          <strong>Consolidar design tokens.</strong>
+          <ul>
+            <li>Elegir namespace <code>--s-*</code>, <code>--r-*</code>, <code>--c-*</code> y migrar todas las referencias antiguas en <code>components.css</code>.</li>
+            <li>Eliminar doble definición de <code>.metric-grid</code>.</li>
+            <li>Verificar visualmente shell, drawers y bottom nav.</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Crear servicios de dominio en <code>app/domain/</code>.</strong>
+          <ul>
+            <li><code>journey-store.ts</code>: signals de <code>JourneyStage</code> con estado, indicador de atención y acción.</li>
+            <li><code>recommendation-store.ts</code>: lista de recomendaciones con estados <code>pending</code>, <code>approved</code>, <code>dismissed</code>.</li>
+            <li><code>active-work-store.ts</code>: tareas en curso del ciclo de adquisición.</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Implementar cards de estado del journey.</strong>
+          <ul>
+            <li>Grid de 5-6 fases del journey en Home (Opportunity, Intelligence, Content/Creative, Campaign, Sales, Optimization).</li>
+            <li>Cada card muestra: nombre, estado, contador clave, acción principal.</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Implementar feed de recomendaciones AI.</strong>
+          <ul>
+            <li>Lista de recomendaciones con agente origen, impacto, evidencia breve.</li>
+            <li>Botones Aprobar, Descartar, Ver más.</li>
+            <li>Al aprobar, la recomendación se convierte en trabajo activo.</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Implementar panel de trabajo activo.</strong>
+          <ul>
+            <li>Tareas derivadas de recomendaciones aprobadas o del estado actual del journey.</li>
+            <li>Indicador de progreso y acción contextual.</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Origen de datos visible.</strong>
+          <ul>
+            <li>Cada sección de Home declara si sus datos son reales, demo o gap.</li>
+            <li>Reutilizar componente <code>DataOrigin</code> existente.</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Tests.</strong>
+          <ul>
+            <li>Tests unitarios para los stores de dominio con Vitest.</li>
+            <li>Tests de renderizado básico para las nuevas cards de Home.</li>
+          </ul>
+        </li>
+      </ol>
+
+      <h3>Rutas y archivos afectados</h3>
+      <ul>
+        <li><code>apps/web/src/app/features/home/home.ts</code> y <code>home.html</code></li>
+        <li><code>apps/web/src/app/domain/journey-store.ts</code> (nuevo)</li>
+        <li><code>apps/web/src/app/domain/recommendation-store.ts</code> (nuevo)</li>
+        <li><code>apps/web/src/app/domain/active-work-store.ts</code> (nuevo)</li>
+        <li><code>apps/web/src/app/ui/recommendation-card/</code> (nuevo)</li>
+        <li><code>apps/web/src/app/ui/journey-stage-card/</code> (nuevo)</li>
+        <li><code>apps/web/src/styles/components.css</code></li>
+      </ul>
+
+      <h3>Criterios de aceptación</h3>
+      <ul class="checklist">
+        <li>Home muestra el estado del Acquisition Journey sin salir de la pantalla.</li>
+        <li>El usuario puede aprobar o descartar al menos tres recomendaciones demo.</li>
+        <li>Las recomendaciones aprobadas aparecen en el panel de trabajo activo.</li>
+        <li>Todos los datos demo llevan etiqueta de origen.</li>
+        <li>Los tests de los stores pasan.</li>
+        <li>No se introduce ninguna dependencia nueva ni se toca backend.</li>
+      </ul>
+
+      <h3>Entregable del sprint</h3>
+      <p>
+        Un PR que transforma <code>/home</code> en el centro de control de adquisición, consolidando tokens y sentando las bases del dominio <code>Journey / Recommendation / ActiveWork</code>. El resto de pantallas permanecen inalteradas salvo correcciones de tokens globales.
+      </p>
+    </section>
+  </main>
+</div>

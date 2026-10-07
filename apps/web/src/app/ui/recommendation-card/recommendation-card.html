@@ -1,0 +1,52 @@
+<app-card class="recommendation-card" padding="md">
+  <div class="recommendation-card__inner">
+    <div class="recommendation-card__head">
+      <div class="recommendation-card__agent">
+        <app-icon name="robot" size="sm" aria-hidden="true" />
+        <span class="recommendation-card__agent-name">{{ recommendation().agentName }}</span>
+      </div>
+      <app-badge
+        [variant]="impactVariant(recommendation().impact)"
+        [label]="impactLabel(recommendation().impact)"
+      />
+    </div>
+
+    <div class="recommendation-card__body">
+      <h3 class="recommendation-card__title">{{ recommendation().title }}</h3>
+      <p class="recommendation-card__what">{{ recommendation().what }}</p>
+
+      <div class="recommendation-card__why">
+        <p class="recommendation-card__why-title">¿Por qué?</p>
+        <ul>
+          @for (reason of recommendation().why; track reason) {
+            <li>{{ reason }}</li>
+          }
+        </ul>
+      </div>
+
+      <div class="recommendation-card__meta">
+        <div>
+          <p class="recommendation-card__meta-label">Confianza</p>
+          <p class="recommendation-card__confidence">{{ recommendation().confidence }}%</p>
+        </div>
+        <div>
+          <p class="recommendation-card__meta-label">Impacto esperado</p>
+          <p class="recommendation-card__impact-text">{{ recommendation().impactDescription }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="recommendation-card__actions">
+      <app-button variant="primary" size="sm" (click)="onApprove()">
+        Aprobar
+      </app-button>
+      <app-button variant="ghost" size="sm" (click)="onDismiss()">
+        Descartar
+      </app-button>
+      <a [routerLink]="recommendation().actionPath" class="recommendation-card__link" (click)="onViewMore()">
+        Ver más
+        <app-icon name="arrowRight" size="xs" />
+      </a>
+    </div>
+  </div>
+</app-card>

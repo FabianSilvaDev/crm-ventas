@@ -1,0 +1,29 @@
+<app-card class="stage-card" padding="md">
+  <div class="stage-card__inner">
+    <div class="stage-card__head">
+      <div class="stage-card__icon" aria-hidden="true">
+        <app-icon [name]="stageIcon(stage().id)" size="md" />
+      </div>
+      <app-badge
+        [variant]="statusVariant(stage().status)"
+        [label]="statusLabel(stage().status)"
+      />
+    </div>
+
+    <div class="stage-card__body">
+      <h3 class="stage-card__title">{{ stage().label }}</h3>
+      <p class="stage-card__description">{{ stage().description }}</p>
+    </div>
+
+    <div class="stage-card__foot">
+      <p class="stage-card__count">
+        <strong>{{ stage().count }}</strong>
+        <span>{{ stage().countLabel }}</span>
+      </p>
+      <a [routerLink]="stage().actionPath" class="stage-card__action">
+        {{ stage().actionLabel }}
+        <app-icon name="arrowRight" size="xs" />
+      </a>
+    </div>
+  </div>
+</app-card>
