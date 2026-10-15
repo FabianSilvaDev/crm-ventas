@@ -1,0 +1,436 @@
+@if (state.loading() && !state.data()) {
+  <app-state-display
+    mode="loading"
+    description="Agregando embudo, series temporales, atribucion por canal y experimentos de la ventana seleccionada..."
+  />
+} @else if (state.error(); as error) {
+  <app-state-display mode="error" [error]="error" (retry)="load()" />
+} @else if (data(); as analytics) {
+  <div class="stack stack--lg">
+    <!-- Cabecera de la seccion -->
+    <header class="page-header">
+      <div>
+        <h1 class="page-header__title">
+          <app-pixel-icon name="analytics" [size]="18" accent="amber" />
+          Analitica
+        </h1>
+        <p class="page-header__description">
+          Rendimiento agregado de la operacion simulada: embudo, ingresos frente a gasto, atribucion por canal,
+          catalogo, campanas y experimentos A/B de las landing pages.
+        </p>
+      </div>
+      <div class="page-header__actions">
+        <button type="button" class="btn btn--ghost btn--sm" (click)="refresh()" [disabled]="state.loading()">
+          <app-pixel-icon name="reset" [size]="12" accent="#4fd6ff" />
+          {{ state.loading() ? 'Actualizando' : 'Actualizar' }}
+        </button>
+      </div>
+    </header>
+
+    <!-- Ventana temporal: cada cambio vuelve a pedir la analitica a la API -->
+    <div class="row row--wrap" role="group" aria-label="Ventana temporal">
+      <div class="tabs">
+        @for (option of ranges; track option) {
+          <button type="button" class="tab" [class.tab--active]="option === range()" (click)="setRange(option)">
+            {{ option }} dias
+          </button>
+        }
+      </div>
+      <span class="spacer"></span>
+      <span class="text-xs text-dim">
+        La API agrega los ultimos {{ analytics.range }} dias y devuelve las series de ese mismo periodo.
+      </span>
+    </div>
+
+    <!-- Origen y naturaleza de los datos -->
+    <aside class="demo-banner">
+      <app-pixel-icon class="demo-banner__glyph" name="demo" [size]="14" accent="#ffc44d" />
+      <span>
+        <strong>Cifras de demostracion.</strong>
+        El ingreso y el gasto son simulados: la serie diaria se reparte a partir de los totales de campana con una
+        semilla fija, de modo que la misma ventana devuelve siempre el mismo resultado.
+      </span>
+    </aside>
+
+    <!-- Indicadores de la ventana -->
+    @if (overview(); as kpi) {
+      <section class="grid grid--3" aria-label="Indicadores de la ventana">
+        <app-stat-tile
+          label="Ingreso"
+          [value]="kpi.revenue | eur"
+          icon="analytics"
+          accent="amber"
+          [hint]="'Importes en ' + kpi.currency"
+          [trend]="revenueTrend()"
+        />
+        <app-stat-tile
+          label="Gasto"
+          [value]="kpi.spend | eur"
+          icon="campaigns"
+          accent="orange"
+          [hint]="'Ritmo de presupuesto ' + (kpi.budgetPacing | rate)"
+        />
+        <app-stat-tile
+          label="ROAS"
+          [value]="kpi.roas + 'x'"
+          icon="check"
+          accent="lime"
+          [hint]="'Ingreso simulado por cada euro de gasto'"
+        />
+        <app-stat-tile
+          label="Conversiones"
+          [value]="kpi.conversions | num"
+          icon="check"
+          accent="green"
+          [hint]="'CPA de ' + (kpi.cpa | eur)"
+        />
+        <app-stat-tile
+          label="CPA"
+          [value]="kpi.cpa | eur"
+          icon="grid"
+          accent="violet"
+          [hint]="'Coste por conversion simulada'"
+        />
+        <app-stat-tile
+          label="CPL"
+          [value]="kpi.cpl | eur"
+          icon="leads"
+          accent="pink"
+          [hint]="'Coste por lead captado'"
+        />
+        <app-stat-tile
+          label="Leads"
+          [value]="kpi.leads | num"
+          icon="leads"
+          accent="blue"
+          [hint]="'Leads atribuidos a campanas'"
+          [trend]="leadsTrend()"
+        />
+        <app-stat-tile
+          label="CTR"
+          [value]="kpi.ctr | rate"
+          icon="search"
+          accent="cyan"
+          [hint]="'Clics sobre impresiones'"
+        />
+        <app-stat-tile
+          label="Ritmo de presupuesto"
+          [value]="kpi.budgetPacing | rate"
+          icon="flow"
+          accent="amber"
+          [hint]="'Porcentaje del presupuesto consumido'"
+        />
+      </section>
+    }
+
+    <!-- Embudo y atribucion por canal -->
+    <section class="grid grid--2">
+      <article class="panel panel--notched">
+        <header class="panel__header">
+          <span class="panel__title">
+            <app-pixel-icon name="flow" [size]="14" accent="green" />
+            Embudo de conversion
+            <span class="panel__subtitle">Visitas, leads, cualificacion, propuesta y cierre</span>
+          </span>
+        </header>
+        <div class="panel__body">
+          @if (funnel().length > 0) {
+            <app-funnel-chart [steps]="funnel()" />
+          } @else {
+            <app-state-display mode="empty" description="La ventana seleccionada no tiene etapas de embudo." />
+          }
+        </div>
+      </article>
+
+      <article class="panel panel--notched">
+        <header class="panel__header">
+          <span class="panel__title">
+            <app-pixel-icon name="analytics" [size]="14" accent="amber" />
+            Ingreso por canal
+            <span class="panel__subtitle">Una sola medida: ingreso simulado</span>
+          </span>
+        </header>
+        <div class="panel__body">
+          @if (channelRows().length > 0) {
+            <app-bar-chart [rows]="channelRows()" valueFormat="currency" />
+          } @else {
+            <app-state-display mode="empty" description="Sin atribucion por canal en esta ventana." />
+          }
+        </div>
+      </article>
+    </section>
+
+    <!-- Serie de dinero: una unica escala (EUR) para las dos series -->
+    <article class="panel panel--notched">
+      <header class="panel__header">
+        <span class="panel__title">
+          <app-pixel-icon name="analytics" [size]="14" accent="amber" />
+          Ingreso y gasto simulados
+          <span class="panel__subtitle">Misma unidad (EUR) y un unico eje</span>
+        </span>
+      </header>
+      <div class="panel__body">
+        @if (revenuePoints().length > 0) {
+          <app-line-chart
+            [points]="revenuePoints()"
+            [series]="revenueSeriesDef()"
+            [height]="220"
+            valueFormat="currency"
+          />
+        } @else {
+          <app-state-display mode="empty" description="Sin serie de ingresos en la ventana seleccionada." />
+        }
+      </div>
+    </article>
+
+    <!-- Serie de leads: medida distinta, grafico aparte -->
+    <article class="panel panel--notched">
+      <header class="panel__header">
+        <span class="panel__title">
+          <app-pixel-icon name="leads" [size]="14" accent="pink" />
+          Leads captados
+          <span class="panel__subtitle">Escala propia: no comparte eje con el dinero</span>
+        </span>
+      </header>
+      <div class="panel__body">
+        @if (leadPoints().length > 0) {
+          <app-line-chart [points]="leadPoints()" [series]="leadSeriesDef()" [height]="180" />
+        } @else {
+          <app-state-display mode="empty" description="Sin serie de leads en la ventana seleccionada." />
+        }
+      </div>
+    </article>
+
+    <!-- Atribucion por canal -->
+    <article class="panel panel--notched">
+      <header class="panel__header">
+        <span class="panel__title">
+          <app-pixel-icon name="campaigns" [size]="14" accent="orange" />
+          Atribucion por canal
+          <span class="panel__subtitle">Cada campana se atribuye a su canal principal</span>
+        </span>
+      </header>
+      <div class="panel__body panel__body--flush">
+        @if (channels().length > 0) {
+          <div class="table-wrap">
+            <table class="table table--compact">
+              <caption class="visually-hidden">
+                Gasto, ingreso, ROAS, conversiones y leads por canal de adquisicion.
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Canal</th>
+                  <th scope="col" class="num">Gasto</th>
+                  <th scope="col" class="num">Ingreso</th>
+                  <th scope="col" class="num">ROAS</th>
+                  <th scope="col" class="num">Conversiones</th>
+                  <th scope="col" class="num">Leads</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (channel of channels(); track channel.label) {
+                  <tr>
+                    <th scope="row">{{ channelLabel(channel.label) }}</th>
+                    <td class="num">{{ channel.spend | eur }}</td>
+                    <td class="num">{{ channel.revenue | eur }}</td>
+                    <td class="num num--strong">{{ channel.roas }}x</td>
+                    <td class="num">{{ channel.conversions | num }}</td>
+                    <td class="num">{{ channel.leads | num }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <div class="panel__body">
+            <app-state-display mode="empty" description="Sin canales con gasto en esta ventana." />
+          </div>
+        }
+      </div>
+    </article>
+
+    <!-- Productos y campanas -->
+    <section class="grid grid--2">
+      <article class="panel panel--notched">
+        <header class="panel__header">
+          <span class="panel__title">
+            <app-pixel-icon name="products" [size]="14" accent="amber" />
+            Productos con mas ingreso
+          </span>
+        </header>
+        <div class="panel__body panel__body--flush">
+          @if (products().length > 0) {
+            <div class="table-wrap">
+              <table class="table table--compact">
+                <caption class="visually-hidden">
+                  Ranking de productos por ingreso simulado, con unidades, margen, puntuacion de validacion y
+                  valoracion media.
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Producto</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col" class="num">Unid.</th>
+                    <th scope="col" class="num">Ingreso</th>
+                    <th scope="col" class="num">Margen</th>
+                    <th scope="col" class="num">Puntuacion</th>
+                    <th scope="col" class="num">Valoracion</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (product of products(); track product.id) {
+                    <tr>
+                      <th scope="row" class="text-mono text-xs">{{ product.name }}</th>
+                      <td><app-status-chip [status]="product.status" kind="product" /></td>
+                      <td class="num">{{ product.unitsSold | num }}</td>
+                      <td class="num">{{ product.revenue | eur }}</td>
+                      <td class="num">{{ product.margin | rate }}</td>
+                      <td class="num num--strong">{{ product.score | num }}</td>
+                      <td class="num">{{ product.rating | num: 1 }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <div class="panel__body">
+              <app-state-display mode="empty" description="El catalogo no tiene productos que mostrar." />
+            </div>
+          }
+        </div>
+      </article>
+
+      <article class="panel panel--notched">
+        <header class="panel__header">
+          <span class="panel__title">
+            <app-pixel-icon name="campaigns" [size]="14" accent="orange" />
+            Campanas con mejor retorno
+          </span>
+        </header>
+        <div class="panel__body panel__body--flush">
+          @if (campaigns().length > 0) {
+            <div class="table-wrap">
+              <table class="table table--compact">
+                <caption class="visually-hidden">
+                  Rendimiento por campana: canal, estado, ROAS, coste por conversion y conversiones simuladas.
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Campana</th>
+                    <th scope="col">Canal</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col" class="num">ROAS</th>
+                    <th scope="col" class="num">CPA</th>
+                    <th scope="col" class="num">Conv.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (campaign of campaigns(); track campaign.id) {
+                    <tr>
+                      <th scope="row" class="text-mono text-xs">{{ campaign.name }}</th>
+                      <td class="text-dim">{{ channelLabel(campaign.channel) }}</td>
+                      <td><app-status-chip [status]="campaign.status" kind="campaign" /></td>
+                      <td class="num num--strong">{{ campaign.roas }}x</td>
+                      <td class="num">{{ campaign.cpa | eur }}</td>
+                      <td class="num">{{ campaign.conversions | num }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <div class="panel__body">
+              <app-state-display mode="empty" description="Sin campanas con gasto en esta ventana." />
+            </div>
+          }
+        </div>
+      </article>
+    </section>
+
+    <!-- Experimentos A/B y avisos derivados de los datos -->
+    <section class="grid grid--2">
+      <article class="panel panel--notched">
+        <header class="panel__header">
+          <span class="panel__title">
+            <app-pixel-icon name="landing" [size]="14" accent="violet" />
+            Experimentos A/B de landing pages
+          </span>
+        </header>
+        <div class="panel__body panel__body--flush">
+          @if (experiments().length > 0) {
+            <div class="table-wrap">
+              <table class="table table--compact">
+                <caption class="visually-hidden">
+                  Variante ganadora, alternativa y mejora relativa de cada experimento A/B.
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Landing</th>
+                    <th scope="col">Ganadora</th>
+                    <th scope="col">Alternativa</th>
+                    <th scope="col" class="num">Mejora</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (experiment of experiments(); track experiment.landingPageId) {
+                    <tr>
+                      <th scope="row" class="text-mono text-xs">{{ experiment.slug }}</th>
+                      <td class="text-xs">
+                        {{ variantLabel(experiment.winner.name, experiment.winner.conversionRate) }}
+                      </td>
+                      <td class="text-xs text-dim">
+                        @if (experiment.runnerUp; as runnerUp) {
+                          {{ variantLabel(runnerUp.name, runnerUp.conversionRate) }}
+                        } @else {
+                          Sin alternativa comparable
+                        }
+                      </td>
+                      <td class="num num--strong">{{ experiment.lift | rate }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <div class="panel__body">
+              <app-state-display
+                mode="empty"
+                description="Ninguna landing publicada tiene aun dos variantes comparables."
+              />
+            </div>
+          }
+        </div>
+      </article>
+
+      <article class="panel panel--notched">
+        <header class="panel__header">
+          <span class="panel__title">
+            <app-pixel-icon name="warning" [size]="14" accent="#ffc44d" />
+            Avisos de la operacion
+            <span class="panel__subtitle">Frases derivadas de los propios datos</span>
+          </span>
+        </header>
+        <div class="panel__body">
+          @if (insights().length > 0) {
+            <div class="stack stack--sm">
+              @for (insight of insights(); track insight.title) {
+                <div class="insight">
+                  <app-status-chip [status]="insight.level" kind="severity" />
+                  <span>
+                    <span class="insight__title" style="display: block">{{ insight.title }}</span>
+                    <span class="insight__detail" style="display: block">{{ insight.detail }}</span>
+                  </span>
+                </div>
+              }
+            </div>
+          } @else {
+            <app-state-display
+              mode="empty"
+              description="La API no ha generado avisos para esta ventana temporal."
+            />
+          }
+        </div>
+      </article>
+    </section>
+  </div>
+}

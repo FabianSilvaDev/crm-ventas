@@ -1,0 +1,20 @@
+{
+  "name": "ai-operations-cms-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "API REST simulada del AI Operations CMS (Express 5, datos mock en memoria).",
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=20.6.0"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/server.js",
+    "dev": "node --watch --env-file-if-exists=.env src/server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.3.0"
+  }
+}

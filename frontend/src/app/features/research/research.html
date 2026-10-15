@@ -1,0 +1,389 @@
+@if (state.loading() && !state.data()) {
+  <app-state-display mode="loading" description="Consultando informes de investigacion y sus agregados..." />
+} @else if (state.error(); as error) {
+  <app-state-display mode="error" [error]="error" (retry)="load()" />
+} @else if (state.data(); as view) {
+  <div class="stack stack--lg">
+    <!-- Cabecera de la seccion -->
+    <header class="page-header">
+      <div>
+        <h1 class="page-header__title">
+          <app-pixel-icon name="research" [size]="18" accent="cyan" />
+          Investigacion de mercado
+        </h1>
+        <p class="page-header__description">
+          Informes de mercado, tendencias, competencia y validacion que alimentan la decision de producto. Elige un
+          informe para ver sus hallazgos, sus fuentes y su serie de datos.
+        </p>
+      </div>
+      <div class="page-header__actions">
+        <button type="button" class="btn btn--ghost btn--sm" (click)="refresh()" [disabled]="state.loading()">
+          <app-pixel-icon name="reset" [size]="12" accent="#4fd6ff" />
+          {{ state.loading() ? 'Actualizando' : 'Actualizar' }}
+        </button>
+      </div>
+    </header>
+
+    <!-- Origen de los datos -->
+    <aside class="demo-banner">
+      <app-pixel-icon class="demo-banner__glyph" name="demo" [size]="14" accent="#ffc44d" />
+      <span>
+        <strong>Datos de demostracion.</strong>
+        Informes con fecha de referencia {{ referenceDate() | dateEs: 'datetime' }}. Las cifras son simuladas y no
+        proceden de fuentes reales.
+      </span>
+    </aside>
+
+    <!-- Agregados de GET /research/summary -->
+    @if (totals(); as summary) {
+      <section class="grid grid--5" aria-label="Resumen de investigacion">
+        <app-stat-tile
+          label="Informes"
+          [value]="summary.reports + ''"
+          icon="research"
+          accent="cyan"
+          [hint]="pendingValidation() + ' pendientes de decision'"
+        />
+        <app-stat-tile
+          label="Publicados"
+          [value]="summary.published + ''"
+          icon="check"
+          accent="green"
+          [hint]="summary.reports - summary.published + ' en borrador'"
+        />
+        <app-stat-tile
+          label="Hallazgos"
+          [value]="summary.findings + ''"
+          icon="search"
+          accent="amber"
+          hint="Conclusiones registradas en los informes"
+        />
+        <app-stat-tile
+          label="Fuentes"
+          [value]="summary.sources + ''"
+          icon="content"
+          accent="violet"
+          hint="Paneles, encuestas y catalogos consultados"
+        />
+        <app-stat-tile
+          label="Competidores"
+          [value]="summary.competitors + ''"
+          icon="campaigns"
+          accent="orange"
+          hint="Analizados en los informes de competencia"
+        />
+      </section>
+    }
+
+    <!-- Filtros: cada cambio recarga el listado contra la API -->
+    <div class="toolbar" role="group" aria-label="Filtros de investigacion">
+      <label class="field">
+        <span class="field__label">Buscar</span>
+        <input
+          class="input"
+          type="search"
+          placeholder="Titulo o resumen"
+          [value]="search()"
+          (input)="onSearchInput($any($event.target).value)"
+        />
+      </label>
+
+      <label class="field">
+        <span class="field__label">Tipo</span>
+        <select class="select" [value]="type()" (change)="onTypeChange($any($event.target).value)">
+          <option value="">Todos los tipos</option>
+          @for (option of types(); track option) {
+            <option [value]="option">{{ typeLabel(option) }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="field">
+        <span class="field__label">Estado</span>
+        <select class="select" [value]="status()" (change)="onStatusChange($any($event.target).value)">
+          <option value="">Todos los estados</option>
+          @for (option of statusOptions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="field">
+        <span class="field__label">Orden</span>
+        <select class="select" [value]="sort()" (change)="onSortChange($any($event.target).value)">
+          @for (option of sortOptions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </label>
+
+      <span class="spacer"></span>
+
+      <span class="text-xs text-dim">{{ total() }} informes</span>
+
+      <button type="button" class="btn btn--ghost btn--sm" (click)="clearFilters()" [disabled]="!hasFilters()">
+        <app-pixel-icon name="reset" [size]="12" accent="#7a8fa3" />
+        Limpiar filtros
+      </button>
+    </div>
+
+    <!-- Listado + detalle del informe abierto -->
+    <section class="grid grid--sidebar">
+      <div class="stack">
+        @if (reports().length > 0) {
+          <div class="grid grid--2">
+            @for (report of reports(); track report.id) {
+              <button
+                type="button"
+                class="report-card"
+                [class.report-card--selected]="selectedId() === report.id"
+                [attr.aria-pressed]="selectedId() === report.id"
+                (click)="selectReport(report.id)"
+              >
+                <span class="row row--between">
+                  <span class="tag accent-cyan">
+                    <span class="tag__dot"></span>
+                    {{ typeLabel(report.type) }}
+                  </span>
+                  <app-status-chip [status]="report.status" kind="content" />
+                </span>
+
+                <span class="report-card__title">{{ report.title }}</span>
+                <span class="report-card__summary">{{ report.summary }}</span>
+
+                @if (report.metrics.length > 0) {
+                  <span class="kv">
+                    @for (metric of report.metrics; track metric.label) {
+                      <span class="kv__key">{{ metric.label }}</span>
+                      <span class="kv__value">{{ metric.value }}</span>
+                    }
+                  </span>
+                }
+
+                <span class="report__meta">
+                  @if (report.author; as author) {
+                    <app-agent-avatar [avatar]="author.avatar" [size]="22" [status]="author.status" [label]="author.name" />
+                    <span class="report__author">
+                      <span class="text-xs">{{ author.name }}</span>
+                      <span class="text-xs text-dim">{{ author.role }}</span>
+                    </span>
+                  } @else {
+                    <span class="text-xs text-dim">Sin autor asignado</span>
+                  }
+                  <span class="spacer"></span>
+                  <span class="text-xs text-dim">{{ report.publishedAt | timeAgo: referenceDate() }}</span>
+                </span>
+
+                <span class="row row--between">
+                  <span class="text-xs text-dim">
+                    {{ report.findingCount | num }} hallazgos · {{ report.sourceCount | num }} fuentes
+                  </span>
+                  @if (report.product; as product) {
+                    <span class="tag accent-amber">
+                      <span class="tag__dot"></span>
+                      {{ product.name }}
+                    </span>
+                  }
+                </span>
+              </button>
+            }
+          </div>
+        } @else {
+          <app-state-display mode="empty" description="Ningun informe cumple los filtros aplicados." />
+        }
+
+        <!-- Reparto por tipo: una sola medida, el nombre como identidad -->
+        @if (typeRows().length > 0) {
+          <article class="panel panel--notched">
+            <header class="panel__header">
+              <span class="panel__title">
+                <app-pixel-icon name="analytics" [size]="14" accent="amber" />
+                Informes por tipo
+                <span class="panel__subtitle">Todos los informes, sin aplicar filtros</span>
+              </span>
+            </header>
+            <div class="panel__body">
+              <app-bar-chart [rows]="typeRows()" />
+            </div>
+          </article>
+        }
+      </div>
+
+      <!-- Detalle del informe: contenido ampliado de GET /research/:id -->
+      <aside class="stack">
+        @if (detail.loading() && !detail.data()) {
+          <app-state-display mode="loading" description="Consultando hallazgos, fuentes y competidores del informe..." />
+        } @else if (detail.error(); as error) {
+          <app-state-display mode="error" [error]="error" (retry)="reloadDetail()" />
+        } @else if (detail.data(); as report) {
+          <article class="panel panel--notched">
+            <header class="panel__header">
+              <span class="panel__title">
+                <app-pixel-icon name="research" [size]="14" accent="cyan" />
+                Informe
+              </span>
+              <app-status-chip [status]="report.status" kind="content" />
+            </header>
+            <div class="panel__body stack stack--sm">
+              <h2>{{ report.title }}</h2>
+
+              <div class="row row--wrap">
+                <span class="tag accent-cyan">
+                  <span class="tag__dot"></span>
+                  {{ typeLabel(report.type) }}
+                </span>
+                @if (report.product; as product) {
+                  <span class="tag accent-amber">
+                    <span class="tag__dot"></span>
+                    {{ product.name }}
+                  </span>
+                }
+              </div>
+
+              @if (report.author; as author) {
+                <div class="report__meta">
+                  <app-agent-avatar [avatar]="author.avatar" [size]="30" [status]="author.status" [label]="author.name" />
+                  <span class="report__author">
+                    <span class="text-sm">{{ author.name }}</span>
+                    <span class="text-xs text-dim">{{ author.role }}</span>
+                  </span>
+                </div>
+              }
+
+              <p class="text-sm text-dim">{{ report.summary }}</p>
+
+              <dl class="kv">
+                <dt class="kv__key">Publicado</dt>
+                <dd class="kv__value">{{ report.publishedAt | dateEs: 'date' }}</dd>
+                <dt class="kv__key">Antiguedad</dt>
+                <dd class="kv__value">{{ report.publishedAt | timeAgo: referenceDate() }}</dd>
+                <dt class="kv__key">Hallazgos</dt>
+                <dd class="kv__value">{{ report.findingCount | num }}</dd>
+                <dt class="kv__key">Fuentes</dt>
+                <dd class="kv__value">{{ report.sourceCount | num }}</dd>
+                <dt class="kv__key">Competidores</dt>
+                <dd class="kv__value">{{ (report.competitors?.length ?? 0) | num }}</dd>
+              </dl>
+
+              @if (report.metrics.length > 0) {
+                <hr class="divider" />
+                <dl class="kv">
+                  @for (metric of report.metrics; track metric.label) {
+                    <dt class="kv__key">{{ metric.label }}</dt>
+                    <dd class="kv__value">{{ metric.value }}</dd>
+                  }
+                </dl>
+              }
+            </div>
+          </article>
+
+          <article class="panel panel--notched">
+            <header class="panel__header">
+              <span class="panel__title">
+                <app-pixel-icon name="search" [size]="14" accent="#ffc44d" />
+                Hallazgos
+                <span class="panel__subtitle">{{ report.findingCount | num }}</span>
+              </span>
+            </header>
+            <div class="panel__body panel__body--flush">
+              @if (report.findings && report.findings.length > 0) {
+                <div class="feed">
+                  @for (finding of report.findings; track finding) {
+                    <div class="feed__item">
+                      <span class="feed__marker feed__marker--info"></span>
+                      <span class="feed__message">{{ finding }}</span>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <div class="panel__body">
+                  <app-state-display mode="empty" description="Este informe no tiene hallazgos registrados." />
+                </div>
+              }
+            </div>
+          </article>
+
+          <article class="panel panel--notched">
+            <header class="panel__header">
+              <span class="panel__title">
+                <app-pixel-icon name="content" [size]="14" accent="#a98bff" />
+                Fuentes
+                <span class="panel__subtitle">{{ report.sourceCount | num }}</span>
+              </span>
+            </header>
+            <div class="panel__body panel__body--flush">
+              @if (report.sources && report.sources.length > 0) {
+                <div class="feed">
+                  @for (source of report.sources; track source.title) {
+                    <div class="feed__item">
+                      <span class="feed__marker feed__marker--success"></span>
+                      <span class="feed__message">{{ source.title }}</span>
+                      <span class="chip chip--neutral">{{ source.type }}</span>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <div class="panel__body">
+                  <app-state-display mode="empty" description="Este informe no declara fuentes." />
+                </div>
+              }
+            </div>
+          </article>
+
+          @if (report.competitors && report.competitors.length > 0) {
+            <article class="panel panel--notched">
+              <header class="panel__header">
+                <span class="panel__title">
+                  <app-pixel-icon name="analytics" [size]="14" accent="orange" />
+                  Competidores
+                  <span class="panel__subtitle">{{ report.competitors.length | num }} analizados</span>
+                </span>
+              </header>
+              <div class="panel__body panel__body--flush">
+                <div class="table-wrap">
+                  <table class="table table--compact">
+                    <thead>
+                      <tr>
+                        <th scope="col">Competidor</th>
+                        <th scope="col" class="num">Precio</th>
+                        <th scope="col">Fortaleza</th>
+                        <th scope="col">Hueco</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (competitor of report.competitors; track competitor.name) {
+                        <tr>
+                          <th scope="row">{{ competitor.name }}</th>
+                          <td class="num">{{ competitor.price | eur }}</td>
+                          <td class="text-dim">{{ competitor.strength }}</td>
+                          <td class="text-dim">{{ competitor.gap }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </article>
+          }
+
+          @if (seriesRows().length > 0) {
+            <article class="panel panel--notched">
+              <header class="panel__header">
+                <span class="panel__title">
+                  <app-pixel-icon name="analytics" [size]="14" accent="amber" />
+                  Serie del informe
+                  <span class="panel__subtitle">Una sola medida por periodo</span>
+                </span>
+              </header>
+              <div class="panel__body">
+                <app-bar-chart [rows]="seriesRows()" />
+              </div>
+            </article>
+          }
+        } @else {
+          <app-state-display mode="empty" description="Selecciona un informe del listado para ver su contenido." />
+        }
+      </aside>
+    </section>
+  </div>
+}

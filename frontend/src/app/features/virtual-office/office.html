@@ -1,0 +1,253 @@
+<div class="stack">
+  <!-- Filtros y controles de camara -->
+  <div class="toolbar">
+    <label class="field">
+      <span class="field__label">Departamento</span>
+      <select class="select" (change)="onDepartmentChange($event)">
+        <option value="">Todos</option>
+        @for (department of departments(); track department.id) {
+          <option [value]="department.id" [selected]="departmentFilter() === department.id">
+            {{ department.name }}
+          </option>
+        }
+      </select>
+    </label>
+
+    <label class="field">
+      <span class="field__label">Estado</span>
+      <select class="select" (change)="onStatusChange($event)">
+        <option value="">Todos</option>
+        @for (item of statusLabelList(); track item.status) {
+          <option [value]="item.status" [selected]="statusFilter() === item.status">{{ item.label }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="field">
+      <span class="field__label">Buscar agente</span>
+      <input
+        class="input"
+        type="search"
+        placeholder="Nombre, rol o especialidad"
+        [value]="search()"
+        (input)="onSearch($event)"
+      />
+    </label>
+
+    <button type="button" class="btn btn--ghost btn--sm" (click)="clearFilters()">Limpiar</button>
+
+    <span class="spacer"></span>
+
+    <div class="row">
+      <button type="button" class="btn btn--ghost btn--icon" (click)="zoom(1.2)" aria-label="Acercar">
+        <app-pixel-icon name="office-zoom" [size]="14" accent="cyan" />
+      </button>
+      <button type="button" class="btn btn--ghost btn--icon" (click)="zoom(1 / 1.2)" aria-label="Alejar">
+        <app-pixel-icon name="office-zoom" [size]="10" accent="cyan" />
+      </button>
+      <button type="button" class="btn btn--sm" (click)="fit()">
+        <app-pixel-icon name="office" [size]="12" accent="amber" />
+        Vista general
+      </button>
+    </div>
+  </div>
+
+  <!-- Escenario -->
+  <div class="office office-stage">
+    <div class="office__canvas-host" #canvasHost></div>
+
+    @if (state.loading() && !state.data()) {
+      <div class="office-overlay">
+        <app-state-display mode="loading" description="Dibujando la oficina con los agentes del backend..." />
+      </div>
+    } @else if (state.error(); as error) {
+      <div class="office-overlay">
+        <app-state-display mode="error" [error]="error" (retry)="load()" />
+      </div>
+    } @else if (sceneError(); as error) {
+      <div class="office-overlay">
+        <app-state-display
+          mode="error"
+          title="El escenario pixel art no puede dibujarse"
+          [description]="error"
+          (retry)="mountScene()"
+        />
+      </div>
+    }
+
+    <!-- Leyenda de estados y recuento -->
+    <div class="office__hud office__hud--top-left">
+      <div class="office__legend">
+        <span class="text-mono text-xs text-dim">
+          {{ counts().visible }}/{{ counts().total }} agentes visibles
+        </span>
+        @for (item of statusLabelList(); track item.status) {
+          <span class="legend__item">
+            <span class="legend__dot" [style.background]="item.color"></span>
+            {{ item.label }}
+            <strong class="text-mono">{{ counts().byStatus[item.status] }}</strong>
+          </span>
+        }
+      </div>
+    </div>
+
+    <div class="office__hud office__hud--bottom">
+      <span class="text-xs text-dim">
+        Arrastra para mover la vista · rueda del raton para acercar · clic en un agente para ver su ficha
+      </span>
+    </div>
+
+    <!-- Panel lateral del agente seleccionado -->
+    @if (selectedAgent(); as agent) {
+      <aside class="office-panel" aria-label="Ficha del agente">
+        <header class="panel__header">
+          <span class="panel__title">
+            <app-pixel-icon name="agents" [size]="14" [accent]="agent.department?.accent ?? 'cyan'" />
+            {{ agent.name }}
+          </span>
+          <div class="row">
+            <button type="button" class="btn btn--ghost btn--sm" (click)="focusSelected()">Centrar</button>
+            <button type="button" class="btn btn--ghost btn--sm" (click)="selectedId.set(null)">Cerrar</button>
+          </div>
+        </header>
+
+        <div class="office-panel__scroll stack stack--sm">
+          <div class="row row--wrap">
+            <app-agent-avatar [avatar]="agent.avatar" [size]="76" [status]="agent.status" [label]="agent.name" />
+            <div class="stack stack--sm" style="flex: 1 1 auto; min-width: 160px">
+              <app-status-chip [status]="agent.status" kind="agent" />
+              <p class="text-sm">{{ agent.role }}</p>
+              <p class="text-xs text-dim">
+                Nivel {{ agent.level }} · {{ agent.specialty }}
+              </p>
+              @if (agent.department; as department) {
+                <span class="tag" [class]="'accent-' + department.accent">
+                  <span class="tag__dot"></span>
+                  {{ department.name }}
+                </span>
+              }
+            </div>
+          </div>
+
+          <p class="text-sm text-dim">{{ agent.bio }}</p>
+
+          <div>
+            <p class="field__label">Tarea actual</p>
+            @if (agent.currentTask; as task) {
+              <p class="text-sm">{{ task.title }}</p>
+              <app-progress-bar [value]="task.progress" [color]="statusColor[agent.status]" size="sm" />
+              <p class="text-xs text-dim">Tiempo estimado restante: {{ task.etaMinutes | minutes }}</p>
+            } @else {
+              <p class="text-sm text-dim">Sin tarea asignada en este momento.</p>
+            }
+          </div>
+
+          @if (agent.recentResult; as result) {
+            <div>
+              <p class="field__label">Resultado reciente</p>
+              <p class="text-sm">{{ result.title }}</p>
+              <p class="text-xs text-dim">{{ result.summary }}</p>
+              @if (result.metric; as metric) {
+                <p class="text-xs">
+                  <span class="text-mono">{{ metric.label }}:</span> <strong>{{ metric.value }}</strong>
+                </p>
+              }
+              <p class="text-xs text-faint">{{ result.at | timeAgo: referenceDate() }}</p>
+            </div>
+          }
+
+          <div>
+            <p class="field__label">Capacidades</p>
+            <div class="row row--wrap">
+              @for (capability of agent.capabilities; track capability) {
+                <span class="capability">{{ capability }}</span>
+              }
+            </div>
+          </div>
+
+          <dl class="kv">
+            <dt class="kv__key">Tareas completadas</dt>
+            <dd class="kv__value">{{ agent.stats.tasksCompleted | num }}</dd>
+            <dt class="kv__key">Tasa de exito</dt>
+            <dd class="kv__value">{{ agent.stats.successRate | rate }}</dd>
+            <dt class="kv__key">Duracion media</dt>
+            <dd class="kv__value">{{ agent.stats.avgTaskMinutes | minutes }}</dd>
+            <dt class="kv__key">Ultima actividad</dt>
+            <dd class="kv__value">{{ agent.lastActivityAt | timeAgo: referenceDate() }}</dd>
+          </dl>
+
+          <!-- Accion real: ejecuta una tarea simulada en el backend -->
+          <div class="panel" style="padding: 10px">
+            <p class="field__label">Ejecutar tarea simulada</p>
+            <p class="text-xs text-dim">
+              Lanza una tarea sobre este agente. El avance se sigue por polling desde el servidor y el resultado se
+              guarda en su historial.
+            </p>
+            <button
+              type="button"
+              class="btn btn--primary btn--sm"
+              style="margin-top: 8px"
+              [disabled]="runningTask()?.status === 'running'"
+              (click)="runTask()"
+            >
+              <app-pixel-icon name="play" [size]="12" accent="#4fd6ff" />
+              {{ runningTask()?.status === 'running' ? 'Ejecutando' : 'Ejecutar tarea' }}
+            </button>
+
+            @if (runningTask(); as task) {
+              <div class="stack stack--sm" style="margin-top: 10px">
+                <app-status-chip [status]="task.status" kind="task" />
+                @if (task.status === 'running') {
+                  <app-progress-bar [value]="task.progress" size="sm" />
+                }
+                @if (task.result; as result) {
+                  <p class="text-sm">{{ result.summary }}</p>
+                  @for (metric of result.metrics; track metric.label) {
+                    <p class="text-xs">
+                      <span class="text-mono">{{ metric.label }}:</span> <strong>{{ metric.value }}</strong>
+                    </p>
+                  }
+                }
+                @if (task.error) {
+                  <p class="text-sm text-bad">{{ task.error }}</p>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      </aside>
+    }
+  </div>
+
+  <!-- Carga por departamento -->
+  <section class="grid grid--4" aria-label="Departamentos">
+    @for (department of departments(); track department.id) {
+      <button
+        type="button"
+        class="department-card"
+        [class.department-card--active]="departmentFilter() === department.id"
+        (click)="focusDepartment(department.id)"
+      >
+        <span class="row row--between">
+          <span class="department-card__name" [class]="'accent-' + department.accent">{{ department.name }}</span>
+          <app-pixel-icon name="office" [size]="14" [accent]="department.accent" />
+        </span>
+
+        <span class="text-xs text-dim">{{ department.description }}</span>
+
+        <span class="row" style="gap: 12px">
+          <span class="text-xs"><strong class="text-mono">{{ department.stats.agentCount }}</strong> agentes</span>
+          <span class="text-xs"><strong class="text-mono">{{ department.stats.active }}</strong> activos</span>
+          <span class="text-xs"><strong class="text-mono">{{ department.stats.tasksCompleted | num }}</strong> tareas</span>
+        </span>
+
+        @if (department.lead; as lead) {
+          <span class="row" style="gap: 8px">
+            <app-agent-avatar [avatar]="lead.avatar" [size]="28" [status]="lead.status" [showStatus]="false" />
+            <span class="text-xs text-dim">Responsable: <strong>{{ lead.name }}</strong></span>
+          </span>
+        }
+      </button>
+    }
+  </section>
+</div>

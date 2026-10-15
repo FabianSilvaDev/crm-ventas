@@ -1,0 +1,414 @@
+@if (summaryState.loading() && !summaryState.data()) {
+  <app-state-display mode="loading" description="Consultando piezas, creatividades y agregados de la API simulada..." />
+} @else if (summaryState.error(); as error) {
+  <app-state-display mode="error" [error]="error" (retry)="refreshAll()" />
+} @else {
+  <div class="stack stack--lg">
+    <header class="page-header">
+      <div>
+        <h1 class="page-header__title">
+          <app-pixel-icon name="content" [size]="18" accent="violet" />
+          Contenido y creatividades
+        </h1>
+        <p class="page-header__description">
+          Piezas editoriales producidas por los agentes de marketing y piezas creativas que acompana a las campanas.
+          Cada bloque se filtra por su cuenta y conserva su propio estado de carga y error.
+        </p>
+      </div>
+      <div class="page-header__actions">
+        <button
+          type="button"
+          class="btn btn--ghost"
+          (click)="refreshAll()"
+          [disabled]="summaryState.loading() || piecesState.loading() || creativesState.loading()"
+        >
+          <app-pixel-icon name="reset" [size]="12" accent="#4fd6ff" />
+          {{ summaryState.loading() ? 'Actualizando' : 'Actualizar' }}
+        </button>
+      </div>
+    </header>
+
+    <aside class="demo-banner">
+      <app-pixel-icon class="demo-banner__glyph" name="demo" [size]="14" accent="#ffc44d" />
+      <span>
+        <strong>Cifras de demostracion.</strong>
+        Rendimiento simulado con fecha de referencia {{ referenceDate() | dateEs: 'datetime' }}.
+      </span>
+    </aside>
+
+    <!-- Resumen: piezas, creatividades y volumen alcanzado -->
+    @if (totals(); as data) {
+      <section class="grid grid--3" aria-label="Resumen de contenido">
+        <app-stat-tile
+          label="Piezas de contenido"
+          [value]="data.pieces | num"
+          icon="content"
+          accent="violet"
+          [hint]="(data.words | compact) + ' palabras escritas'"
+        />
+        <app-stat-tile
+          label="Publicadas"
+          [value]="data.published | num"
+          icon="check"
+          accent="green"
+          [hint]="data.pieces - data.published + ' pendientes de publicar'"
+        />
+        <app-stat-tile
+          label="En curso"
+          [value]="data.inProgress | num"
+          icon="flow"
+          accent="blue"
+          hint="Idea, borrador o en revision"
+        />
+        <app-stat-tile
+          label="Creatividades"
+          [value]="data.creatives | num"
+          icon="products"
+          accent="amber"
+          [hint]="data.liveCreatives + ' ya en campana'"
+        />
+        <app-stat-tile
+          label="Impresiones"
+          [value]="data.impressions | compact"
+          icon="analytics"
+          accent="cyan"
+          hint="Suma de todas las piezas"
+        />
+        <app-stat-tile
+          label="Conversiones"
+          [value]="data.conversions | num"
+          icon="leads"
+          accent="lime"
+          hint="Atribuidas al contenido publicado"
+        />
+      </section>
+    }
+
+    <!-- Piezas de contenido + reparto por tipo -->
+    <section class="grid grid--sidebar">
+      <div class="stack">
+        <div class="toolbar" role="search">
+          <div class="field">
+            <label class="field__label" for="piece-type">Tipo</label>
+            <select id="piece-type" class="select" [value]="pieceType()" (change)="onPieceType($event)">
+              <option value="">Todos los tipos</option>
+              @for (option of typeOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="piece-status">Estado</label>
+            <select id="piece-status" class="select" [value]="pieceStatus()" (change)="onPieceStatus($event)">
+              <option value="">Cualquier estado</option>
+              @for (option of pieceStatusOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="piece-search">Buscar</label>
+            <input
+              id="piece-search"
+              class="input"
+              type="search"
+              placeholder="Titulo o palabra clave"
+              [value]="pieceSearch()"
+              (input)="onPieceSearch($event)"
+            />
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="piece-sort">Orden</label>
+            <select id="piece-sort" class="select" [value]="pieceSort()" (change)="onPieceSort($event)">
+              @for (option of pieceSorts; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </div>
+
+          <span class="spacer"></span>
+          <span class="text-xs text-dim">
+            {{ piecesState.loading() ? 'Actualizando...' : pieces().length + ' de ' + pieceTotal() + ' piezas' }}
+          </span>
+        </div>
+
+        <article class="panel panel--notched">
+          <header class="panel__header">
+            <span class="panel__title">
+              <app-pixel-icon name="content" [size]="14" accent="violet" />
+              Piezas de contenido
+              <span class="panel__subtitle">Titulo, canal, autor y rendimiento publicado</span>
+            </span>
+            <a class="text-xs" routerLink="/campaigns">Ver campanas</a>
+          </header>
+
+          <div class="panel__body panel__body--flush">
+            @if (piecesState.loading() && !piecesState.data()) {
+              <div class="panel__body">
+                <app-state-display mode="loading" description="Cargando las piezas de contenido..." />
+              </div>
+            } @else if (piecesState.error(); as error) {
+              <div class="panel__body">
+                <app-state-display mode="error" [error]="error" (retry)="loadPieces(false)" />
+              </div>
+            } @else if (pieces().length === 0) {
+              <div class="panel__body">
+                <app-state-display
+                  mode="empty"
+                  [description]="
+                    hasActivePieceFilters()
+                      ? 'Ninguna pieza coincide con los filtros aplicados.'
+                      : 'Todavia no se ha generado contenido en esta sesion del servidor.'
+                  "
+                />
+              </div>
+            } @else {
+              <div class="table-wrap">
+                <table class="table table--compact">
+                  <thead>
+                    <tr>
+                      <th scope="col">Pieza</th>
+                      <th scope="col">Tipo</th>
+                      <th scope="col">Canal</th>
+                      <th scope="col">Estado</th>
+                      <th scope="col">Autor</th>
+                      <th scope="col">Publicada</th>
+                      <th scope="col" class="num">Palabras</th>
+                      <th scope="col" class="num">Impresiones</th>
+                      <th scope="col" class="num">Clics</th>
+                      <th scope="col" class="num">CTR</th>
+                      <th scope="col" class="num">Conv.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (piece of pieces(); track piece.id) {
+                      <tr>
+                        <th scope="row">
+                          {{ piece.title }}
+                          @if (piece.keywords.length > 0) {
+                            <span class="cell-note text-xs text-dim">{{ keywordsOf(piece) }}</span>
+                          }
+                        </th>
+                        <td>{{ typeLabel(piece.type) }}</td>
+                        <td class="text-dim">{{ channelLabel(piece.channel) }}</td>
+                        <td><app-status-chip [status]="piece.status" kind="content" /></td>
+                        <td>
+                          @if (piece.author; as author) {
+                            <span class="row">
+                              <app-agent-avatar
+                                [avatar]="author.avatar"
+                                [size]="22"
+                                [status]="author.status"
+                                [label]="author.name"
+                                [showStatus]="false"
+                              />
+                              <span class="text-sm">{{ author.name }}</span>
+                            </span>
+                          } @else {
+                            <span class="text-dim">Sin autor</span>
+                          }
+                        </td>
+                        <td class="text-dim">{{ piece.publishedAt | dateEs }}</td>
+                        <td class="num">{{ piece.wordCount | num }}</td>
+                        <td class="num">{{ piece.performance.impressions | num }}</td>
+                        <td class="num">{{ piece.performance.clicks | num }}</td>
+                        <td class="num">{{ piece.performance.ctr | rate }}</td>
+                        <td class="num num--strong">{{ piece.performance.conversions | num }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
+
+          @if (pieces().length > 0) {
+            <footer class="panel__footer">
+              El CTR se calcula en la API como clics entre impresiones; las conversiones son las atribuidas a la pieza.
+            </footer>
+          }
+        </article>
+      </div>
+
+      <div class="stack">
+        <article class="panel panel--notched">
+          <header class="panel__header">
+            <span class="panel__title">
+              <app-pixel-icon name="analytics" [size]="14" accent="amber" />
+              Piezas por tipo
+              <span class="panel__subtitle">Recuento de piezas: una sola medida por categoria</span>
+            </span>
+          </header>
+          <div class="panel__body">
+            @if (byTypeRows().length > 0) {
+              <app-bar-chart [rows]="byTypeRows()" />
+              <p class="text-xs text-dim" style="margin-top: 10px">
+                La barra representa el numero de piezas; las conversiones acompanan como nota, sin codificar longitud.
+              </p>
+            } @else {
+              <app-state-display mode="empty" description="Sin piezas registradas por tipo." />
+            }
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Creatividades publicitarias -->
+    <div class="toolbar" role="search">
+      <div class="field">
+        <label class="field__label" for="creative-format">Formato</label>
+        <select id="creative-format" class="select" [value]="creativeFormat()" (change)="onCreativeFormat($event)">
+          <option value="">Todos los formatos</option>
+          @for (option of creativeFormats(); track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="creative-status">Estado</label>
+        <select id="creative-status" class="select" [value]="creativeStatus()" (change)="onCreativeStatus($event)">
+          <option value="">Cualquier estado</option>
+          @for (option of creativeStatusOptions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="creative-search">Buscar</label>
+        <input
+          id="creative-search"
+          class="input"
+          type="search"
+          placeholder="Nombre o formato"
+          [value]="creativeSearch()"
+          (input)="onCreativeSearch($event)"
+        />
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="creative-sort">Orden</label>
+        <select id="creative-sort" class="select" [value]="creativeSort()" (change)="onCreativeSort($event)">
+          @for (option of creativeSorts; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+
+      <span class="spacer"></span>
+      <span class="text-xs text-dim">
+        {{ creativesState.loading() ? 'Actualizando...' : creatives().length + ' de ' + creativeTotal() + ' creatividades' }}
+      </span>
+    </div>
+
+    <article class="panel panel--notched">
+      <header class="panel__header">
+        <span class="panel__title">
+          <app-pixel-icon name="products" [size]="14" accent="amber" />
+          Creatividades
+          <span class="panel__subtitle">Diseno, medidas y rendimiento dentro de su campana</span>
+        </span>
+      </header>
+
+      <div class="panel__body panel__body--flush">
+        @if (creativesState.loading() && !creativesState.data()) {
+          <div class="panel__body">
+            <app-state-display mode="loading" description="Cargando las creatividades..." />
+          </div>
+        } @else if (creativesState.error(); as error) {
+          <div class="panel__body">
+            <app-state-display mode="error" [error]="error" (retry)="loadCreatives(false)" />
+          </div>
+        } @else if (creatives().length === 0) {
+          <div class="panel__body">
+            <app-state-display
+              mode="empty"
+              [description]="
+                hasActiveCreativeFilters()
+                  ? 'Ninguna creatividad coincide con los filtros aplicados.'
+                  : 'Todavia no se ha producido ninguna creatividad en esta sesion del servidor.'
+              "
+            />
+          </div>
+        } @else {
+          <div class="table-wrap">
+            <table class="table table--compact">
+              <thead>
+                <tr>
+                  <th scope="col">Creatividad</th>
+                  <th scope="col">Formato</th>
+                  <th scope="col">Medidas</th>
+                  <th scope="col" class="num">Variantes</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col">Campana</th>
+                  <th scope="col">Autor</th>
+                  <th scope="col" class="num">Impresiones</th>
+                  <th scope="col" class="num">Clics</th>
+                  <th scope="col" class="num">CTR</th>
+                  <th scope="col" class="num">Conv.</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (creative of creatives(); track creative.id) {
+                  <tr>
+                    <th scope="row">
+                      <span class="row">
+                        <app-pixel-icon name="content" [size]="12" [accent]="creative.palette" />
+                        {{ creative.name }}
+                      </span>
+                      <span class="text-xs text-dim">{{ creative.createdAt | timeAgo: referenceDate() }}</span>
+                    </th>
+                    <td>{{ creative.format }}</td>
+                    <td class="text-mono text-xs text-dim">
+                      {{ creative.dimensions.width }}x{{ creative.dimensions.height }} px
+                    </td>
+                    <td class="num">{{ creative.variants | num }}</td>
+                    <td><app-status-chip [status]="creative.status" kind="creative" /></td>
+                    <td>
+                      @if (creative.campaign; as campaign) {
+                        <span class="text-sm">{{ campaign.name }}</span>
+                        <span class="text-xs text-dim">{{ channelLabel(campaign.channels[0]) }}</span>
+                      } @else {
+                        <span class="text-dim">Sin campana</span>
+                      }
+                    </td>
+                    <td>
+                      @if (creative.author; as author) {
+                        <span class="row">
+                          <app-agent-avatar
+                            [avatar]="author.avatar"
+                            [size]="22"
+                            [status]="author.status"
+                            [label]="author.name"
+                            [showStatus]="false"
+                          />
+                          <span class="text-sm">{{ author.name }}</span>
+                        </span>
+                      } @else {
+                        <span class="text-dim">Sin autor</span>
+                      }
+                    </td>
+                    <td class="num">{{ creative.performance.impressions | num }}</td>
+                    <td class="num">{{ creative.performance.clicks | num }}</td>
+                    <td class="num">{{ creative.performance.ctr | rate }}</td>
+                    <td class="num num--strong">{{ creative.performance.conversions | num }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+
+      @if (creatives().length > 0) {
+        <footer class="panel__footer">
+          Las variantes indican cuantas versiones del mismo creativo se han producido para el test A/B de la campana.
+        </footer>
+      }
+    </article>
+  </div>
+}

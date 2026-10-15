@@ -1,0 +1,359 @@
+@if (state.loading() && !state.data()) {
+  <app-state-display
+    mode="loading"
+    description="Consultando la configuracion del espacio de trabajo, la simulacion, las integraciones y el estado de ejecucion..."
+  />
+} @else if (state.error(); as error) {
+  <app-state-display mode="error" [error]="error" (retry)="load()" />
+} @else {
+  <div class="stack stack--lg">
+    <!-- Cabecera de la seccion -->
+    <header class="page-header">
+      <div>
+        <h1 class="page-header__title">
+          <app-pixel-icon name="settings" [size]="18" accent="#7a8fa3" />
+          Configuracion
+        </h1>
+        <p class="page-header__description">
+          Espacio de trabajo, parametros de la simulacion, integraciones, banderas de funcionalidad y estado real del
+          backend. La pantalla es de solo lectura: los valores se ajustan con variables de entorno al arrancar el
+          servidor.
+        </p>
+      </div>
+      <div class="page-header__actions">
+        <button type="button" class="btn btn--ghost btn--sm" (click)="load()" [disabled]="state.loading()">
+          <app-pixel-icon name="reset" [size]="12" accent="#4fd6ff" />
+          {{ state.loading() ? 'Actualizando' : 'Actualizar' }}
+        </button>
+      </div>
+    </header>
+
+    <!-- Aviso principal: nada de esto se guarda -->
+    <aside class="demo-banner">
+      <app-pixel-icon class="demo-banner__glyph" name="demo" [size]="14" accent="#ffc44d" />
+      <span>
+        <strong>Entorno de demostracion sin persistencia.</strong>
+        Los datos y las ejecuciones viven unicamente en la memoria del backend: al reiniciar el proceso se pierden
+        todos los leads, campanas, contenidos, notificaciones y flujos en curso.
+      </span>
+    </aside>
+
+    <!-- Espacio de trabajo y politica de datos -->
+    <section class="grid grid--2">
+      <article class="panel panel--notched">
+        <header class="panel__header">
+          <span class="panel__title">
+            <app-pixel-icon name="office" [size]="14" accent="cyan" />
+            Espacio de trabajo
+          </span>
+          @if (workspace()?.demo) {
+            <span class="chip chip--warning">Demostracion</span>
+          }
+        </header>
+        <div class="panel__body stack">
+          @if (workspace(); as ws) {
+            <dl class="kv">
+              <dt class="kv__key">Nombre</dt>
+              <dd class="kv__value">{{ ws.name }}</dd>
+              <dt class="kv__key">Plan</dt>
+              <dd class="kv__value">{{ ws.plan }}</dd>
+              <dt class="kv__key">Zona horaria</dt>
+              <dd class="kv__value text-mono">{{ ws.timezone }}</dd>
+              <dt class="kv__key">Idioma</dt>
+              <dd class="kv__value text-mono">{{ ws.locale }}</dd>
+              <dt class="kv__key">Moneda</dt>
+              <dd class="kv__value text-mono">{{ ws.currency }}</dd>
+              <dt class="kv__key">Identificador</dt>
+              <dd class="kv__value text-mono text-xs">{{ ws.id }}</dd>
+            </dl>
+          } @else {
+            <app-state-display mode="empty" description="La API no ha devuelto el espacio de trabajo." />
+          }
+
+          <hr class="divider" />
+
+          @if (profile(); as user) {
+            <div class="row">
+              <app-agent-avatar [avatar]="user.avatar" [size]="56" [label]="user.name" [showStatus]="false" />
+              <div class="stack stack--sm">
+                <span class="text-mono">{{ user.name }}</span>
+                <span class="text-xs text-dim">{{ user.role }}</span>
+                <span class="text-xs text-mono text-dim">{{ user.email }}</span>
+                <span class="text-xs text-dim">Ultimo acceso {{ user.lastLoginAt | timeAgo }}</span>
+              </div>
+            </div>
+            <p class="setting-note">
+              Perfil ficticio de la demostracion: no hay autenticacion real ni cuentas de usuario detras de esta
+              pantalla.
+            </p>
+          }
+        </div>
+      </article>
+
+      <article class="panel panel--notched">
+        <header class="panel__header">
+          <span class="panel__title">
+            <app-pixel-icon name="warning" [size]="14" accent="#ffc44d" />
+            Politica de datos
+          </span>
+        </header>
+        <div class="panel__body stack stack--sm">
+          @if (dataPolicy(); as policy) {
+            <div class="row row--wrap">
+              <span class="chip" [class]="policy.inMemory ? 'chip--warning' : 'chip--neutral'">
+                Datos en memoria: {{ policy.inMemory ? 'si' : 'no' }}
+              </span>
+              <span class="chip" [class]="policy.persistent ? 'chip--good' : 'chip--critical'">
+                Persistencia: {{ policy.persistent ? 'si' : 'no' }}
+              </span>
+            </div>
+
+            <dl class="kv">
+              <dt class="kv__key">Nota de la API</dt>
+              <dd class="kv__value">{{ policy.note }}</dd>
+            </dl>
+
+            <p class="setting-note">
+              No hay base de datos, ni ficheros, ni copias de seguridad. Todo cambio que hagas en la interfaz
+              (por ejemplo, marcar una notificacion como leida) vive en memoria y se pierde al detener o reiniciar el
+              backend.
+            </p>
+          } @else {
+            <app-state-display mode="empty" description="La API no ha devuelto la politica de datos." />
+          }
+        </div>
+      </article>
+    </section>
+
+    <!-- Parametros de simulacion -->
+    <article class="panel panel--notched">
+      <header class="panel__header">
+        <span class="panel__title">
+          <app-pixel-icon name="flow" [size]="14" accent="green" />
+          Parametros de simulacion
+          <span class="panel__subtitle">Valores vigentes en este arranque del backend</span>
+        </span>
+      </header>
+      <div class="panel__body">
+        @if (simulationParameters().length > 0) {
+          <dl class="kv">
+            @for (parameter of simulationParameters(); track parameter.key) {
+              <dt class="kv__key">{{ parameter.label }}</dt>
+              <dd class="kv__value">
+                <span class="text-mono">{{ parameter.value }}</span>
+                <span class="setting-note">
+                  · {{ parameter.explanation }} Se ajusta con <code class="env-var">{{ parameter.envVariable }}</code>.
+                </span>
+              </dd>
+            }
+          </dl>
+        } @else {
+          <app-state-display mode="empty" description="La API no ha devuelto los parametros de simulacion." />
+        }
+      </div>
+    </article>
+
+    <!-- Integraciones y banderas de funcionalidad -->
+    <section class="grid grid--2">
+      <article class="panel panel--notched">
+        <header class="panel__header">
+          <span class="panel__title">
+            <app-pixel-icon name="grid" [size]="14" accent="violet" />
+            Integraciones
+            <span class="panel__subtitle">Ninguna conexion externa es real</span>
+          </span>
+        </header>
+        <div class="panel__body panel__body--flush">
+          @if (integrations().length > 0) {
+            <div class="table-wrap">
+              <table class="table table--compact">
+                <caption class="visually-hidden">
+                  Integraciones disponibles con su categoria, su estado y la descripcion de lo que harian al
+                  conectarse.
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Integracion</th>
+                    <th scope="col">Categoria</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col">Descripcion</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (integration of integrations(); track integration.id) {
+                    <tr>
+                      <th scope="row" class="text-sm">{{ integration.name }}</th>
+                      <td class="text-xs text-dim">{{ integration.category }}</td>
+                      <td>
+                        <span class="chip" [class]="integrationStatusTone(integration.status)">
+                          {{ integrationStatusLabel(integration.status) }}
+                        </span>
+                      </td>
+                      <td class="text-xs text-dim">{{ integration.description }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <div class="panel__footer">
+              Las integraciones simuladas se resuelven dentro del backend con datos deterministas; el resto permanecen
+              deshabilitadas a proposito.
+            </div>
+          } @else {
+            <div class="panel__body">
+              <app-state-display mode="empty" description="La API no ha devuelto integraciones." />
+            </div>
+          }
+        </div>
+      </article>
+
+      <article class="panel panel--notched">
+        <header class="panel__header">
+          <span class="panel__title">
+            <app-pixel-icon name="check" [size]="14" accent="lime" />
+            Banderas de funcionalidad
+          </span>
+        </header>
+        <div class="panel__body panel__body--flush">
+          @if (featureFlags().length > 0) {
+            @for (flag of featureFlags(); track flag.id) {
+              <div class="flag-row">
+                <span>
+                  <span style="display: block" class="text-sm">{{ flag.name }}</span>
+                  <span style="display: block" class="text-xs text-dim">{{ flag.description }}</span>
+                </span>
+                <span class="chip" [class]="flagTone(flag.enabled)">
+                  {{ flag.enabled ? 'Activada' : 'Desactivada' }}
+                </span>
+              </div>
+            }
+          } @else {
+            <div class="panel__body">
+              <app-state-display mode="empty" description="La API no ha devuelto banderas de funcionalidad." />
+            </div>
+          }
+        </div>
+      </article>
+    </section>
+
+    <!-- Estado de ejecucion y bandeja de avisos -->
+    <section class="grid grid--sidebar">
+      <article class="panel panel--notched">
+        <header class="panel__header">
+          <span class="panel__title">
+            <app-pixel-icon name="flow" [size]="14" accent="green" />
+            Estado de ejecucion
+            <span class="panel__subtitle">Datos en vivo del proceso del backend</span>
+          </span>
+        </header>
+        <div class="panel__body">
+          @if (runtime(); as live) {
+            <dl class="kv">
+              <dt class="kv__key">Entorno</dt>
+              <dd class="kv__value text-mono">{{ live.nodeEnv }}</dd>
+              <dt class="kv__key">Version</dt>
+              <dd class="kv__value text-mono">{{ live.version }}</dd>
+              <dt class="kv__key">Prefijo de la API</dt>
+              <dd class="kv__value text-mono">{{ live.apiPrefix }}</dd>
+              <dt class="kv__key">Origenes CORS</dt>
+              <dd class="kv__value text-mono text-xs">{{ live.corsOrigins.join(', ') }}</dd>
+              <dt class="kv__key">Tiempo encendido</dt>
+              <dd class="kv__value">
+                {{ uptimeMs() | duration }}
+                <span class="text-xs text-dim"> · {{ live.uptimeSeconds | num }} s</span>
+              </dd>
+              <dt class="kv__key">Ejecuciones activas</dt>
+              <dd class="kv__value">
+                {{ live.activeRuns | num }}
+                <span class="text-xs text-dim"> · {{ live.inMemoryRuns | num }} guardadas en memoria</span>
+              </dd>
+              <dt class="kv__key">Tareas en memoria</dt>
+              <dd class="kv__value">
+                {{ live.inMemoryTasks | num }}
+                <span class="text-xs text-dim"> · {{ live.activeTimers | num }} temporizadores en curso</span>
+              </dd>
+            </dl>
+          } @else {
+            <app-state-display mode="empty" description="La API no ha devuelto el estado de ejecucion." />
+          }
+        </div>
+      </article>
+
+      <article class="panel panel--notched">
+        <header class="panel__header">
+          <span class="panel__title">
+            <app-pixel-icon name="bell" [size]="14" accent="cyan" />
+            Notificaciones
+            @if (unreadCount() > 0) {
+              <span class="chip chip--critical">{{ unreadCount() }} sin leer</span>
+            }
+          </span>
+          <button type="button" class="btn btn--ghost btn--sm" (click)="toggleUnreadOnly()">
+            {{ unreadOnly() ? 'Ver todas' : 'Solo sin leer' }}
+          </button>
+        </header>
+
+        <div class="panel__body stack stack--sm">
+          <div class="row row--between">
+            <span class="text-xs text-dim">
+              Mostrando {{ notifications().length }} de {{ notificationsTotal() }} avisos
+            </span>
+            <button
+              type="button"
+              class="btn btn--primary btn--sm"
+              (click)="markAllRead()"
+              [disabled]="busy() || unreadCount() === 0"
+            >
+              Marcar todas como leidas
+            </button>
+          </div>
+
+          @if (actionError(); as message) {
+            <p class="text-xs text-bad">{{ message }}</p>
+          }
+
+          @if (notificationsState.loading() && notifications().length === 0) {
+            <app-state-display mode="loading" description="Consultando la bandeja de avisos..." />
+          } @else if (notificationsState.error(); as error) {
+            <app-state-display mode="error" [error]="error" (retry)="loadNotifications()" />
+          } @else if (notifications().length > 0) {
+            <div class="notif__list">
+              @for (item of notifications(); track item.id) {
+                <div class="notif__item" [class.notif__item--unread]="!item.read">
+                  <p class="notif__title">
+                    <app-status-chip [status]="item.level" kind="severity" />
+                    {{ item.title }}
+                  </p>
+                  <p class="notif__message">{{ item.message }}</p>
+                  <div class="row row--wrap" style="margin-top: 6px">
+                    <span class="text-xs text-dim">{{ item.at | timeAgo }}</span>
+                    <span class="spacer"></span>
+                    @if (item.link; as link) {
+                      <a class="text-xs" [routerLink]="link">{{ item.linkLabel ?? 'Ver detalle' }}</a>
+                    }
+                    @if (item.read) {
+                      <span class="chip chip--neutral">Leida</span>
+                    } @else {
+                      <button type="button" class="btn btn--ghost btn--sm" (click)="markRead(item.id)" [disabled]="busy()">
+                        Marcar leida
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+            <p class="setting-note">
+              Marcar como leida se guarda en la memoria del backend: la lista se vuelve a consultar despues de cada
+              accion y el cambio se pierde al reiniciar el servidor.
+            </p>
+          } @else {
+            <app-state-display
+              mode="empty"
+              description="No hay notificaciones que mostrar. Cambia el filtro para ver las ya leidas."
+            />
+          }
+        </div>
+      </article>
+    </section>
+  </div>
+}

@@ -1,0 +1,341 @@
+@if (state.loading() && !state.data()) {
+  <app-state-display mode="loading" description="Consultando indicadores, series y actividad de la API simulada..." />
+} @else if (state.error(); as error) {
+  <app-state-display mode="error" [error]="error" (retry)="load()" />
+} @else if (state.data(); as view) {
+  <div class="stack stack--lg">
+    <!-- Origen y naturaleza de los datos -->
+    <aside class="demo-banner">
+      <app-pixel-icon class="demo-banner__glyph" name="demo" [size]="14" accent="#ffc44d" />
+      <span>
+        <strong>Cifras de demostracion.</strong>
+        Datos simulados con fecha de referencia {{ referenceDate() | dateEs: 'datetime' }}. Las ejecuciones viven en
+        memoria y se pierden al reiniciar el backend.
+      </span>
+      <span class="spacer"></span>
+      <button type="button" class="btn btn--ghost btn--sm" (click)="refresh()" [disabled]="state.loading()">
+        <app-pixel-icon name="reset" [size]="12" accent="#4fd6ff" />
+        {{ state.loading() ? 'Actualizando' : 'Actualizar' }}
+      </button>
+    </aside>
+
+    <!-- Indicadores principales -->
+    @if (kpis(); as indicators) {
+      <section class="grid grid--5" aria-label="Indicadores principales">
+        <app-stat-tile
+          label="Agentes activos"
+          [value]="indicators.agents.active + '/' + indicators.agents.total"
+          icon="agents"
+          accent="blue"
+          [hint]="unavailableAgents() + ' agentes no disponibles'"
+        />
+        <app-stat-tile
+          label="Flujos en ejecucion"
+          [value]="indicators.workflows.running + ''"
+          icon="flow"
+          accent="green"
+          [hint]="indicators.workflows.templates + ' plantillas · ' + indicators.workflows.completed + ' completados'"
+        />
+        <app-stat-tile
+          label="Leads generados"
+          [value]="indicators.leads.total + ''"
+          icon="leads"
+          accent="pink"
+          [hint]="indicators.leads.open + ' abiertos · ' + (indicators.leads.pipelineValue | eur)"
+          [trend]="leadsTrend()"
+        />
+        <app-stat-tile
+          label="Conversiones"
+          [value]="indicators.conversions.total + ''"
+          icon="check"
+          accent="lime"
+          [hint]="'Tasa en landings ' + (indicators.conversions.landingRate | rate)"
+        />
+        <app-stat-tile
+          label="Ingreso simulado"
+          [value]="indicators.revenue.simulated | eur"
+          icon="analytics"
+          accent="amber"
+          [hint]="'ROAS de campanas ' + indicators.campaigns.roas + 'x'"
+        />
+      </section>
+    }
+
+    <!-- Salud de la operacion y embudo -->
+    <section class="grid grid--sidebar">
+      <div class="stack">
+        @if (charts(); as data) {
+          <article class="panel panel--notched">
+            <header class="panel__header">
+              <span class="panel__title">
+                <app-pixel-icon name="leads" [size]="14" accent="pink" />
+                Leads captados
+                <span class="panel__subtitle">Ultimos 14 dias de la demo</span>
+              </span>
+            </header>
+            <div class="panel__body">
+              @if (leadsSeries().length > 0) {
+                <app-line-chart [points]="leadsSeries()" [series]="leadsSeriesDef()" [height]="170" />
+              } @else {
+                <app-state-display mode="empty" description="Sin serie de leads en el periodo." />
+              }
+            </div>
+          </article>
+
+          <article class="panel panel--notched">
+            <header class="panel__header">
+              <span class="panel__title">
+                <app-pixel-icon name="analytics" [size]="14" accent="amber" />
+                Ingreso y gasto simulados
+                <span class="panel__subtitle">Misma unidad (EUR) y un unico eje</span>
+              </span>
+            </header>
+            <div class="panel__body">
+              <app-line-chart
+                [points]="revenueSeries()"
+                [series]="revenueSeriesDef()"
+                [height]="190"
+                valueFormat="currency"
+              />
+            </div>
+          </article>
+        }
+      </div>
+
+      <div class="stack">
+        @if (health(); as status) {
+          <article class="panel panel--notched">
+            <header class="panel__header">
+              <span class="panel__title">
+                <app-pixel-icon name="warning" [size]="14" accent="#ffc44d" />
+                Estado de la operacion
+              </span>
+              <span class="chip chip--neutral">{{ status.label }}</span>
+            </header>
+            <div class="panel__body stack stack--sm">
+              <div class="health-meter">
+                <span class="health-meter__value" [style.color]="healthTone()">{{ status.score }}</span>
+                <div class="stack stack--sm" style="flex: 1 1 auto">
+                  <app-progress-bar
+                    [value]="status.score / 100"
+                    [color]="healthTone()"
+                    [showLabel]="false"
+                    label="Puntuacion de salud"
+                  />
+                  <p class="text-xs text-dim">
+                    Puntuacion calculada por la API a partir de agentes en error, flujos detenidos y ritmo de gasto.
+                  </p>
+                </div>
+              </div>
+
+              <div class="health-signals">
+                @for (signal of status.signals; track signal.label) {
+                  <a class="health-signal" [routerLink]="signal.link">
+                    <app-pixel-icon
+                      [name]="severityIcon(signal.level)"
+                      [size]="14"
+                      [accent]="severityColor(signal.level)"
+                    />
+                    <span>
+                      <span class="health-signal__title">{{ signal.label }}</span>
+                      <span class="health-signal__detail">{{ signal.detail }}</span>
+                    </span>
+                    <app-pixel-icon name="flow" [size]="12" accent="#7a8fa3" />
+                  </a>
+                } @empty {
+                  <p class="text-sm text-dim">Sin senales: no hay agentes en error ni flujos detenidos.</p>
+                }
+              </div>
+            </div>
+          </article>
+        }
+
+        <article class="panel panel--notched">
+          <header class="panel__header">
+            <span class="panel__title">
+              <app-pixel-icon name="leads" [size]="14" accent="pink" />
+              Embudo comercial
+            </span>
+          </header>
+          <div class="panel__body">
+            @if (funnel().length > 0) {
+              <app-funnel-chart [steps]="funnel()" />
+            } @else {
+              <app-state-display mode="empty" />
+            }
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Carga por departamento y ranking de campanas -->
+    <section class="grid grid--2">
+      <article class="panel panel--notched">
+        <header class="panel__header">
+          <span class="panel__title">
+            <app-pixel-icon name="agents" [size]="14" accent="blue" />
+            Tareas completadas por departamento
+            <span class="panel__subtitle">Una sola medida por categoria</span>
+          </span>
+        </header>
+        <div class="panel__body">
+          @if (workloadRows().length > 0) {
+            <app-bar-chart [rows]="workloadRows()" />
+          } @else {
+            <app-state-display mode="empty" />
+          }
+        </div>
+      </article>
+
+      <article class="panel panel--notched">
+        <header class="panel__header">
+          <span class="panel__title">
+            <app-pixel-icon name="campaigns" [size]="14" accent="orange" />
+            Campanas con mejor retorno
+          </span>
+          <a class="text-xs" routerLink="/campaigns">Ver todas</a>
+        </header>
+        <div class="panel__body panel__body--flush">
+          @if (campaignRanking().length > 0) {
+            <div class="table-wrap">
+              <table class="table table--compact">
+                <thead>
+                  <tr>
+                    <th scope="col">Campana</th>
+                    <th scope="col">Canal</th>
+                    <th scope="col" class="num">Gasto</th>
+                    <th scope="col" class="num">Ingreso</th>
+                    <th scope="col" class="num">ROAS</th>
+                    <th scope="col" class="num">Conv.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (campaign of campaignRanking(); track campaign.id) {
+                    <tr>
+                      <th scope="row">
+                        <span class="text-mono text-xs">{{ campaign.name }}</span>
+                      </th>
+                      <td class="text-dim">{{ campaign.channel }}</td>
+                      <td class="num">{{ campaign.spend | eur }}</td>
+                      <td class="num">{{ campaign.revenue | eur }}</td>
+                      <td class="num num--strong">{{ campaign.roas }}x</td>
+                      <td class="num">{{ campaign.conversions }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <div class="panel__body"><app-state-display mode="empty" /></div>
+          }
+        </div>
+      </article>
+    </section>
+
+    <!-- Actividad y ultimas tareas -->
+    <section class="grid grid--sidebar">
+      <article class="panel panel--notched">
+        <header class="panel__header">
+          <span class="panel__title">
+            <app-pixel-icon name="flow" [size]="14" accent="green" />
+            Actividad reciente
+          </span>
+          <a class="text-xs" routerLink="/agents">Ver agentes</a>
+        </header>
+        <div class="panel__body panel__body--flush">
+          @if (activity().length > 0) {
+            <div class="feed">
+              @for (event of activity(); track event.id) {
+                <div class="feed__item">
+                  <span class="feed__marker" [class]="'feed__marker--' + event.severity"></span>
+                  <span>
+                    <span class="feed__message">{{ event.message }}</span>
+                    <span class="feed__meta">
+                      @if (event.actor; as actor) {
+                        <span class="text-mono">{{ actor.name }}</span>
+                      }
+                      @if (event.department; as department) {
+                        <span class="tag" [class]="'accent-' + department.accent">
+                          <span class="tag__dot"></span>
+                          {{ department.shortName }}
+                        </span>
+                      }
+                    </span>
+                  </span>
+                  <span class="feed__time">{{ event.at | timeAgo: referenceDate() }}</span>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="panel__body"><app-state-display mode="empty" /></div>
+          }
+        </div>
+      </article>
+
+      <article class="panel panel--notched">
+        <header class="panel__header">
+          <span class="panel__title">
+            <app-pixel-icon name="check" [size]="14" accent="lime" />
+            Ultimas tareas
+          </span>
+        </header>
+        <div class="panel__body panel__body--flush">
+          @if (tasks().length > 0) {
+            @for (task of tasks(); track task.id) {
+              <div class="task-row">
+                <app-pixel-icon
+                  [name]="task.kind === 'workflow-stage' ? 'flow' : 'agents'"
+                  [size]="16"
+                  [accent]="task.department?.accent ?? 'cyan'"
+                />
+                <span class="truncate">
+                  <span class="text-sm">{{ task.title }}</span>
+                  <span class="text-xs text-dim">
+                    {{ task.agentName ?? 'Sin agente' }}
+                    @if (task.workflowName) {
+                      · {{ task.workflowName }}
+                    }
+                  </span>
+                </span>
+                <app-progress-bar [value]="task.progress" size="sm" [showLabel]="false" />
+                <app-status-chip [status]="task.status" kind="task" />
+              </div>
+            }
+          } @else {
+            <div class="panel__body">
+              <app-state-display
+                mode="empty"
+                description="Todavia no se ha ejecutado ninguna tarea ni flujo en esta sesion del servidor."
+              />
+            </div>
+          }
+        </div>
+      </article>
+    </section>
+
+    <!-- Parametros de simulacion vigentes -->
+    @if (demo(); as info) {
+      <section class="panel">
+        <header class="panel__header">
+          <span class="panel__title">
+            <app-pixel-icon name="settings" [size]="14" accent="#7a8fa3" />
+            Simulacion en curso
+          </span>
+          <a class="text-xs" routerLink="/settings">Configurar</a>
+        </header>
+        <div class="panel__body">
+          <dl class="kv">
+            <dt class="kv__key">Duracion por etapa</dt>
+            <dd class="kv__value">{{ info.simulation.stepMs }} ms</dd>
+            <dt class="kv__key">Duracion por tarea</dt>
+            <dd class="kv__value">{{ info.simulation.taskMs }} ms</dd>
+            <dt class="kv__key">Tasa de fallo</dt>
+            <dd class="kv__value">{{ info.simulation.failureRate | rate }}</dd>
+            <dt class="kv__key">Polling sugerido</dt>
+            <dd class="kv__value">{{ info.simulation.pollIntervalMs }} ms</dd>
+          </dl>
+        </div>
+      </section>
+    }
+  </div>
+}

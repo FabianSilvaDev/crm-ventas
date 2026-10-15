@@ -1,0 +1,19 @@
+<div class="app-shell">
+  <div class="app-brand">
+    <img class="app-brand__mark" [src]="logo()" alt="" width="30" height="30" />
+    <span class="app-brand__text">
+      <span class="app-brand__name">AI Operations CMS</span>
+      <span class="app-brand__tag">Oficina de agentes · demo</span>
+    </span>
+  </div>
+
+  <app-header class="app-header"></app-header>
+
+  <aside class="app-sidebar">
+    <app-sidebar></app-sidebar>
+  </aside>
+
+  <main class="app-content" id="contenido">
+    <router-outlet></router-outlet>
+  </main>
+</div>

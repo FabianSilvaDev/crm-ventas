@@ -1,0 +1,531 @@
+@if (state.loading() && !state.data()) {
+  <app-state-display mode="loading" description="Consultando el catalogo de productos y sus ofertas..." />
+} @else if (state.error(); as error) {
+  <app-state-display mode="error" [error]="error" (retry)="load()" />
+} @else if (state.data(); as view) {
+  <div class="stack stack--lg">
+    <!-- Cabecera de la seccion -->
+    <header class="page-header">
+      <div>
+        <h1 class="page-header__title">
+          <app-pixel-icon name="products" [size]="18" accent="pink" />
+          Productos y ofertas
+        </h1>
+        <p class="page-header__description">
+          Catalogo investigado y validado: de donde sale cada producto, como rinde y que oferta lo lleva al mercado.
+          Elige un producto para ver su validacion, sus campanas y su linea temporal.
+        </p>
+      </div>
+      <div class="page-header__actions">
+        <button type="button" class="btn btn--ghost btn--sm" (click)="refresh()" [disabled]="state.loading()">
+          <app-pixel-icon name="reset" [size]="12" accent="#4fd6ff" />
+          {{ state.loading() ? 'Actualizando' : 'Actualizar' }}
+        </button>
+      </div>
+    </header>
+
+    <!-- Origen de los datos -->
+    <aside class="demo-banner">
+      <app-pixel-icon class="demo-banner__glyph" name="demo" [size]="14" accent="#ffc44d" />
+      <span>
+        <strong>Datos de demostracion.</strong>
+        Catalogo simulado con fecha de referencia {{ referenceDate() | dateEs: 'datetime' }}. Las cifras de venta y
+        validacion no proceden de fuentes reales.
+      </span>
+    </aside>
+
+    <!-- Catalogo y ofertas son dos conjuntos distintos de la API -->
+    <div class="tabs" role="tablist" aria-label="Secciones de producto">
+      <button
+        type="button"
+        class="tab"
+        role="tab"
+        [class.tab--active]="tab() === 'catalogo'"
+        [attr.aria-selected]="tab() === 'catalogo'"
+        (click)="setTab('catalogo')"
+      >
+        Catalogo ({{ total() }})
+      </button>
+      <button
+        type="button"
+        class="tab"
+        role="tab"
+        [class.tab--active]="tab() === 'ofertas'"
+        [attr.aria-selected]="tab() === 'ofertas'"
+        (click)="setTab('ofertas')"
+      >
+        Ofertas
+      </button>
+    </div>
+
+    @if (tab() === 'catalogo') {
+      <!-- Filtros: cada cambio recarga el listado contra la API -->
+      <div class="toolbar" role="group" aria-label="Filtros de productos">
+        <label class="field">
+          <span class="field__label">Buscar</span>
+          <input
+            class="input"
+            type="search"
+            placeholder="Nombre, SKU o proveedor"
+            [value]="search()"
+            (input)="onSearchInput($any($event.target).value)"
+          />
+        </label>
+
+        <label class="field">
+          <span class="field__label">Estado</span>
+          <select class="select" [value]="status()" (change)="onStatusChange($any($event.target).value)">
+            <option value="">Todos los estados</option>
+            @for (option of statuses(); track option) {
+              <option [value]="option">{{ productStatusLabel(option) }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="field">
+          <span class="field__label">Categoria</span>
+          <select class="select" [value]="category()" (change)="onCategoryChange($any($event.target).value)">
+            <option value="">Todas las categorias</option>
+            @for (option of categories(); track option) {
+              <option [value]="option">{{ option }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="field">
+          <span class="field__label">Orden</span>
+          <select class="select" [value]="sort()" (change)="onSortChange($any($event.target).value)">
+            @for (option of sortOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </label>
+
+        <span class="spacer"></span>
+
+        <span class="text-xs text-dim">{{ total() }} productos</span>
+
+        <button type="button" class="btn btn--ghost btn--sm" (click)="clearFilters()" [disabled]="!hasFilters()">
+          <app-pixel-icon name="reset" [size]="12" accent="#7a8fa3" />
+          Limpiar filtros
+        </button>
+      </div>
+
+      <!-- Catalogo -->
+      @if (catalog().length > 0) {
+        <section class="grid grid--3" aria-label="Catalogo de productos">
+          @for (product of catalog(); track product.id) {
+            <button
+              type="button"
+              class="product-card"
+              [class.product-card--selected]="selectedId() === product.id"
+              [attr.aria-pressed]="selectedId() === product.id"
+              (click)="selectProduct(product.id)"
+            >
+              <span class="row row--between">
+                <span class="product-card__name">{{ product.name }}</span>
+                <app-status-chip [status]="product.status" kind="product" />
+              </span>
+
+              <span class="product-card__meta">
+                <span class="text-mono text-xs">{{ product.sku }}</span>
+                <span class="spacer"></span>
+                <span class="tag accent-amber">
+                  <span class="tag__dot"></span>
+                  {{ product.category }}
+                </span>
+              </span>
+
+              <span class="kv">
+                <span class="kv__key">Precio</span>
+                <span class="kv__value">{{ product.pricing.price | eur }}</span>
+                <span class="kv__key">Margen</span>
+                <span class="kv__value">{{ product.validation.margin | rate }}</span>
+                <span class="kv__key">Unidades</span>
+                <span class="kv__value">{{ product.kpis.unitsSold | num }}</span>
+                <span class="kv__key">Ingresos</span>
+                <span class="kv__value">{{ product.kpis.revenue | eur }}</span>
+              </span>
+
+              <span class="row row--between">
+                <span class="text-xs text-dim">Score de validacion</span>
+                <span class="text-mono text-xs">{{ product.validation.score }}/100</span>
+              </span>
+              <app-progress-bar
+                [value]="product.validation.score / 100"
+                [color]="scoreColor(product.validation.score)"
+                [showLabel]="false"
+                [label]="'Score de validacion de ' + product.name"
+              />
+            </button>
+          }
+        </section>
+      } @else {
+        <app-state-display mode="empty" description="Ningun producto cumple los filtros aplicados." />
+      }
+
+      <!-- Detalle del producto abierto: GET /products/:id -->
+      @if (detail.loading() && !detail.data()) {
+        <app-state-display
+          mode="loading"
+          description="Consultando validacion, campanas, landings y linea temporal del producto..."
+        />
+      } @else if (detail.error(); as error) {
+        <app-state-display mode="error" [error]="error" (retry)="reloadDetail()" />
+      } @else if (detail.data(); as product) {
+        <div class="stack">
+          <section class="grid grid--2">
+            <article class="panel panel--notched">
+              <header class="panel__header">
+                <span class="panel__title">
+                  <app-pixel-icon name="products" [size]="14" accent="pink" />
+                  {{ product.name }}
+                </span>
+                <app-status-chip [status]="product.status" kind="product" />
+              </header>
+              <div class="panel__body stack stack--sm">
+                <div class="row row--wrap">
+                  <span class="tag accent-amber">
+                    <span class="tag__dot"></span>
+                    {{ product.category }}
+                  </span>
+                  @for (tag of product.tags; track tag) {
+                    <span class="chip chip--neutral">{{ tag }}</span>
+                  }
+                </div>
+
+                <dl class="kv">
+                  <dt class="kv__key">SKU</dt>
+                  <dd class="kv__value text-mono">{{ product.sku }}</dd>
+                  <dt class="kv__key">Proveedor</dt>
+                  <dd class="kv__value">{{ product.supplier }}</dd>
+                  <dt class="kv__key">Precio de venta</dt>
+                  <dd class="kv__value">{{ product.pricing.price | eur }}</dd>
+                  <dt class="kv__key">Coste</dt>
+                  <dd class="kv__value">{{ product.pricing.cost | eur }}</dd>
+                  <dt class="kv__key">Oferta vinculada</dt>
+                  <dd class="kv__value">
+                    @if (product.offer; as offer) {
+                      {{ offer.name }} · {{ offer.price | eur }}
+                    } @else {
+                      Sin oferta asociada
+                    }
+                  </dd>
+                  <dt class="kv__key">Registrado</dt>
+                  <dd class="kv__value">{{ product.createdAt | dateEs: 'date' }}</dd>
+                  <dt class="kv__key">Actualizado</dt>
+                  <dd class="kv__value">{{ product.updatedAt | timeAgo: referenceDate() }}</dd>
+                </dl>
+
+                @if (product.research; as research) {
+                  <hr class="divider" />
+                  <span class="field__label">Investigacion de respaldo</span>
+                  <p class="text-sm">{{ research.title }}</p>
+                  <div class="row row--wrap">
+                    <span class="tag accent-cyan">
+                      <span class="tag__dot"></span>
+                      {{ typeLabel(research.type) }}
+                    </span>
+                    <span class="text-xs text-dim">
+                      {{ research.findingCount | num }} hallazgos · {{ research.sourceCount | num }} fuentes
+                    </span>
+                    <span class="spacer"></span>
+                    <a class="text-xs" routerLink="/research">Ver investigacion</a>
+                  </div>
+                }
+              </div>
+            </article>
+
+            <article class="panel panel--notched">
+              <header class="panel__header">
+                <span class="panel__title">
+                  <app-pixel-icon name="check" [size]="14" accent="lime" />
+                  Validacion
+                </span>
+                <span class="chip chip--neutral">{{ product.validation.verdict }}</span>
+              </header>
+              <div class="panel__body stack stack--sm">
+                <div class="stack stack--sm">
+                  <div class="row row--between">
+                    <span class="text-sm">Score de validacion</span>
+                    <span class="text-mono">{{ product.validation.score }}/100</span>
+                  </div>
+                  <app-progress-bar
+                    [value]="product.validation.score / 100"
+                    [color]="scoreColor(product.validation.score)"
+                    [showLabel]="false"
+                    label="Score de validacion"
+                  />
+                </div>
+
+                <div class="stack stack--sm">
+                  <div class="row row--between">
+                    <span class="text-sm">Margen</span>
+                    <span class="text-mono">{{ product.validation.margin | rate }}</span>
+                  </div>
+                  <app-progress-bar [value]="product.validation.margin" [showLabel]="false" label="Margen" />
+                </div>
+
+                <div class="stack stack--sm">
+                  <div class="row row--between">
+                    <span class="text-sm">Indice de demanda</span>
+                    <span class="text-mono">{{ product.validation.demandIndex }}/100</span>
+                  </div>
+                  <app-progress-bar
+                    [value]="product.validation.demandIndex / 100"
+                    color="var(--px-amber)"
+                    [showLabel]="false"
+                    label="Indice de demanda"
+                  />
+                </div>
+
+                <hr class="divider" />
+
+                <dl class="kv">
+                  <dt class="kv__key">Competencia</dt>
+                  <dd class="kv__value">{{ product.validation.competition }}</dd>
+                  <dt class="kv__key">Riesgo de suministro</dt>
+                  <dd class="kv__value">{{ product.validation.supplyRisk }}</dd>
+                  <dt class="kv__key">Validado</dt>
+                  <dd class="kv__value">{{ product.validation.validatedAt | dateEs: 'date' }}</dd>
+                </dl>
+              </div>
+            </article>
+          </section>
+
+          <section class="grid grid--sidebar">
+            <article class="panel panel--notched">
+              <header class="panel__header">
+                <span class="panel__title">
+                  <app-pixel-icon name="leads" [size]="14" accent="pink" />
+                  Embudo de leads
+                  <span class="panel__subtitle">Etapas publicadas por la API: captados y ganados</span>
+                </span>
+              </header>
+              <div class="panel__body">
+                @if (leadFunnel().length > 0) {
+                  <app-funnel-chart [steps]="leadFunnel()" />
+                } @else {
+                  <app-state-display mode="empty" description="Este producto todavia no tiene leads asociados." />
+                }
+              </div>
+            </article>
+
+            <article class="panel panel--notched">
+              <header class="panel__header">
+                <span class="panel__title">
+                  <app-pixel-icon name="analytics" [size]="14" accent="amber" />
+                  Rendimiento
+                </span>
+              </header>
+              <div class="panel__body">
+                @if (product.leads; as leads) {
+                  <dl class="kv">
+                    <dt class="kv__key">Leads captados</dt>
+                    <dd class="kv__value">{{ leads.total | num }}</dd>
+                    <dt class="kv__key">Leads ganados</dt>
+                    <dd class="kv__value">{{ leads.won | num }}</dd>
+                    <dt class="kv__key">Valor en pipeline</dt>
+                    <dd class="kv__value">{{ leads.pipelineValue | eur }}</dd>
+                    <dt class="kv__key">Unidades vendidas</dt>
+                    <dd class="kv__value">{{ product.kpis.unitsSold | num }}</dd>
+                    <dt class="kv__key">Ingreso simulado</dt>
+                    <dd class="kv__value">{{ product.kpis.revenue | eur }}</dd>
+                    <dt class="kv__key">Ingreso por campanas</dt>
+                    <dd class="kv__value">{{ product.kpis.campaignsRevenue | eur }}</dd>
+                    <dt class="kv__key">Tasa de devolucion</dt>
+                    <dd class="kv__value">{{ product.kpis.returnRate | rate }}</dd>
+                    <dt class="kv__key">Valoracion</dt>
+                    <dd class="kv__value">{{ product.kpis.rating }} / 5</dd>
+                  </dl>
+                } @else {
+                  <app-state-display mode="empty" description="Sin datos comerciales para este producto." />
+                }
+              </div>
+            </article>
+          </section>
+
+          <section class="grid grid--2">
+            <article class="panel panel--notched">
+              <header class="panel__header">
+                <span class="panel__title">
+                  <app-pixel-icon name="campaigns" [size]="14" accent="orange" />
+                  Campanas asociadas
+                  <span class="panel__subtitle">Ingreso simulado por campana</span>
+                </span>
+              </header>
+              <div class="panel__body">
+                @if (campaignRows().length > 0) {
+                  <app-bar-chart [rows]="campaignRows()" valueFormat="currency" />
+                } @else {
+                  <app-state-display mode="empty" description="Este producto no tiene campanas activas." />
+                }
+              </div>
+            </article>
+
+            <article class="panel panel--notched">
+              <header class="panel__header">
+                <span class="panel__title">
+                  <app-pixel-icon name="landing" [size]="14" accent="cyan" />
+                  Landings asociadas
+                </span>
+              </header>
+              <div class="panel__body panel__body--flush">
+                @if (product.landingPages && product.landingPages.length > 0) {
+                  <div class="table-wrap">
+                    <table class="table table--compact">
+                      <thead>
+                        <tr>
+                          <th scope="col">Landing</th>
+                          <th scope="col">Estado</th>
+                          <th scope="col" class="num">Visitantes</th>
+                          <th scope="col" class="num">Conversion</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (landing of product.landingPages; track landing.id) {
+                          <tr>
+                            <th scope="row">
+                              <span class="text-mono text-xs">{{ landing.slug }}</span>
+                            </th>
+                            <td>
+                              <app-status-chip [status]="landing.status" kind="landing" />
+                            </td>
+                            <td class="num">{{ landing.visitors | num }}</td>
+                            <td class="num num--strong">{{ landing.conversionRate | rate }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                } @else {
+                  <div class="panel__body">
+                    <app-state-display mode="empty" description="Este producto no tiene landings publicadas." />
+                  </div>
+                }
+              </div>
+            </article>
+          </section>
+
+          <article class="panel panel--notched">
+            <header class="panel__header">
+              <span class="panel__title">
+                <app-pixel-icon name="flow" [size]="14" accent="green" />
+                Linea temporal
+                <span class="panel__subtitle">Del registro del producto a la ultima campana</span>
+              </span>
+            </header>
+            <div class="panel__body panel__body--flush">
+              @if (product.timeline && product.timeline.length > 0) {
+                <div class="feed">
+                  @for (entry of product.timeline; track entry.at + entry.label) {
+                    <div class="feed__item">
+                      <span class="feed__marker feed__marker--info"></span>
+                      <span>
+                        <span class="feed__message">{{ entry.label }}</span>
+                        <span class="feed__meta">{{ entry.at | dateEs: 'datetime' }}</span>
+                      </span>
+                      <span class="feed__time">{{ entry.at | timeAgo: referenceDate() }}</span>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <div class="panel__body">
+                  <app-state-display mode="empty" description="Sin hitos registrados para este producto." />
+                </div>
+              }
+            </div>
+          </article>
+        </div>
+      } @else {
+        <app-state-display mode="empty" description="Selecciona un producto del catalogo para ver su detalle." />
+      }
+    } @else {
+      <!-- Ofertas: GET /offers -->
+      <div class="toolbar" role="group" aria-label="Filtros de ofertas">
+        <label class="field">
+          <span class="field__label">Estado de la oferta</span>
+          <select class="select" [value]="offerStatus()" (change)="onOfferStatusChange($any($event.target).value)">
+            <option value="">Todos los estados</option>
+            @for (option of offerStatusOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </label>
+
+        <span class="spacer"></span>
+
+        <span class="text-xs text-dim">{{ offersList().length }} ofertas</span>
+
+        <button type="button" class="btn btn--ghost btn--sm" (click)="loadOffers()" [disabled]="offers.loading()">
+          <app-pixel-icon name="reset" [size]="12" accent="#4fd6ff" />
+          {{ offers.loading() ? 'Actualizando' : 'Actualizar' }}
+        </button>
+      </div>
+
+      @if (offers.loading() && !offers.data()) {
+        <app-state-display mode="loading" description="Consultando las ofertas derivadas de los productos..." />
+      } @else if (offers.error(); as error) {
+        <app-state-display mode="error" [error]="error" (retry)="loadOffers()" />
+      } @else if (offersList().length > 0) {
+        <section class="grid grid--2" aria-label="Ofertas">
+          @for (offer of offersList(); track offer.id) {
+            <article class="panel panel--notched">
+              <header class="panel__header">
+                <span class="panel__title">
+                  <app-pixel-icon name="products" [size]="14" accent="pink" />
+                  {{ offer.name }}
+                </span>
+                <app-status-chip [status]="offer.status" kind="offer" />
+              </header>
+              <div class="panel__body stack stack--sm">
+                <p class="text-sm text-dim">{{ offer.positioning }}</p>
+
+                <dl class="kv">
+                  <dt class="kv__key">Producto</dt>
+                  <dd class="kv__value">
+                    @if (offer.product; as product) {
+                      {{ product.name }}
+                    } @else {
+                      Sin producto asociado
+                    }
+                  </dd>
+                  <dt class="kv__key">Canal</dt>
+                  <dd class="kv__value">{{ channelLabel(offer.channel) }}</dd>
+                  <dt class="kv__key">Precio</dt>
+                  <dd class="kv__value">{{ offer.price | eur }}</dd>
+                  <dt class="kv__key">Conversion</dt>
+                  <dd class="kv__value">{{ offer.conversionRate | rate }}</dd>
+                  <dt class="kv__key">Garantia</dt>
+                  <dd class="kv__value">{{ offer.guarantee }}</dd>
+                  <dt class="kv__key">Creada</dt>
+                  <dd class="kv__value">
+                    {{ offer.createdAt | timeAgo: offers.data()?.referenceDate }}
+                  </dd>
+                </dl>
+
+                @if (offer.tiers.length > 0) {
+                  <hr class="divider" />
+                  <span class="field__label">Niveles de la oferta</span>
+                  <div class="stack stack--sm">
+                    @for (tier of offer.tiers; track tier.id) {
+                      <div class="tier stack stack--sm">
+                        <div class="row row--between">
+                          <span class="text-sm">{{ tier.name }}</span>
+                          <span class="text-mono text-sm">{{ tier.price | eur }}</span>
+                        </div>
+                        <span class="text-xs text-dim">{{ tier.includes.join(' · ') }}</span>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </article>
+          }
+        </section>
+      } @else {
+        <app-state-display mode="empty" description="Ninguna oferta cumple el estado seleccionado." />
+      }
+    }
+  </div>
+}

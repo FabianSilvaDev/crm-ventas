@@ -1,140 +1,281 @@
-# CRM de Ventas + Plataforma de Marketing con IA
+# AI Operations CMS
 
-Plataforma interna de uso propio que cierra el ciclo comercial completo:
+CMS para supervisar un sistema multiagente de inteligencia artificial dedicado a
+investigación de mercado, marketing, contenido, publicidad, captación de clientes,
+ventas y analítica.
 
-> nicho → investigación → productos → selección → estrategia → contenido → landing → SEO →
-> campaña → publicidad → leads → ventas → analítica → optimización
+Incluye una **oficina virtual en pixel art** donde los agentes trabajan por
+departamento, un **flujo de 17 etapas** que se ejecuta de verdad en el backend, y las
+vistas administrativas para revisar productos, ofertas, campañas, leads y resultados.
 
-**Estado actual: Hito 1 (Cimientos) en curso — Sprint 1, rebanada «webhook de Meta + pantalla de
-leads» terminada.**
-Ya hay código, y pasa las verificaciones: `tsc -b` en 0, typecheck en 0 y **193 tests en verde**.
-
-| Ya existe | Contenido |
-|---|---|
-| `packages/contracts` | Catálogo de **43 errores** con `type`/`docs` derivados (no pueden divergir) y los esquemas Zod compartidos: identidad, leads y webhooks de Meta · 53 tests |
-| `apps/api` | Esqueleto NestJS: `/health/live`, `/health/ready`, problem+json conforme a RFC 9457 con `traceId`, validación de entorno fail-fast y **webhook de Meta Lead Ads**: handshake, firma HMAC sobre el cuerpo crudo, rate limit por IP, cliente de Graph API sustituible por fixtures · 102 tests |
-| `apps/web` | Angular 22 zoneless: «Estado del sistema» y **«Leads»** (tabla, enlace `wa.me`, estado honesto cuando el API aún no puede dar datos) · 38 tests |
-| `apps/api/scripts` | `send-signed-webhook.mjs`: prueba el webhook de punta a punta sin cuenta de Meta |
-
-**Lo que esta rebanada NO hace, dicho sin adornos: no produce un lead.** El webhook recibe, verifica
-y valida, pero **no persiste** — no hay base de datos en esta máquina (`docker`, `psql`, `pg_ctl` y
-el puerto 5432: nada disponible). `{received:true}` significa «el sobre pasó todas las puertas», no
-«hay un lead guardado». La elección de Postgres es la puerta siguiente.
-Ver [`docs/manual.md`](docs/manual.md) §9.
-
-**Pendiente del hito:** ESLint + CI (con detección de drift del contrato), Prisma y migraciones, el
-esqueleto de `apps/site`, y la instrumentación (pino + OTel).
-Ver [`docs/roadmap.md`](docs/roadmap.md).
+> **Todos los datos son simulados y ficticios.** No hay modelos de lenguaje,
+> plataformas publicitarias, servicios de terceros ni base de datos: esta primera
+> versión funciona de extremo a extremo con un backend Express que genera respuestas
+> realistas. Los servicios y los contratos están preparados para sustituir esos datos
+> por agentes y APIs reales sin tocar el frontend
+> (ver [docs/architecture.md](docs/architecture.md#5-sustituir-los-datos-simulados-por-agentes-reales)).
 
 ---
 
-## Documentación
+## Requisitos
 
-Toda la documentación vive en `docs/`. Orden de lectura recomendado:
+| Herramienta | Versión verificada |
+| --- | --- |
+| Node.js | v24.19.0 (mínimo 20.6, por `--env-file-if-exists`) |
+| npm | 11.x |
 
-| Documento | Contenido |
-|---|---|
-| [`docs/manual.md`](docs/manual.md) | **Empieza aquí para usarlo.** Instalación, arranque, comandos, la interfaz, diagnóstico y problemas conocidos |
-| [`docs/architecture.md`](docs/architecture.md) | **El contrato.** Invariantes, fronteras, autoridad documental y mapa de documentos. El que se consulta mientras se escribe código |
-| [`docs/architecture-review.md`](docs/architecture-review.md) | **Empieza aquí para el análisis.** Análisis arquitectónico completo A–O: visión, arquitectura, stack, estructura del repo, modelo de datos, API, IA, marketing, SEO, DevOps, seguridad, escalabilidad, MVP, roadmap, Sprint 1 y riesgos. Fechado: **no es autoridad** |
-| [`docs/decisions.md`](docs/decisions.md) | 23 ADR con contexto, decisión, consecuencias y alternativas descartadas, más las enmiendas y la deuda registrada (I12). **Autoridad final** |
-| [`docs/roadmap.md`](docs/roadmap.md) | 11 fases agrupadas en 5 hitos con puertas de salida y criterios de aceptación |
-| [`docs/database.md`](docs/database.md) | Modelo de datos, provenance, orden de migración y qué NO se crea |
-| [`docs/api.md`](docs/api.md) | Contratos REST, errores, auth, idempotencia, catálogo de endpoints |
-| [`docs/ai-agents.md`](docs/ai-agents.md) | LLMProvider, ModelRouter, ToolRegistry, agentes, memoria, observabilidad |
-| [`docs/security.md`](docs/security.md) | Modelo de amenazas, RBAC, prompt injection, guardrails, cumplimiento |
-| [`docs/seo.md`](docs/seo.md) | SSR/prerender, checklist técnico, JSON-LD, Search Console, content engine |
-| [`docs/marketing.md`](docs/marketing.md) | Funnel, templates, economía unitaria, atribución, KPIs, experimentación |
-| [`docs/design-system.md`](docs/design-system.md) | Tokens, primitivas, reglas de accesibilidad y cómo se añade una pantalla |
-| [`docs/deployment.md`](docs/deployment.md) | Entorno local, Compose, Dockerfiles, CI/CD, backups, runbook |
+No hace falta Docker, base de datos ni ninguna otra herramienta.
 
----
+## Instalación
 
-## Decisiones estructurales (resumen)
+```bash
+git clone <url-del-repositorio>
+cd "crm ventas"
 
-| Decisión | Elección |
-|---|---|
-| **Canal de venta** | **Meta Ads → lead capturado → cierre por WhatsApp** en Colombia. El cierre es conversacional, no hay checkout (ADR-016) |
-| Arquitectura | Monolito modular NestJS + worker BullMQ separado |
-| Frontend | **Dos apps Angular**: `apps/web` (CRM interno, SPA, noindex) y `apps/site` (público, SSR, indexable) |
-| Monorepo | pnpm workspaces (sin Nx, sin Turborepo) |
-| Base de datos | PostgreSQL + pgvector (sin base vectorial dedicada). Vectores a **768 dims** con modelo registrado por fila (ADR-019) |
-| Colas | Redis + BullMQ con scheduler embebido (sin servicio aparte) |
-| Eventos | Outbox transaccional (sin Kafka) |
-| API | REST `/api/v1` + OpenAPI desde Zod + cliente Angular generado |
-| IA | `LLMProvider` + `ModelRouter` con **routing híbrido**: Ollama local para volumen, modelos remotos para calidad |
-| Human-in-the-loop | Propiedad del `ToolRegistry`, no instrucción al modelo |
-| Métricas | Provenance obligatoria: `REAL` / `ESTIMATED` / `AI_INFERENCE` |
-
-Razones completas de cada una en [`docs/decisions.md`](docs/decisions.md).
-
----
-
-## Entorno verificado
-
-| Recurso | Estado |
-|---|---|
-| Node.js | v24.19.0 ✅ |
-| npm | 11.17.0 ✅ |
-| Git | 2.52.0 ✅ |
-| Ollama | 0.34.3, corriendo en `:11434` ✅ (gemma4:8b, gemma4:26b, qwen3.6:36b, modelos `:cloud`) |
-| GPU | ❌ ninguna — inferencia local CPU-only, ~5-8 tok/s en 8B |
-| CPU / RAM | i7-1255U (10C/12T) / 32 GB |
-| pnpm | ❌ no global — se usa vía **`corepack pnpm`** (12.8.1, la de `packageManager`) ✅ |
-| Docker / Compose | ❌ ausente |
-| WSL2 | ❌ ausente (prerequisito de Docker Desktop, requiere admin + reinicio) |
-
-Los prerequisitos pendientes son tareas del Sprint 1, no bloquean la escritura de código.
-Ver [`docs/deployment.md`](docs/deployment.md).
-
----
-
-## Principio central
-
-```
-DATA → INTELLIGENCE → DECISION → CONTENT → CAMPAIGN → TRAFFIC
-     → LEAD → SALE → ANALYTICS → LEARNING → OPTIMIZATION
+# Instala backend y frontend, y las herramientas de la raiz
+npm install
+npm run install:all
 ```
 
-La parte que decide si esto vale o no es **LEARNING**: que las métricas reales de campaña
-recalibren las estimaciones del scoring. Sin ese paso, el sistema acumula datos pero no
-aprende, y el Product Scoring Engine es decoración. Está implementado como criterio de
-aceptación del Hito 5, no como una intención.
+`npm install` en la raíz sólo instala `concurrently` (para levantar ambos servicios
+con un comando); las dependencias reales viven en `backend/` y `frontend/`.
 
----
+## Ejecución
 
-## Principios de trabajo
+### Opción A: un solo comando
 
-1. Simplicidad antes que completitud.
-2. Observabilidad antes que potencia.
-3. Seguridad como arquitectura, no como instrucción al modelo.
-4. Costos medidos desde la primera llamada a un LLM.
-5. Automatización con aprobación humana hasta que los límites estén probados.
-6. Ninguna tecnología por moda.
+```bash
+npm run dev
+```
 
----
+Levanta el backend en `http://localhost:3000` y el frontend en
+`http://localhost:4200` con salida etiquetada por servicio.
 
-## Siguiente paso
+### Opción B: dos terminales
 
-**La puerta está cerrada y es una sola: elegir PostgreSQL.** No hay `docker`, ni `psql`, ni nada
-escuchando en el 5432, y sin base de datos el proyecto no puede dar el paso que le falta:
-**persistir el primer lead**. El webhook ya está construido hasta ese borde y esperándola.
+```bash
+# Terminal 1 — API
+npm run dev:backend
 
-La decisión es entre **Postgres nativo en el host** (sin Docker, instalable hoy, pero hay que
-gestionarlo a mano) y **Postgres gestionado en la nube** (Neon, Supabase, RDS: sin administración,
-pero es un servicio externo y de pago a partir de cierto uso). Las dos son válidas; lo que no es
-válido es seguir sin elegir, porque bloquea el Hito 2 entero.
+# Terminal 2 — interfaz
+npm run dev:frontend
+```
 
-Con esa decisión tomada, el orden ya está escrito en
-[`docs/database.md`](docs/database.md) §13: `prisma@~7.10.0` + `@prisma/client@~7.10.0` (**fijadas**:
-`prisma@latest` resuelve a un release candidate y deja el CLI y el cliente en majors distintas),
-`allowBuilds` en `pnpm-workspace.yaml`, las migraciones `0001_core_min` y `0002_lead_ingestion`, y la
-ingesta real.
+Después abre **http://localhost:4200**.
 
-**En paralelo, y sin depender de nada de lo anterior:** iniciar los trámites con Meta (app,
-verificación del negocio, permisos `leads_retrieval`/`ads_management`/`business_management`, número de
-WhatsApp Business, plantillas). Tardan **semanas** y son el bloqueante de mayor plazo del proyecto.
-El handshake del webhook ya está implementado y funcionando, que es exactamente lo que Meta pide para
-validar el endpoint.
+### Si el puerto 4200 o el 3000 están ocupados
 
-No se avanza de fase sin confirmación explícita.
+```bash
+# Interfaz en otro puerto
+npm run dev:frontend -- --port 4300
+
+# API en otro puerto (y avisando al frontend del origen nuevo)
+CORS_ORIGINS=http://localhost:4200,http://localhost:4300 PORT=3100 npm run dev:backend
+```
+
+Si cambias el puerto de la interfaz, añádelo a `CORS_ORIGINS` (o el navegador bloqueará
+las peticiones) y ajusta `apiBaseUrl` en `frontend/src/environments/environment.ts` si
+mueves la API.
+
+### Scripts disponibles
+
+| Comando | Qué hace |
+| --- | --- |
+| `npm run install:all` | Instala las dependencias del backend y del frontend. |
+| `npm run dev` | Backend + frontend a la vez. |
+| `npm run dev:backend` | Sólo la API, con recarga automática. |
+| `npm run dev:frontend` | Sólo la interfaz Angular. |
+| `npm run build` | Compila el frontend en `frontend/dist`. |
+| `npm test` | Pruebas de la API (health, agentes y flujos). |
+| `npm --prefix frontend run check:sprites` | Valida las matrices de pixel art. |
+
+## Variables de entorno
+
+Son **opcionales**: el backend arranca con valores por defecto razonables. Para
+cambiarlas, copia `.env.example` a `backend/.env`:
+
+```bash
+cp .env.example backend/.env          # Linux/macOS
+Copy-Item .env.example backend/.env   # Windows PowerShell
+```
+
+| Variable | Por defecto | Para qué sirve |
+| --- | --- | --- |
+| `PORT` | `3000` | Puerto de la API. |
+| `CORS_ORIGINS` | `http://localhost:4200,http://127.0.0.1:4200` | Orígenes permitidos. |
+| `SIMULATION_STEP_MS` | `4200` | Duración de cada etapa de un flujo. |
+| `SIMULATION_TASK_MS` | `2600` | Duración de una tarea de agente. |
+| `SIMULATION_FAILURE_RATE` | `0.03` | Probabilidad de fallo controlado. Ponlo a `0` para que la demo no se detenga nunca por un error simulado. |
+| `POLL_INTERVAL_MS` | `1500` | Cadencia de polling que la API anuncia al frontend. |
+
+La URL de la API en el frontend se configura en
+`frontend/src/environments/environment.ts`.
+
+## Qué se puede hacer
+
+- **Dashboard**: indicadores, salud de la operación, series temporales, embudo,
+  actividad reciente y últimas tareas.
+- **Oficina virtual** (`/office`): escenario pixel art con 8 salas y 20 agentes.
+  Arrastra para mover la vista, usa la rueda para acercar, filtra por departamento,
+  estado o nombre, y pulsa un agente para ver su ficha y **ejecutar una tarea
+  simulada** cuyo avance se sigue por polling.
+- **Flujo de agentes** (`/workflows`): las 17 etapas de izquierda a derecha con sus
+  dependencias dibujadas. **Iniciar demostración** hace que el backend recorra el
+  flujo; se puede **pausar**, **reanudar**, **reiniciar** y consultar el resultado y
+  las métricas de cada etapa.
+- **Agentes**, **Investigación**, **Productos y ofertas**, **Contenido y
+  creatividades**, **Landing pages**, **Campañas**, **Leads y ventas**,
+  **Analítica** y **Configuración**: vistas conectadas a la API con filtros,
+  detalle y estados de carga, error y vacío.
+
+## Comprobar que funciona
+
+```bash
+# 1. La API responde
+curl -s http://localhost:3000/api/v1/health
+
+# 2. Pruebas automatizadas de la API (23 comprobaciones)
+npm test
+
+# 3. El frontend compila
+npm run build
+
+# 4. El pixel art no tiene matrices descuadradas
+npm --prefix frontend run check:sprites
+```
+
+En la interfaz, el indicador del header debe mostrar **API conectada** en verde. Si
+aparece en rojo, el backend no está arrancado o `apiBaseUrl` no apunta al puerto
+correcto; el propio header permite reintentar la conexión.
+
+## Estructura
+
+```text
+crm ventas/
+├── backend/     API REST simulada (Express 5, JavaScript ESM, datos en memoria)
+├── frontend/    SPA Angular 22 (standalone, zoneless, signals, PixiJS)
+├── docs/        architecture.md y api.md
+└── package.json Scripts de instalación y ejecución
+```
+
+Detalle completo en [docs/architecture.md](docs/architecture.md) y referencia de
+endpoints en [docs/api.md](docs/api.md).
+
+## Fuentes de datos (estudio de oportunidad)
+
+El intake puede trabajar con fuentes reales o sólo con la demo. Lo controla
+`SOURCES_MODE` (`auto` por defecto) y el estado se consulta en `GET /api/v1/sources`.
+
+```powershell
+# Que fuentes hay y cuales estan configuradas
+Invoke-RestMethod http://localhost:3000/api/v1/sources | ConvertTo-Json -Depth 4
+
+# Un estudio, sin salir a la red (funciona siempre)
+Invoke-RestMethod -Method Post http://localhost:3000/api/v1/intake/scan `
+  -ContentType 'application/json' `
+  -Body '{"keywords":["teclado mecanico","soporte de monitor"],"mode":"simulated","constraints":{"minMargin":0.25}}'
+```
+
+| Fuente | Necesita | Estado comprobado |
+| --- | --- | --- |
+| **Google Trends** | nada | El autocompletado de temas responde; la serie de interés devuelve **429** desde IP de servidor (Google limita), así que puede fallar de forma intermitente |
+| **AliExpress** | `ALIEXPRESS_APP_KEY` + `SECRET` | Endpoint vivo; sin credenciales responde `InvalidAppKey` |
+| **Alibaba.com** | `ALIBABA_APP_KEY` + `SECRET` | Endpoint vivo; hay que confirmar el método aprobado para tu app |
+| **Datos de demostración** | nada | Siempre disponible, siempre marcada como `simulated` |
+
+Lo importante de cómo está montado: **cada cifra viaja con su fuente, su fecha y su
+confianza**, y un dato que falta se declara ausente en lugar de rellenarse. Si pides un
+estudio en modo `live` sin credenciales, la respuesta no trae números inventados: trae
+cero señales, el motivo de cada fuente y el veredicto `sin datos suficientes`.
+
+Para trabajar con datos reales: copia `.env.example` a `backend/.env`, rellena las
+claves y pon `SOURCES_MODE=live`. Detalles y límites en
+[docs/architecture.md](docs/architecture.md#5-fuentes-de-datos-estudio-de-oportunidad).
+
+## Oportunidades: cómo se elige qué perseguir
+
+La sección **Oportunidades** es donde arranca todo. El recorrido es el de un caso real:
+
+1. **Descubrir.** El botón *Qué está subiendo* lee el feed de tendencias de Google Trends
+   y trae los términos que suben ahora en tu país, con su volumen aproximado.
+2. **Estudiar.** Escribes los términos a valorar (o usas los descubiertos), fijas tus
+   restricciones —margen mínimo, coste máximo, competencia asumible— y lanzas el estudio.
+   Yanca consulta las fuentes y **registra las candidatas en la cola**.
+3. **Decidir.** La cola ordena por puntuación. Cada fila muestra su **cobertura** (cuánto
+   del estudio se pudo completar) y sus **datos ausentes**: un 75 sobre dos métricas no es
+   lo mismo que un 75 sobre seis. Al abrir una, ves **cada cifra con su fuente**, las
+   comprobaciones de tus restricciones y el historial de estudios.
+4. **Aprobar** la oportunidad, con motivo. Solo las aprobadas se pueden ejecutar.
+5. **Lanzar el flujo con ella.** Desde la ficha, *Lanzar el flujo* arranca la ejecución
+   atada a esa oportunidad y te lleva al flujo a seguirla. Y ahí está la diferencia:
+
+   | Ejecución | Qué produce |
+   | --- | --- |
+   | **Con** oportunidad | Las métricas de cada etapa salen del estudio de *esa* oportunidad, y los artefactos son suyos: los registros reales si el término corresponde a un producto del catálogo, o propuestas marcadas como *propuesto* si no existe todavía. |
+   | **Sin** oportunidad (demostración) | Recorre siempre el caso previsto de la plantilla (`rsc-0001`, `prd-001`, `off-0001`...), sea cual sea el término. |
+
+```powershell
+# Que esta subiendo ahora (dato real de Google Trends)
+Invoke-RestMethod "http://localhost:3000/api/v1/intake/discover?geo=ES" | ConvertTo-Json -Depth 4
+
+# Estudio de dos terminos, con tus restricciones, y registro en la cola
+Invoke-RestMethod -Method Post http://localhost:3000/api/v1/intake/scan -ContentType 'application/json' `
+  -Body '{"keywords":["perforadora de escritorio","soporte de portatil"],"mode":"auto","constraints":{"minMargin":0.3,"maxCost":120}}'
+
+# La cola y una decision
+Invoke-RestMethod http://localhost:3000/api/v1/opportunities | ConvertTo-Json -Depth 4
+Invoke-RestMethod -Method Post http://localhost:3000/api/v1/opportunities/opp-0004/approve `
+  -ContentType 'application/json' -Body '{"reason":"Margen alto y poca competencia."}'
+```
+
+**Estado real de Google Trends** (comprobado, no supuesto): la resolución de términos
+y el feed de tendencias **funcionan**; la serie de interés responde **429** desde IP de
+servidor, así que en este equipo la demanda la aportan los datos de demostración,
+marcados como `simulated` en cada cifra. La vista lo dice en la barra superior:
+"*N fuentes reales · modo auto*".
+
+## Puertas de decisión: dónde se para el flujo
+
+El flujo no corre del tirón. **Se detiene en tres puntos** y espera tu decisión, porque
+son los momentos en los que seguir tiene un coste:
+
+| Etapa | Qué te pregunta |
+| --- | --- |
+| **Validación de producto** | ¿Seguimos adelante con esta oportunidad? Es el punto más barato para descartarla. |
+| **Configuración de campaña** | ¿Publicamos la campaña? |
+| **Audiencia y presupuesto** | ¿Autorizas el reparto? A partir de aquí se gasta. |
+
+Mientras espera, la ejecución está en `awaiting_approval`: la etapa aparece marcada como
+*Esperando decisión*, el contador de **Flujo de agentes** del menú se pone en ámbar y el
+header muestra **«N esperando tu decisión»** con acceso directo. Cuando abres esa
+ejecución, el panel de la puerta te da la pregunta, el contexto y los dos botones.
+
+- **Aprobar** continúa el flujo por donde iba (y no vuelve a preguntar por esa etapa).
+- **Rechazar** detiene el ciclo: lo ya hecho se conserva, lo pendiente queda omitido, y
+  detenerse a propósito **no cuenta como fallo**. Si el ciclo venía de una oportunidad,
+  **esa oportunidad se descarta con tu motivo** — decidir que no en el flujo se refleja en
+  la cola, en lugar de dejarla ahí para que alguien la reintente.
+
+Para demostraciones desatendidas: `SIMULATION_GATES=off` en `backend/.env`.
+
+## Datos y persistencia
+
+**Los datos y las ejecuciones viven en memoria.** Al detener el backend se pierden
+las ejecuciones de flujo, las tareas lanzadas, la actividad generada y las
+notificaciones leídas; al arrancar de nuevo todo vuelve al estado inicial de la
+demostración. Es una decisión consciente de esta primera versión (sin base de datos).
+
+El estado inicial de la demostración (`backend/src/mocks/`) está fechado el
+**6 de octubre de 2026**, y los datos que deben ser estables se generan con semillas
+fijas: la misma consulta devuelve siempre el mismo resultado, así que dos vistas no
+pueden mostrar cifras contradictorias.
+
+## Limitaciones conocidas
+
+- No hay agentes reales: los resultados son plantillas coherentes por etapa.
+- No hay base de datos ni persistencia; no hay autenticación (el perfil del header es
+  ficticio).
+- El escenario pixel art se dibuja con un máximo de ~20 agentes por vista; no está
+  pensado para cientos.
+- La oficina necesita **WebGL** (PixiJS 8). Si el navegador no lo ofrece, la vista lo
+  indica en pantalla en lugar de quedarse en blanco.

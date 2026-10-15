@@ -1,0 +1,530 @@
+@if (initialLoading()) {
+  <app-state-display
+    mode="loading"
+    description="Consultando el embudo comercial, los leads y sus trazas en la API simulada..."
+  />
+} @else if (viewError(); as error) {
+  <app-state-display mode="error" [error]="error" (retry)="load()" />
+} @else {
+  <div class="stack stack--lg">
+    <!-- Cabecera de la seccion -->
+    <header class="page-header">
+      <div>
+        <h1 class="page-header__title">
+          <app-pixel-icon name="leads" [size]="18" accent="pink" />
+          Leads y ventas
+        </h1>
+        <p class="page-header__description">
+          Pipeline comercial simulado: captacion, cualificacion, propuesta y cierre. Cada lead incluye su empresa, el
+          agente responsable y la traza completa de pasos.
+        </p>
+      </div>
+      <div class="page-header__actions">
+        <button type="button" class="btn btn--ghost btn--sm" (click)="load()" [disabled]="listState.loading()">
+          <app-pixel-icon name="reset" [size]="12" accent="#4fd6ff" />
+          {{ listState.loading() ? 'Actualizando' : 'Actualizar' }}
+        </button>
+      </div>
+    </header>
+
+    <!-- Origen y naturaleza de los datos -->
+    <aside class="demo-banner">
+      <app-pixel-icon class="demo-banner__glyph" name="demo" [size]="14" accent="#ffc44d" />
+      <span>
+        <strong>Datos de demostracion.</strong>
+        Fecha de referencia {{ referenceDate() | dateEs: 'datetime' }}. Los leads, sus importes y sus trazas se generan
+        de forma determinista y viven en memoria del backend.
+      </span>
+    </aside>
+
+    <!-- Indicadores del embudo, embudo y reparto por origen -->
+    @if (summary(); as resumen) {
+      <section class="grid grid--3" aria-label="Indicadores de leads">
+        <app-stat-tile
+          label="Leads totales"
+          [value]="resumen.totals.total | num"
+          icon="leads"
+          accent="pink"
+          [hint]="'Puntuacion media ' + resumen.totals.averageScore"
+        />
+        <app-stat-tile
+          label="Abiertos"
+          [value]="resumen.totals.open | num"
+          icon="flow"
+          accent="blue"
+          [hint]="resumen.totals.lost + ' perdidos · ' + resumen.totals.won + ' ganados'"
+        />
+        <app-stat-tile
+          label="Ganados"
+          [value]="resumen.totals.won | num"
+          icon="check"
+          accent="lime"
+          [hint]="'Valor ganado ' + (resumen.totals.wonValue | eur)"
+        />
+        <app-stat-tile
+          label="Valor del pipeline"
+          [value]="resumen.totals.pipelineValue | eur"
+          icon="analytics"
+          accent="amber"
+          [hint]="'Solo oportunidades abiertas, de ' + resumen.totals.total + ' leads'"
+        />
+        <app-stat-tile
+          label="Tasa de conversion"
+          [value]="resumen.totals.conversionRate | rate"
+          icon="campaigns"
+          accent="green"
+          [hint]="'Ganados sobre el total de leads'"
+        />
+        <app-stat-tile
+          label="Prioridad alta"
+          [value]="resumen.totals.highPriority | num"
+          icon="warning"
+          accent="orange"
+          [hint]="'Requieren seguimiento comercial inmediato'"
+        />
+      </section>
+
+      <section class="grid grid--2">
+        <article class="panel panel--notched">
+          <header class="panel__header">
+            <span class="panel__title">
+              <app-pixel-icon name="leads" [size]="14" accent="pink" />
+              Embudo comercial
+              <span class="panel__subtitle">Tasa de paso respecto a la etapa anterior</span>
+            </span>
+          </header>
+          <div class="panel__body">
+            @if (funnel().length > 0) {
+              <app-funnel-chart [steps]="funnel()" />
+            } @else {
+              <app-state-display mode="empty" description="El embudo no tiene etapas que mostrar." />
+            }
+          </div>
+        </article>
+
+        <article class="panel panel--notched">
+          <header class="panel__header">
+            <span class="panel__title">
+              <app-pixel-icon name="analytics" [size]="14" accent="amber" />
+              Leads por origen
+              <span class="panel__subtitle">Una sola medida: numero de leads</span>
+            </span>
+          </header>
+          <div class="panel__body">
+            @if (originRows().length > 0) {
+              <app-bar-chart [rows]="originRows()" />
+            } @else {
+              <app-state-display mode="empty" description="La API no ha devuelto reparto por origen." />
+            }
+          </div>
+        </article>
+      </section>
+    } @else if (summaryError(); as error) {
+      <app-state-display mode="error" [error]="error" (retry)="loadSummary()" />
+    } @else {
+      <app-state-display mode="loading" description="Consultando el resumen del embudo comercial..." />
+    }
+
+    <!-- Listado y detalle -->
+    <section class="grid grid--sidebar">
+      <div class="stack">
+        <!-- Filtros: todos se aplican contra la API, ninguno es decorativo -->
+        <div class="toolbar" role="search" aria-label="Filtros del listado de leads">
+          <label class="field">
+            <span class="field__label">Buscar</span>
+            <input
+              class="input"
+              type="search"
+              placeholder="Contacto, empresa, sector o ciudad"
+              [value]="searchDraft()"
+              (input)="onSearchInput($event)"
+              (change)="applySearch()"
+              (keyup.enter)="applySearch()"
+            />
+          </label>
+
+          <label class="field">
+            <span class="field__label">Estado</span>
+            <select class="select" [value]="status()" (change)="onStatusChange($event)">
+              <option value="">Todos los estados</option>
+              @for (option of statusOptions(); track option) {
+                <option [value]="option">{{ statusLabel(option) }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field__label">Origen</span>
+            <select class="select" [value]="origin()" (change)="onOriginChange($event)">
+              <option value="">Todos los origenes</option>
+              @for (option of originOptions(); track option) {
+                <option [value]="option">{{ originLabel(option) }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field__label">Prioridad</span>
+            <select class="select" [value]="priority()" (change)="onPriorityChange($event)">
+              <option value="">Todas las prioridades</option>
+              @for (option of priorityOptions(); track option.priority) {
+                <option [value]="option.priority">{{ priorityLabel(option.priority) }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="field" style="min-width: 118px">
+            <span class="field__label">Puntuacion minima</span>
+            <input
+              class="input"
+              type="number"
+              min="0"
+              max="100"
+              step="5"
+              placeholder="0"
+              [value]="minScore() ?? ''"
+              (change)="onMinScoreChange($event)"
+            />
+          </label>
+
+          <label class="field">
+            <span class="field__label">Orden</span>
+            <select class="select" [value]="sort()" (change)="onSortChange($event)">
+              @for (option of sortOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </label>
+
+          <span class="spacer"></span>
+
+          <button type="button" class="btn btn--ghost btn--sm" (click)="clearFilters()" [disabled]="!hasFilters()">
+            <app-pixel-icon name="cross" [size]="12" accent="#8fa7b8" />
+            Limpiar filtros
+          </button>
+        </div>
+
+        <!-- Tabla de leads -->
+        <article class="panel panel--notched">
+          <header class="panel__header">
+            <span class="panel__title">
+              <app-pixel-icon name="leads" [size]="14" accent="pink" />
+              Oportunidades
+              <span class="panel__subtitle">{{ total() }} leads con los filtros aplicados</span>
+            </span>
+            @if (listState.loading()) {
+              <span class="chip chip--info">Actualizando</span>
+            }
+          </header>
+
+          <div class="panel__body panel__body--flush">
+            @if (listError(); as error) {
+              <div class="panel__body">
+                <app-state-display mode="error" [error]="error" (retry)="loadList(false)" />
+              </div>
+            } @else if (leads().length > 0) {
+              <div class="table-wrap">
+                <table class="table table--compact">
+                  <caption class="visually-hidden">
+                    Listado de leads con contacto, empresa, origen, estado, puntuacion, prioridad, valor, campana,
+                    agente responsable y fecha del ultimo contacto.
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Contacto</th>
+                      <th scope="col">Empresa</th>
+                      <th scope="col">Origen</th>
+                      <th scope="col">Estado</th>
+                      <th scope="col" class="num">Punt.</th>
+                      <th scope="col">Prioridad</th>
+                      <th scope="col" class="num">Valor</th>
+                      <th scope="col">Campana</th>
+                      <th scope="col">Agente</th>
+                      <th scope="col">Ultimo contacto</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (lead of leads(); track lead.id) {
+                      <tr
+                        class="lead-row"
+                        [class.lead-row--active]="lead.id === selectedId()"
+                        tabindex="0"
+                        (click)="select(lead.id)"
+                        (keydown.enter)="select(lead.id)"
+                      >
+                        <th scope="row">
+                          <span style="display: block" class="text-sm">{{ lead.contact.name }}</span>
+                          <span style="display: block" class="text-xs text-dim truncate">{{ lead.contact.role }}</span>
+                        </th>
+                        <td>
+                          <span style="display: block" class="text-sm">{{ lead.company.name }}</span>
+                          <span style="display: block" class="text-xs text-dim">
+                            {{ lead.company.city }} · {{ lead.company.country }}
+                          </span>
+                        </td>
+                        <td class="text-dim">{{ originLabel(lead.origin) }}</td>
+                        <td><app-status-chip [status]="lead.status" kind="lead" /></td>
+                        <td class="num num--strong">{{ lead.score | num }}</td>
+                        <td>
+                          <span class="chip" [class]="priorityTone(lead.priority)">{{
+                            priorityLabel(lead.priority)
+                          }}</span>
+                        </td>
+                        <td class="num">{{ lead.value | eur }}</td>
+                        <td>
+                          @if (lead.campaign; as campaign) {
+                            <span class="text-xs text-mono">{{ campaign.name }}</span>
+                          } @else {
+                            <span class="text-xs text-dim">Sin campana</span>
+                          }
+                        </td>
+                        <td>
+                          @if (lead.ownerAgent; as agent) {
+                            <span class="row" style="gap: 6px">
+                              <app-agent-avatar
+                                [avatar]="agent.avatar"
+                                [size]="24"
+                                [status]="agent.status"
+                                [label]="agent.name"
+                                [showStatus]="false"
+                              />
+                              <span class="text-xs truncate">{{ agent.name }}</span>
+                            </span>
+                          } @else {
+                            <span class="text-xs text-dim">Sin asignar</span>
+                          }
+                        </td>
+                        <td class="text-xs text-dim">{{ lead.lastContactAt | timeAgo: referenceDate() }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Paginacion real: gobernada por meta.page/pageSize/total/totalPages -->
+              <div class="row row--between" style="padding: 10px 12px">
+                <span class="text-xs text-dim">
+                  Pagina {{ currentPage() }} de {{ totalPages() }} · {{ pageSizeValue() }} leads por pagina ·
+                  {{ total() }} en total
+                </span>
+                <span class="row">
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    (click)="goToPage(currentPage() - 1)"
+                    [disabled]="currentPage() <= 1 || listState.loading()"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    (click)="goToPage(currentPage() + 1)"
+                    [disabled]="currentPage() >= totalPages() || listState.loading()"
+                  >
+                    Siguiente
+                  </button>
+                </span>
+              </div>
+            } @else {
+              <div class="panel__body">
+                <app-state-display
+                  mode="empty"
+                  description="Ningun lead cumple los filtros aplicados. Prueba a ampliar la puntuacion minima o a limpiar los filtros."
+                />
+              </div>
+            }
+          </div>
+        </article>
+      </div>
+
+      <!-- Panel lateral: detalle del lead seleccionado o mejores oportunidades -->
+      <div class="stack">
+        @if (selectedId()) {
+          <article class="panel panel--notched">
+            <header class="panel__header">
+              <span class="panel__title">
+                <app-pixel-icon name="search" [size]="14" accent="cyan" />
+                Detalle del lead
+              </span>
+              <button type="button" class="btn btn--ghost btn--sm" (click)="closeDetail()">
+                <app-pixel-icon name="cross" [size]="12" accent="#8fa7b8" />
+                Cerrar
+              </button>
+            </header>
+
+            <div class="panel__body">
+              @if (detailState.loading() && !detail()) {
+                <app-state-display mode="loading" description="Consultando la ficha y la traza del lead..." />
+              } @else if (detailState.error(); as error) {
+                <app-state-display mode="error" [error]="error" (retry)="retryDetail()" />
+              } @else if (detail(); as lead) {
+                <div class="stack">
+                  <div class="detail-head">
+                    @if (lead.ownerAgent; as agent) {
+                      <app-agent-avatar
+                        [avatar]="agent.avatar"
+                        [size]="48"
+                        [status]="agent.status"
+                        [label]="agent.name"
+                      />
+                    }
+                    <div class="stack stack--sm">
+                      <span class="text-mono">{{ lead.contact.name }}</span>
+                      <span class="text-xs text-dim">{{ lead.contact.role }}</span>
+                      <span class="row row--wrap">
+                        <app-status-chip [status]="lead.status" kind="lead" />
+                        <span class="chip" [class]="priorityTone(lead.priority)">
+                          {{ priorityLabel(lead.priority) }}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <hr class="divider" />
+
+                  <dl class="kv">
+                    <dt class="kv__key">Correo</dt>
+                    <dd class="kv__value text-mono text-xs">{{ lead.contact.email }}</dd>
+                    <dt class="kv__key">Telefono</dt>
+                    <dd class="kv__value text-mono text-xs">{{ lead.contact.phone }}</dd>
+                    <dt class="kv__key">Empresa</dt>
+                    <dd class="kv__value">
+                      {{ lead.company.name }}
+                      <span class="text-xs text-dim">
+                        · {{ lead.company.industry }} · {{ lead.company.size }} empleados · {{ lead.company.city }},
+                        {{ lead.company.country }}
+                      </span>
+                    </dd>
+                    <dt class="kv__key">Origen</dt>
+                    <dd class="kv__value">{{ originLabel(lead.origin) }}</dd>
+                    <dt class="kv__key">Puntuacion</dt>
+                    <dd class="kv__value">{{ lead.score | num }} sobre 100</dd>
+                    <dt class="kv__key">Valor</dt>
+                    <dd class="kv__value">
+                      {{ lead.value | eur }}
+                      <span class="text-xs text-dim"> · {{ lead.units }} unidades en {{ lead.currency }}</span>
+                    </dd>
+                    <dt class="kv__key">Campana</dt>
+                    <dd class="kv__value">
+                      @if (lead.campaign; as campaign) {
+                        <span class="text-mono text-xs">{{ campaign.name }}</span>
+                      } @else {
+                        <span class="text-dim">Sin campana asociada</span>
+                      }
+                    </dd>
+                    <dt class="kv__key">Oferta</dt>
+                    <dd class="kv__value">
+                      @if (lead.offer; as offer) {
+                        {{ offer.name }}
+                        <span class="text-xs text-dim">
+                          · {{ offer.price | eur }} · {{ offerStatusLabel(offer.status) }}
+                        </span>
+                      } @else {
+                        <span class="text-dim">Sin oferta</span>
+                      }
+                    </dd>
+                    <dt class="kv__key">Producto</dt>
+                    <dd class="kv__value">
+                      @if (lead.product; as product) {
+                        {{ product.name }}
+                        <span class="text-xs text-dim text-mono"> · {{ product.sku }} · {{ product.category }}</span>
+                      } @else {
+                        <span class="text-dim">Sin producto</span>
+                      }
+                    </dd>
+                    <dt class="kv__key">Siguiente paso</dt>
+                    <dd class="kv__value">{{ lead.nextStep }}</dd>
+                    <dt class="kv__key">Antiguedad</dt>
+                    <dd class="kv__value">
+                      {{ lead.daysSinceCreation }} dias desde la creacion
+                      <span class="text-xs text-dim"> · creado el {{ lead.createdAt | dateEs }}</span>
+                    </dd>
+                    @if (lead.tags.length > 0) {
+                      <dt class="kv__key">Etiquetas</dt>
+                      <dd class="kv__value row row--wrap">
+                        @for (tag of lead.tags; track tag) {
+                          <span class="tag"><span class="tag__dot"></span>{{ tag }}</span>
+                        }
+                      </dd>
+                    }
+                  </dl>
+
+                  <hr class="divider" />
+
+                  <!-- Traza del lead: cada paso con su nota, su agente y su fecha -->
+                  <div class="stack stack--sm">
+                    <span class="field__label">Traza comercial</span>
+                    @if (lead.timeline.length > 0) {
+                      <div class="feed">
+                        @for (entry of lead.timeline; track entry.id) {
+                          <div class="feed__item">
+                            <span class="feed__marker" [class]="stepMarker(entry.type)"></span>
+                            <span>
+                              <span class="feed__message">{{ entry.note }}</span>
+                              <span class="feed__meta">
+                                <span class="tag"><span class="tag__dot"></span>{{ timelineLabel(entry.type) }}</span>
+                                @if (entry.agent; as agent) {
+                                  <span class="tag" [class]="'accent-' + (agent.department?.accent ?? 'cyan')">
+                                    <span class="tag__dot"></span>
+                                    {{ agent.name }}
+                                  </span>
+                                } @else {
+                                  <span class="text-xs text-dim">Registrado por el sistema</span>
+                                }
+                              </span>
+                            </span>
+                            <span class="feed__time">{{ entry.at | timeAgo: referenceDate() }}</span>
+                          </div>
+                        }
+                      </div>
+                    } @else {
+                      <app-state-display mode="empty" description="Este lead todavia no tiene pasos registrados." />
+                    }
+                  </div>
+                </div>
+              } @else {
+                <app-state-display mode="empty" description="No se ha podido mostrar el detalle del lead." />
+              }
+            </div>
+          </article>
+        } @else {
+          <article class="panel panel--notched">
+            <header class="panel__header">
+              <span class="panel__title">
+                <app-pixel-icon name="analytics" [size]="14" accent="amber" />
+                Oportunidades abiertas de mayor valor
+              </span>
+            </header>
+            <div class="panel__body panel__body--flush">
+              @if (topLeads().length > 0) {
+                <div class="feed">
+                  @for (lead of topLeads(); track lead.id) {
+                    <button type="button" class="feed__item lead-card" (click)="select(lead.id)">
+                      <span class="feed__marker feed__marker--warning"></span>
+                      <span>
+                        <span class="feed__message">{{ lead.company.name }}</span>
+                        <span class="feed__meta">
+                          <span class="text-mono">{{ lead.contact.name }}</span>
+                          <app-status-chip [status]="lead.status" kind="lead" />
+                        </span>
+                      </span>
+                      <span class="feed__time">{{ lead.value | eur }}</span>
+                    </button>
+                  }
+                </div>
+              } @else {
+                <div class="panel__body">
+                  <app-state-display mode="empty" description="No hay oportunidades abiertas en este momento." />
+                </div>
+              }
+              <div class="panel__footer">
+                Selecciona una fila de la tabla (o una de estas tarjetas) para ver su ficha completa y su traza.
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+    </section>
+  </div>
+}

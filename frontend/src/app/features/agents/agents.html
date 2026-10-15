@@ -1,0 +1,420 @@
+@if (state.loading() && !state.data()) {
+  <app-state-display
+    mode="loading"
+    description="Consultando la plantilla de agentes, los departamentos y el resumen por estado..."
+  />
+} @else if (state.error(); as error) {
+  <app-state-display mode="error" [error]="error" (retry)="load()" />
+} @else if (state.data(); as view) {
+  <div class="stack stack--lg">
+    <!-- Cabecera de la seccion -->
+    <header class="page-header">
+      <div>
+        <h1 class="page-header__title">
+          <app-pixel-icon name="agents" [size]="18" accent="blue" />
+          Agentes
+        </h1>
+        <p class="page-header__description">
+          Plantilla completa del sistema multiagente: que hace cada agente, en que esta trabajando y como rinde.
+          Desde el panel lateral se puede lanzar una tarea simulada y seguirla en directo.
+        </p>
+      </div>
+      <div class="page-header__actions">
+        <button type="button" class="btn btn--ghost btn--sm" (click)="refresh()" [disabled]="state.loading()">
+          <app-pixel-icon name="reset" [size]="12" accent="#4fd6ff" />
+          {{ state.loading() ? 'Actualizando' : 'Actualizar' }}
+        </button>
+      </div>
+    </header>
+
+    <!-- Origen de los datos -->
+    <aside class="demo-banner">
+      <app-pixel-icon class="demo-banner__glyph" name="demo" [size]="14" accent="#ffc44d" />
+      <span>
+        <strong>Datos de demostracion.</strong>
+        Actividad referida a {{ referenceDate() | dateEs: 'datetime' }}. Las tareas simuladas se ejecutan en memoria y se
+        pierden al reiniciar el backend.
+      </span>
+    </aside>
+
+    <!-- Contadores por estado (GET /agents/summary) -->
+    @if (counters(); as totals) {
+      <section class="grid grid--4" aria-label="Resumen de la plantilla">
+        <app-stat-tile
+          label="Agentes"
+          [value]="totals.total + ''"
+          icon="agents"
+          accent="blue"
+          [hint]="totals.byStatus.idle + ' inactivos · ' + totals.byStatus.completed + ' con tarea completada'"
+        />
+        <app-stat-tile
+          label="Activos"
+          [value]="totals.active + ''"
+          icon="play"
+          accent="green"
+          [hint]="totals.byStatus.working + ' trabajando · ' + (totals.byStatus.collaborating + totals.byStatus.thinking) + ' pensando o colaborando'"
+        />
+        <app-stat-tile
+          label="En error"
+          [value]="totals.error + ''"
+          icon="warning"
+          accent="orange"
+          hint="Agentes con un fallo pendiente de revision"
+        />
+        <app-stat-tile
+          label="Fuera de linea"
+          [value]="totals.offline + ''"
+          icon="cross"
+          accent="violet"
+          hint="Agentes sin actividad asignada"
+        />
+      </section>
+    }
+
+    <!-- Filtros: cada cambio recarga el listado contra la API -->
+    <div class="toolbar agent-filters" role="group" aria-label="Filtros de agentes">
+      <label class="field">
+        <span class="field__label">Buscar</span>
+        <input
+          class="input"
+          type="search"
+          placeholder="Nombre, rol o especialidad"
+          [value]="search()"
+          (input)="onSearchInput($any($event.target).value)"
+        />
+      </label>
+
+      <label class="field">
+        <span class="field__label">Departamento</span>
+        <select class="select" [value]="departmentId()" (change)="onDepartmentChange($any($event.target).value)">
+          <option value="">Todos los departamentos</option>
+          @for (department of departments(); track department.id) {
+            <option [value]="department.id">{{ department.name }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="field">
+        <span class="field__label">Estado</span>
+        <select class="select" [value]="status()" (change)="onStatusChange($any($event.target).value)">
+          <option value="">Todos los estados</option>
+          @for (option of statuses(); track option) {
+            <option [value]="option">{{ statusLabel(option) }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="field">
+        <span class="field__label">Orden</span>
+        <select class="select" [value]="sort()" (change)="onSortChange($any($event.target).value)">
+          @for (option of sortOptions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </label>
+
+      <span class="spacer"></span>
+
+      <span class="text-xs text-dim">{{ total() }} agentes</span>
+
+      <button type="button" class="btn btn--ghost btn--sm" (click)="clearFilters()" [disabled]="!hasFilters()">
+        <app-pixel-icon name="reset" [size]="12" accent="#7a8fa3" />
+        Limpiar filtros
+      </button>
+    </div>
+
+    <!-- Listado + detalle del agente seleccionado -->
+    <section class="grid grid--sidebar">
+      <article class="panel panel--notched">
+        <header class="panel__header">
+          <span class="panel__title">
+            <app-pixel-icon name="agents" [size]="14" accent="blue" />
+            Plantilla
+            <span class="panel__subtitle">{{ total() }} agentes con los filtros aplicados</span>
+          </span>
+        </header>
+        <div class="panel__body panel__body--flush">
+          @if (agents().length > 0) {
+            <div class="table-wrap">
+              <table class="table table--compact">
+                <thead>
+                  <tr>
+                    <th scope="col">Agente</th>
+                    <th scope="col">Departamento</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col">Tarea actual</th>
+                    <th scope="col" class="num">Tareas</th>
+                    <th scope="col" class="num">Exito</th>
+                    <th scope="col"><span class="visually-hidden">Detalle</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (agent of agents(); track agent.id) {
+                    <tr [class.agent-row--selected]="selected()?.id === agent.id">
+                      <th scope="row">
+                        <span class="agent-cell">
+                          <app-agent-avatar
+                            [avatar]="agent.avatar"
+                            [size]="30"
+                            [status]="agent.status"
+                            [label]="agent.name"
+                          />
+                          <span class="agent-cell__text">
+                            <span class="text-sm">{{ agent.name }}</span>
+                            <span class="text-xs text-dim truncate">{{ agent.role }}</span>
+                          </span>
+                        </span>
+                      </th>
+                      <td>
+                        @if (agent.department; as department) {
+                          <span class="tag" [class]="'accent-' + department.accent">
+                            <span class="tag__dot"></span>
+                            {{ department.shortName }}
+                          </span>
+                        } @else {
+                          <span class="text-xs text-dim">Sin departamento</span>
+                        }
+                      </td>
+                      <td>
+                        <app-status-chip [status]="agent.status" kind="agent" />
+                      </td>
+                      <td>
+                        @if (agent.currentTask; as current) {
+                          <span class="agent-cell__text">
+                            <span class="text-xs truncate">{{ current.title }}</span>
+                            @if (agent.progress > 0) {
+                              <app-progress-bar
+                                [value]="agent.progress"
+                                size="sm"
+                                [showLabel]="false"
+                                [label]="'Progreso de ' + agent.name"
+                              />
+                            } @else {
+                              <span class="text-xs text-dim">Arrancando</span>
+                            }
+                          </span>
+                        } @else {
+                          <span class="text-xs text-dim">Sin tarea asignada</span>
+                        }
+                      </td>
+                      <td class="num">{{ agent.stats.tasksCompleted | num }}</td>
+                      <td class="num">{{ agent.stats.successRate | rate }}</td>
+                      <td class="text-right">
+                        <button
+                          type="button"
+                          class="btn btn--ghost btn--sm"
+                          [attr.aria-pressed]="selected()?.id === agent.id"
+                          (click)="select(agent.id)"
+                        >
+                          Detalle
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <div class="panel__body">
+              <app-state-display mode="empty" description="Ningun agente cumple los filtros aplicados." />
+            </div>
+          }
+        </div>
+      </article>
+
+      <!-- Panel lateral: ficha, trabajo actual y ejecucion simulada -->
+      <aside class="stack">
+        @if (selected(); as agent) {
+          <article class="panel panel--notched">
+            <header class="panel__header">
+              <span class="panel__title">
+                <app-pixel-icon name="agents" [size]="14" accent="blue" />
+                Ficha
+              </span>
+              <app-status-chip [status]="agent.status" kind="agent" />
+            </header>
+            <div class="panel__body stack stack--sm">
+              <div class="row">
+                <app-agent-avatar
+                  [avatar]="agent.avatar"
+                  [size]="64"
+                  [status]="agent.status"
+                  [label]="agent.name"
+                />
+                <span class="agent-cell__text">
+                  <strong class="text-sm">{{ agent.name }}</strong>
+                  <span class="text-xs text-dim">{{ agent.role }}</span>
+                  <span class="text-xs text-dim">Nivel {{ agent.level }} · {{ agent.specialty }}</span>
+                </span>
+              </div>
+
+              <hr class="divider" />
+
+              <dl class="kv">
+                <dt class="kv__key">Departamento</dt>
+                <dd class="kv__value">
+                  @if (agent.department; as department) {
+                    {{ department.name }}
+                  } @else {
+                    Sin departamento
+                  }
+                </dd>
+                <dt class="kv__key">Tareas completadas</dt>
+                <dd class="kv__value">{{ agent.stats.tasksCompleted | num }}</dd>
+                <dt class="kv__key">Tasa de exito</dt>
+                <dd class="kv__value">{{ agent.stats.successRate | rate }}</dd>
+                <dt class="kv__key">Duracion media</dt>
+                <dd class="kv__value">{{ agent.stats.avgTaskMinutes | minutes }}</dd>
+                <dt class="kv__key">Tareas abiertas</dt>
+                <dd class="kv__value">{{ agent.openTasks | num }}</dd>
+                <dt class="kv__key">Ultima actividad</dt>
+                <dd class="kv__value">{{ agent.lastActivityAt | timeAgo: referenceDate() }}</dd>
+              </dl>
+
+              <hr class="divider" />
+
+              <p class="text-sm text-dim">{{ agent.bio }}</p>
+
+              @if (agent.capabilities.length > 0) {
+                <div class="row row--wrap">
+                  @for (capability of agent.capabilities; track capability) {
+                    <span class="chip chip--neutral">{{ capability }}</span>
+                  }
+                </div>
+              }
+            </div>
+          </article>
+
+          <article class="panel panel--notched">
+            <header class="panel__header">
+              <span class="panel__title">
+                <app-pixel-icon name="flow" [size]="14" accent="cyan" />
+                Trabajo actual
+              </span>
+            </header>
+            <div class="panel__body stack stack--sm">
+              @if (agent.currentTask; as current) {
+                <p class="text-sm">{{ current.title }}</p>
+                <app-progress-bar
+                  [value]="agent.progress"
+                  [label]="'Progreso de ' + current.title"
+                />
+                <dl class="kv">
+                  <dt class="kv__key">Etapa</dt>
+                  <dd class="kv__value">{{ current.stageKey ?? 'Tarea suelta' }}</dd>
+                  <dt class="kv__key">Tiempo estimado</dt>
+                  <dd class="kv__value">{{ current.etaMinutes | minutes }}</dd>
+                  <dt class="kv__key">Colaboradores</dt>
+                  <dd class="kv__value">
+                    @if (current.collaborators.length > 0) {
+                      {{ current.collaborators.join(', ') }}
+                    } @else {
+                      Sin colaboradores
+                    }
+                  </dd>
+                </dl>
+                @if (current.error) {
+                  <p class="text-sm text-bad">{{ current.error }}</p>
+                }
+              } @else {
+                <app-state-display mode="empty" description="El agente no tiene ninguna tarea en curso." />
+              }
+            </div>
+          </article>
+
+          <article class="panel panel--notched">
+            <header class="panel__header">
+              <span class="panel__title">
+                <app-pixel-icon name="check" [size]="14" accent="lime" />
+                Resultado reciente
+              </span>
+            </header>
+            <div class="panel__body">
+              @if (agent.recentResult; as result) {
+                <div class="stack stack--sm">
+                  <p class="text-sm">{{ result.title }}</p>
+                  <p class="text-xs text-dim">{{ result.summary }}</p>
+                  <dl class="kv">
+                    <dt class="kv__key">Momento</dt>
+                    <dd class="kv__value">{{ result.at | timeAgo: referenceDate() }}</dd>
+                    @if (result.metric; as metric) {
+                      <dt class="kv__key">{{ metric.label }}</dt>
+                      <dd class="kv__value">{{ metric.value }}</dd>
+                    }
+                  </dl>
+                </div>
+              } @else {
+                <app-state-display mode="empty" description="Todavia no hay resultados registrados para este agente." />
+              }
+            </div>
+          </article>
+
+          <!-- Accion real: POST /agents/:id/run + polling de GET /agents/tasks/:taskId -->
+          <article class="panel panel--notched">
+            <header class="panel__header">
+              <span class="panel__title">
+                <app-pixel-icon name="play" [size]="14" accent="#b6e34d" />
+                Ejecucion simulada
+              </span>
+            </header>
+            <div class="panel__body stack stack--sm">
+              <p class="text-xs text-dim">
+                Lanza una tarea real sobre {{ agent.name }} y sigue su avance consultando el estado cada
+                {{ pollIntervalMs() }} ms, el intervalo que publica la API.
+              </p>
+
+              <button type="button" class="btn btn--primary" [disabled]="taskRunning()" (click)="runTask(agent)">
+                <app-pixel-icon name="play" [size]="12" accent="#4fd6ff" />
+                {{ taskRunning() ? 'Ejecutando' : 'Ejecutar tarea simulada' }}
+              </button>
+
+              @if (taskRunning()) {
+                <div class="stack stack--sm">
+                  <app-progress-bar
+                    [value]="task()?.progress ?? 0"
+                    [showLabel]="false"
+                    label="Progreso de la tarea simulada"
+                  />
+                  <span class="text-xs text-dim">Tarea en curso; el sondeo se detiene al terminar.</span>
+                </div>
+              }
+
+              @if (task(); as current) {
+                <div class="stack stack--sm">
+                  <div class="row row--between">
+                    <span class="text-sm truncate">{{ current.title }}</span>
+                    <app-status-chip [status]="current.status" kind="task" />
+                  </div>
+                  <dl class="kv">
+                    <dt class="kv__key">Iniciada</dt>
+                    <dd class="kv__value">{{ current.startedAt | timeAgo: referenceDate() }}</dd>
+                    <dt class="kv__key">Duracion</dt>
+                    <dd class="kv__value">{{ current.durationMs | duration }}</dd>
+                    @if (current.result; as result) {
+                      <dt class="kv__key">Resultado</dt>
+                      <dd class="kv__value">{{ result.summary }}</dd>
+                      @for (metric of result.metrics; track metric.label) {
+                        <dt class="kv__key">{{ metric.label }}</dt>
+                        <dd class="kv__value">{{ metric.value }}</dd>
+                      }
+                    }
+                    @if (current.error; as message) {
+                      <dt class="kv__key">Error</dt>
+                      <dd class="kv__value text-bad">{{ message }}</dd>
+                    }
+                  </dl>
+                </div>
+              }
+
+              @if (taskError(); as message) {
+                <p class="text-sm text-bad">{{ message }}</p>
+              }
+            </div>
+          </article>
+        } @else {
+          <app-state-display mode="empty" description="Selecciona un agente de la tabla para ver su detalle." />
+        }
+      </aside>
+    </section>
+  </div>
+}

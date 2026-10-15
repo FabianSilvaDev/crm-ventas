@@ -1,26 +1,19 @@
 {
-  "name": "crm-ventas",
-  "version": "0.0.0",
+  "name": "ai-operations-cms",
+  "version": "1.0.0",
   "private": true,
-  "description": "CRM de ventas + plataforma de marketing con IA. Uso interno.",
-  "packageManager": "pnpm@12.8.1+sha512.f64ba907507f5ceafe06c8d38e6052d0179444580ec1279ddd5bfc11cb48aa8a2644b66598e07e761da84872a9fc57d5f902b87fa49d024198d558612aabbe45",
-  "engines": {
-    "node": ">=22.0.0"
-  },
+  "description": "AI Operations CMS: CMS para supervisar un sistema multiagente de investigacion, marketing, contenido, campanas y ventas. Frontend Angular + backend Express con datos simulados.",
   "scripts": {
-    "build": "tsc -b",
-    "clean": "tsc -b --clean",
-    "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r --workspace-concurrency=1 test",
-    "dev": "pnpm --filter @crm/api dev",
-    "start": "pnpm --filter @crm/api start",
-    "stop": "taskkill //F //IM node.exe || true",
-    "dev:all": "bash scripts/start-dev.sh",
-    "stop:all": "bash scripts/stop-dev.sh"
+    "install:all": "npm --prefix backend install && npm --prefix frontend install",
+    "dev": "concurrently -n backend,frontend -c cyan,green \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend start",
+    "start:backend": "npm --prefix backend start",
+    "start:frontend": "npm --prefix frontend start",
+    "build": "npm --prefix frontend run build",
+    "test": "npm --prefix backend test"
   },
   "devDependencies": {
-    "@types/node": "^26.6.3",
-    "typescript": "~6.0.3",
-    "vitest": "^5.0.3"
+    "concurrently": "^10.0.6"
   }
 }

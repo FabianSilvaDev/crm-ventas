@@ -1,0 +1,571 @@
+@if (summaryState.loading() && !summaryState.data()) {
+  <app-state-display mode="loading" description="Consultando landings, experimentos y salud tecnica de la API simulada..." />
+} @else if (summaryState.error(); as error) {
+  <app-state-display mode="error" [error]="error" (retry)="refreshAll()" />
+} @else {
+  <div class="stack stack--lg">
+    <header class="page-header">
+      <div>
+        <h1 class="page-header__title">
+          <app-pixel-icon name="landing" [size]="18" accent="cyan" />
+          Landing pages
+        </h1>
+        <p class="page-header__description">
+          Paginas de captacion, su salud tecnica y el resultado de los experimentos A/B. Los umbrales que marca el color
+          son LCP hasta {{ lcpGoodMs }} ms (aviso hasta {{ lcpWarnMs }} ms) y puntuaciones de SEO y movilidad desde
+          {{ scoreGood }} sobre 100.
+        </p>
+      </div>
+      <div class="page-header__actions">
+        <button
+          type="button"
+          class="btn btn--ghost"
+          (click)="refreshAll()"
+          [disabled]="summaryState.loading() || listState.loading()"
+        >
+          <app-pixel-icon name="reset" [size]="12" accent="#4fd6ff" />
+          {{ listState.loading() ? 'Actualizando' : 'Actualizar' }}
+        </button>
+      </div>
+    </header>
+
+    <aside class="demo-banner">
+      <app-pixel-icon class="demo-banner__glyph" name="demo" [size]="14" accent="#ffc44d" />
+      <span>
+        <strong>Datos de demostracion.</strong>
+        Trafico y experimentos simulados con fecha de referencia {{ referenceDate() | dateEs: 'datetime' }}.
+      </span>
+    </aside>
+
+    <!-- Totales y salud media -->
+    @if (totals(); as data) {
+      <section class="grid grid--4" aria-label="Resumen de landing pages">
+        <app-stat-tile
+          label="Landings"
+          [value]="data.total | num"
+          icon="landing"
+          accent="cyan"
+          [hint]="data.published + ' publicadas · ' + data.draft + ' en borrador'"
+        />
+        <app-stat-tile
+          label="Publicadas"
+          [value]="data.published | num"
+          icon="check"
+          accent="green"
+          hint="Visibles para trafico de campana"
+        />
+        <app-stat-tile
+          label="Visitantes"
+          [value]="data.visitors | compact"
+          icon="leads"
+          accent="pink"
+          hint="Visitas acumuladas de la demo"
+        />
+        <app-stat-tile
+          label="Conversiones"
+          [value]="data.conversions | num"
+          icon="check"
+          accent="lime"
+          hint="Objetivo alcanzado en la pagina"
+        />
+        <app-stat-tile
+          label="Tasa de conversion"
+          [value]="data.conversionRate | rate"
+          icon="analytics"
+          accent="amber"
+          hint="Conversiones entre visitantes"
+        />
+        <app-stat-tile
+          label="En borrador"
+          [value]="data.draft | num"
+          icon="content"
+          accent="violet"
+          hint="Sin publicar todavia"
+        />
+        @if (technical(); as tech) {
+          <app-stat-tile
+            label="LCP medio"
+            [value]="tech.averageLcpMs | num"
+            unit="ms"
+            icon="analytics"
+            accent="blue"
+            [hint]="'Umbral bueno: hasta ' + lcpGoodMs + ' ms'"
+          />
+          <app-stat-tile
+            label="SEO medio"
+            [value]="tech.averageSeoScore | num"
+            unit="/ 100"
+            icon="search"
+            accent="green"
+            [hint]="'Objetivo: desde ' + scoreGood"
+          />
+        }
+      </section>
+    }
+
+    <!-- Filtros del listado -->
+    <div class="toolbar" role="search">
+      <div class="field">
+        <label class="field__label" for="landing-status">Estado</label>
+        <select id="landing-status" class="select" [value]="status()" (change)="onStatus($event)">
+          <option value="">Cualquier estado</option>
+          @for (option of statusOptions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="landing-search">Buscar</label>
+        <input
+          id="landing-search"
+          class="input"
+          type="search"
+          placeholder="Titulo, slug o plantilla"
+          [value]="search()"
+          (input)="onSearch($event)"
+        />
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="landing-sort">Orden</label>
+        <select id="landing-sort" class="select" [value]="sort()" (change)="onSort($event)">
+          @for (option of sorts; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+
+      <span class="spacer"></span>
+      <span class="text-xs text-dim">
+        {{ listState.loading() ? 'Actualizando...' : landings().length + ' de ' + landingTotal() + ' landings' }}
+      </span>
+    </div>
+
+    <!-- Tarjetas de landing -->
+    @if (listState.loading() && !listState.data()) {
+      <app-state-display mode="loading" description="Cargando el catalogo de landing pages..." />
+    } @else if (listState.error(); as error) {
+      <app-state-display mode="error" [error]="error" (retry)="loadList(false)" />
+    } @else if (landings().length === 0) {
+      <app-state-display
+        mode="empty"
+        [description]="
+          hasActiveFilters()
+            ? 'Ninguna landing coincide con los filtros aplicados.'
+            : 'Todavia no se ha generado ninguna landing en esta sesion del servidor.'
+        "
+      />
+    } @else {
+      <section class="grid grid--3" aria-label="Landing pages">
+        @for (page of landings(); track page.id) {
+          <article
+            class="panel panel--notched landing-card"
+            [class.landing-card--selected]="page.id === selectedId()"
+            [attr.aria-current]="page.id === selectedId() ? 'true' : null"
+          >
+            <header class="panel__header">
+              <span class="row">
+                <app-pixel-icon name="landing" [size]="14" accent="cyan" />
+                <span class="landing-card__title truncate">{{ page.title }}</span>
+              </span>
+              <app-status-chip [status]="page.status" kind="landing" />
+            </header>
+
+            <div class="panel__body stack stack--sm">
+              <p class="text-mono text-xs text-dim truncate">/{{ page.slug }} · {{ page.template }}</p>
+
+              <dl class="kv">
+                <dt class="kv__key">Visitantes</dt>
+                <dd class="kv__value">{{ page.performance.visitors | num }}</dd>
+                <dt class="kv__key">Conversiones</dt>
+                <dd class="kv__value">{{ page.performance.conversions | num }}</dd>
+                <dt class="kv__key">Conversion</dt>
+                <dd class="kv__value">{{ page.performance.conversionRate | rate }}</dd>
+                <dt class="kv__key">Rebote</dt>
+                <dd class="kv__value">{{ page.performance.bounceRate | rate }}</dd>
+                <dt class="kv__key">Tiempo medio</dt>
+                <dd class="kv__value">{{ (page.performance.avgTimeSeconds * 1000) | duration }}</dd>
+              </dl>
+
+              <hr class="divider" />
+
+              <div class="row row--wrap">
+                <span class="text-xs text-dim">LCP</span>
+                <span class="text-mono text-xs" [class]="lcpTone(page.technical.lcpMs)">
+                  {{ page.technical.lcpMs }} ms
+                </span>
+                <span class="text-xs text-dim">SEO</span>
+                <span class="text-mono text-xs" [class]="scoreTone(page.technical.seoScore)">
+                  {{ page.technical.seoScore }}
+                </span>
+                <span class="text-xs text-dim">Movil</span>
+                <span class="text-mono text-xs" [class]="scoreTone(page.technical.mobileScore)">
+                  {{ page.technical.mobileScore }}
+                </span>
+              </div>
+            </div>
+
+            <footer class="panel__footer row row--between">
+              <span class="text-xs text-dim">{{ page.campaignCount }} campanas</span>
+              <button type="button" class="btn btn--ghost btn--sm" (click)="selectLanding(page.id)">
+                <app-pixel-icon name="search" [size]="10" accent="#4fd6ff" />
+                {{ page.id === selectedId() ? 'Seleccionada' : 'Ver detalle' }}
+              </button>
+            </footer>
+          </article>
+        }
+      </section>
+    }
+
+    <!-- Experimentos y acciones pendientes -->
+    <section class="grid grid--2">
+      <article class="panel panel--notched">
+        <header class="panel__header">
+          <span class="panel__title">
+            <app-pixel-icon name="analytics" [size]="14" accent="amber" />
+            Experimentos A/B
+            <span class="panel__subtitle">Ganadora y mejora medida frente a la retadora</span>
+          </span>
+        </header>
+        <div class="panel__body panel__body--flush">
+          @if (experiments().length > 0) {
+            <div class="table-wrap">
+              <table class="table table--compact">
+                <thead>
+                  <tr>
+                    <th scope="col">Landing</th>
+                    <th scope="col">Ganadora</th>
+                    <th scope="col" class="num">Tasa</th>
+                    <th scope="col">Retadora</th>
+                    <th scope="col" class="num">Tasa</th>
+                    <th scope="col" class="num">Mejora</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (experiment of experiments(); track experiment.landingPageId) {
+                    <tr>
+                      <th scope="row">
+                        <button type="button" class="btn btn--ghost btn--sm" (click)="selectLanding(experiment.landingPageId)">
+                          /{{ experiment.slug }}
+                        </button>
+                      </th>
+                      <td class="text-sm">{{ experiment.winner.name }}</td>
+                      <td class="num num--strong">{{ experiment.winner.conversionRate | rate }}</td>
+                      <td class="text-dim text-sm">{{ experiment.runnerUp?.name ?? 'Sin retadora' }}</td>
+                      <td class="num text-dim">{{ experiment.runnerUp?.conversionRate | rate }}</td>
+                      <td class="num" [class]="experiment.lift > 0 ? 'text-good' : 'text-dim'">
+                        {{ experiment.lift | rate }}
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <div class="panel__body">
+              <app-state-display
+                mode="empty"
+                description="Ninguna landing publicada tiene todavia dos variantes con trafico suficiente."
+              />
+            </div>
+          }
+        </div>
+      </article>
+
+      <article class="panel panel--notched">
+        <header class="panel__header">
+          <span class="panel__title">
+            <app-pixel-icon name="warning" [size]="14" accent="#ffc44d" />
+            Acciones pendientes
+            <span class="panel__subtitle">SEO por debajo de {{ scoreGood }} o LCP por encima de {{ lcpGoodMs }} ms</span>
+          </span>
+        </header>
+        <div class="panel__body panel__body--flush">
+          @if (pendingWork().length > 0) {
+            <div class="feed">
+              @for (page of pendingWork(); track page.id) {
+                <div class="feed__item">
+                  <span class="feed__marker feed__marker--warning"></span>
+                  <span>
+                    <span class="feed__message text-mono">/{{ page.slug }}</span>
+                    <span class="feed__meta">{{ pendingAction(page.seoScore, page.lcpMs) }}</span>
+                  </span>
+                  <button type="button" class="btn btn--ghost btn--sm" (click)="selectLanding(page.id)">
+                    <app-pixel-icon name="search" [size]="10" accent="#4fd6ff" />
+                    Revisar
+                  </button>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="panel__body">
+              <app-state-display mode="empty" description="Todas las landings cumplen los umbrales de SEO y de carga." />
+            </div>
+          }
+        </div>
+      </article>
+    </section>
+
+    <!-- Detalle de la landing seleccionada -->
+    @if (!selectedId()) {
+      <section class="panel panel--notched">
+        <div class="panel__body">
+          <app-state-display mode="empty" description="Selecciona una landing del listado para ver su detalle." />
+        </div>
+      </section>
+    } @else if (detailState.loading() && !detailState.data()) {
+      <app-state-display mode="loading" description="Cargando variantes, campanas y leads de la landing..." />
+    } @else if (detailState.error(); as error) {
+      <app-state-display mode="error" [error]="error" (retry)="reloadDetail()" />
+    } @else if (detail(); as page) {
+      <article class="panel panel--notched">
+        <header class="panel__header">
+          <span class="panel__title">
+            <app-pixel-icon name="landing" [size]="14" accent="cyan" />
+            {{ page.title }}
+            <span class="panel__subtitle">/{{ page.slug }}</span>
+          </span>
+          <span class="row">
+            <span class="tag accent-cyan"><span class="tag__dot"></span>{{ page.template }}</span>
+            <app-status-chip [status]="page.status" kind="landing" />
+          </span>
+        </header>
+
+        <div class="panel__body">
+          <div class="grid grid--sidebar">
+            <div class="stack">
+              <!-- Rendimiento y salud tecnica con umbrales explicitos -->
+              <section class="grid grid--3">
+                <div class="stack stack--sm">
+                  <span class="text-xs text-upper text-dim">Rendimiento</span>
+                  <dl class="kv">
+                    <dt class="kv__key">Visitantes</dt>
+                    <dd class="kv__value">{{ page.performance.visitors | num }}</dd>
+                    <dt class="kv__key">Conversiones</dt>
+                    <dd class="kv__value">{{ page.performance.conversions | num }}</dd>
+                    <dt class="kv__key">Conversion</dt>
+                    <dd class="kv__value num--strong">{{ page.performance.conversionRate | rate }}</dd>
+                    <dt class="kv__key">Rebote</dt>
+                    <dd class="kv__value">{{ page.performance.bounceRate | rate }}</dd>
+                    <dt class="kv__key">Tiempo medio</dt>
+                    <dd class="kv__value">{{ (page.performance.avgTimeSeconds * 1000) | duration }}</dd>
+                  </dl>
+                </div>
+
+                <div class="stack stack--sm">
+                  <span class="text-xs text-upper text-dim">Salud tecnica</span>
+                  <div class="stack stack--sm">
+                    <div class="row row--between">
+                      <span class="text-xs">LCP (hasta {{ lcpGoodMs }} ms)</span>
+                      <span class="text-mono text-xs" [class]="lcpTone(page.technical.lcpMs)">
+                        {{ page.technical.lcpMs }} ms
+                      </span>
+                    </div>
+                    <app-progress-bar
+                      [value]="page.technical.lcpMs / lcpWarnMs"
+                      color="#5b9bff"
+                      [showLabel]="false"
+                      label="Largest Contentful Paint"
+                    />
+                  </div>
+                  <div class="stack stack--sm">
+                    <div class="row row--between">
+                      <span class="text-xs">SEO (desde {{ scoreGood }})</span>
+                      <span class="text-mono text-xs" [class]="scoreTone(page.technical.seoScore)">
+                        {{ page.technical.seoScore }}
+                      </span>
+                    </div>
+                    <app-progress-bar
+                      [value]="page.technical.seoScore / 100"
+                      [color]="scoreColor(page.technical.seoScore)"
+                      [showLabel]="false"
+                      label="Puntuacion SEO"
+                    />
+                  </div>
+                  <div class="stack stack--sm">
+                    <div class="row row--between">
+                      <span class="text-xs">Movil (desde {{ scoreGood }})</span>
+                      <span class="text-mono text-xs" [class]="scoreTone(page.technical.mobileScore)">
+                        {{ page.technical.mobileScore }}
+                      </span>
+                    </div>
+                    <app-progress-bar
+                      [value]="page.technical.mobileScore / 100"
+                      [color]="scoreColor(page.technical.mobileScore)"
+                      [showLabel]="false"
+                      label="Puntuacion en movil"
+                    />
+                  </div>
+                </div>
+
+                <div class="stack stack--sm">
+                  <span class="text-xs text-upper text-dim">Responsable y contexto</span>
+                  @if (page.owner; as owner) {
+                    <div class="row">
+                      <app-agent-avatar [avatar]="owner.avatar" [size]="34" [status]="owner.status" [label]="owner.name" />
+                      <span class="truncate">
+                        <span class="cell-note text-sm">{{ owner.name }}</span>
+                        <span class="cell-note text-xs text-dim">{{ owner.role }}</span>
+                      </span>
+                    </div>
+                  } @else {
+                    <p class="text-sm text-dim">Sin agente asignado.</p>
+                  }
+                  <dl class="kv">
+                    <dt class="kv__key">Oferta</dt>
+                    <dd class="kv__value">{{ page.offer?.name ?? 'Sin oferta' }}</dd>
+                    <dt class="kv__key">Producto</dt>
+                    <dd class="kv__value">{{ page.product?.name ?? 'Sin producto' }}</dd>
+                    <dt class="kv__key">Campanas</dt>
+                    <dd class="kv__value">{{ page.campaignCount }}</dd>
+                    <dt class="kv__key">Actualizada</dt>
+                    <dd class="kv__value">{{ page.updatedAt | timeAgo: referenceDate() }}</dd>
+                    <dt class="kv__key">Creada</dt>
+                    <dd class="kv__value">{{ page.createdAt | dateEs }}</dd>
+                  </dl>
+                </div>
+              </section>
+
+              <!-- Variantes A/B -->
+              <section class="panel panel--flush">
+                <header class="panel__header">
+                  <span class="panel__title">
+                    <app-pixel-icon name="analytics" [size]="14" accent="amber" />
+                    Variantes A/B
+                    <span class="panel__subtitle">Visitantes, conversiones y tasa por variante</span>
+                  </span>
+                </header>
+                <div class="panel__body panel__body--flush">
+                  @if (page.variants.length > 0) {
+                    <div class="table-wrap">
+                      <table class="table table--compact">
+                        <thead>
+                          <tr>
+                            <th scope="col">Variante</th>
+                            <th scope="col" class="num">Peso</th>
+                            <th scope="col" class="num">Visitantes</th>
+                            <th scope="col" class="num">Conversiones</th>
+                            <th scope="col" class="num">Tasa</th>
+                            <th scope="col">Resultado</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (variant of page.variants; track variant.id) {
+                            <tr>
+                              <th scope="row">{{ variant.name }}</th>
+                              <td class="num">{{ variant.weight | rate }}</td>
+                              <td class="num">{{ variant.visitors | num }}</td>
+                              <td class="num">{{ variant.conversions | num }}</td>
+                              <td class="num num--strong">{{ variant.conversionRate | rate }}</td>
+                              <td>
+                                @if (variant.id === winnerId()) {
+                                  <span class="chip chip--good">Ganadora</span>
+                                } @else {
+                                  <span class="text-xs text-dim">Retadora</span>
+                                }
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div class="panel__footer">
+                      @if (page.experiment; as experiment) {
+                        <span>
+                          Gana <strong>{{ experiment.winner.name }}</strong> con
+                          {{ experiment.winner.conversionRate | rate }}.
+                          @if (experiment.runnerUp; as runnerUp) {
+                            Mejora de <strong class="text-good">{{ experiment.lift | rate }}</strong> sobre
+                            {{ runnerUp.name }} ({{ runnerUp.conversionRate | rate }}).
+                          }
+                        </span>
+                      } @else {
+                        <span>Sin experimento A/B activo: la pagina tiene una sola variante en produccion.</span>
+                      }
+                    </div>
+                  } @else {
+                    <div class="panel__body">
+                      <app-state-display mode="empty" description="Esta landing no tiene variantes registradas." />
+                    </div>
+                  }
+                </div>
+              </section>
+
+              <!-- Campanas asociadas -->
+              <section class="panel panel--flush">
+                <header class="panel__header">
+                  <span class="panel__title">
+                    <app-pixel-icon name="campaigns" [size]="14" accent="orange" />
+                    Campanas asociadas
+                  </span>
+                </header>
+                <div class="panel__body panel__body--flush">
+                  @if (page.campaigns && page.campaigns.length > 0) {
+                    <div class="table-wrap">
+                      <table class="table table--compact">
+                        <thead>
+                          <tr>
+                            <th scope="col">Campana</th>
+                            <th scope="col">Estado</th>
+                            <th scope="col">Canales</th>
+                            <th scope="col" class="num">Ingreso</th>
+                            <th scope="col" class="num">ROAS</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (campaign of page.campaigns; track campaign.id) {
+                            <tr>
+                              <th scope="row">{{ campaign.name }}</th>
+                              <td><app-status-chip [status]="campaign.status" kind="campaign" /></td>
+                              <td class="text-dim text-sm">{{ channelList(campaign.channels) }}</td>
+                              <td class="num">{{ campaign.revenue | eur }}</td>
+                              <td class="num num--strong">{{ campaign.roas | num: 2 }}x</td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  } @else {
+                    <div class="panel__body">
+                      <app-state-display mode="empty" description="Ninguna campana apunta a esta landing." />
+                    </div>
+                  }
+                </div>
+              </section>
+            </div>
+
+            <!-- Leads captados por la landing -->
+            <div class="stack">
+              <article class="panel panel--flush">
+                <header class="panel__header">
+                  <span class="panel__title">
+                    <app-pixel-icon name="leads" [size]="14" accent="pink" />
+                    Leads
+                  </span>
+                </header>
+                <div class="panel__body">
+                  @if (page.leads; as leads) {
+                    <div class="stack stack--sm">
+                      <p class="stat__value">{{ leads.total | num }}</p>
+                      <p class="text-xs text-dim">Leads captados a traves de las campanas que usan esta landing.</p>
+                      <dl class="kv">
+                        <dt class="kv__key">Ganados</dt>
+                        <dd class="kv__value">{{ leads.won | num }}</dd>
+                        <dt class="kv__key">Valor</dt>
+                        <dd class="kv__value">{{ leads.value | eur }}</dd>
+                      </dl>
+                    </div>
+                  } @else {
+                    <p class="text-sm text-dim">Sin datos de leads para esta landing.</p>
+                  }
+                </div>
+              </article>
+            </div>
+          </div>
+        </div>
+      </article>
+    }
+  </div>
+}

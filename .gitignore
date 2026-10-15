@@ -1,58 +1,34 @@
 # Dependencias
 node_modules/
-.pnpm-store/
+.pnp/
+.pnp.js
 
 # Build
 dist/
 build/
-*.tsbuildinfo
-.vite/
-
-# Entorno — NUNCA se versiona. Ver .env.example
-.env
-.env.*
-!.env.example
-
-# Secretos y credenciales
-*.pem
-*.key
-*.p12
-secrets/
-
-# Test y cobertura
-coverage/
-.nyc_output/
-*.lcov
-
-# Angular
+out-tsc/
 .angular/
+*.tsbuildinfo
+
+# Entorno
+.env
+.env.local
+.env.*.local
 
 # Logs
+logs/
 *.log
 npm-debug.log*
 pnpm-debug.log*
-logs/
 
-# Base de datos JSON local (se genera automáticamente al arrancar)
-apps/api/db/*.json
-
-# Backups de base de datos
-backups/
-*.dump
-
-# Ollama / modelos locales
-models/
-
-# Editores y SO
+# Editores / sistema
 .vscode/*
 !.vscode/extensions.json
-!.vscode/settings.json.example
 .idea/
-*.swp
 .DS_Store
 Thumbs.db
+*.swp
 
-# Temporales
-tmp/
-temp/
-*.tmp
+# Test / cobertura
+coverage/
+.nyc_output/

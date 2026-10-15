@@ -1,0 +1,520 @@
+<div class="stack stack--lg">
+  <!-- Resumen de la cola -->
+  @if (summary.data(); as data) {
+    <section class="grid grid--5" aria-label="Resumen de la cola">
+      <app-stat-tile label="En la cola" [value]="data.totals.total + ''" icon="opportunity" accent="amber" [hint]="data.totals.candidate + ' candidatas por decidir'" />
+      <app-stat-tile label="Aprobadas" [value]="data.totals.approved + ''" icon="check" accent="green" hint="Habilitadas para entrar al flujo" />
+      <app-stat-tile label="Descartadas" [value]="data.totals.discarded + ''" icon="cross" accent="gray" hint="Con su motivo guardado" />
+      <app-stat-tile
+        label="Puntuacion media"
+        [value]="data.averageScore === null ? '—' : data.averageScore + ''"
+        icon="analytics"
+        accent="blue"
+        hint="Sobre las metricas disponibles"
+      />
+      <app-stat-tile
+        label="Estudio completo"
+        [value]="data.byCoverage.complete + '/' + data.totals.total"
+        icon="research"
+        accent="cyan"
+        hint="El resto va con datos parciales"
+      />
+    </section>
+  }
+
+  <!-- Filtros y acciones -->
+  <div class="toolbar">
+    <label class="field">
+      <span class="field__label">Estado</span>
+      <select class="select" (change)="onStatusChange($event)">
+        <option value="">Todas</option>
+        @for (status of statuses; track status) {
+          <option [value]="status" [selected]="statusFilter() === status">{{ statusText(status) }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="field">
+      <span class="field__label">Orden</span>
+      <select class="select" (change)="onSortChange($event)">
+        @for (option of sortOptions; track option) {
+          <option [value]="option" [selected]="sort() === option">{{ option }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="field">
+      <span class="field__label">Buscar termino</span>
+      <input class="input" type="search" [value]="search()" (input)="onSearch($event)" (keyup.enter)="applySearch()" />
+    </label>
+
+    <button type="button" class="btn btn--ghost btn--sm" (click)="applySearch()">Aplicar</button>
+
+    <span class="spacer"></span>
+
+    <!-- Con que datos se esta trabajando: nunca se oculta -->
+    <span class="chip" [class]="liveSources() > 0 ? 'chip--info' : 'chip--warning'">
+      <span class="chip__glyph" [style.background]="liveSources() > 0 ? '#5b9bff' : '#ffc44d'"></span>
+      {{ liveSources() }} fuente(s) reales · modo {{ sourceMode() }}
+    </span>
+
+    <button type="button" class="btn btn--ghost" [disabled]="discovering()" (click)="discoverRising()">
+      <app-pixel-icon name="research" [size]="12" accent="cyan" />
+      {{ discovering() ? 'Consultando...' : 'Que esta subiendo' }}
+    </button>
+
+    <button type="button" class="btn btn--primary" (click)="toggleScan()">
+      <app-pixel-icon name="play" [size]="12" accent="#4fd6ff" />
+      {{ scanOpen() ? 'Cerrar estudio' : 'Estudiar terminos' }}
+    </button>
+  </div>
+
+  <!-- Terminos que estan subiendo (Google Trends) -->
+  @if (discoverError(); as error) {
+    <div class="state state--error">
+      <p class="state__title">No se han podido consultar las tendencias</p>
+      <p class="state__text">{{ error }}</p>
+    </div>
+  }
+
+  @if (discoverResult(); as discover) {
+    <article class="panel panel--notched">
+      <header class="panel__header">
+        <span class="panel__title">
+          <app-pixel-icon name="research" [size]="14" accent="cyan" />
+          Que esta subiendo en {{ discover.geo }}
+          <span class="panel__subtitle">{{ discover.source.name }} · {{ discover.collectedAt | timeAgo }}</span>
+        </span>
+        @if (discover.terms.length > 0) {
+          <button type="button" class="btn btn--sm" (click)="useRisingTerms()">Usar estos terminos</button>
+        }
+      </header>
+
+      <div class="panel__body stack stack--sm">
+        @if (discover.error; as error) {
+          <p class="text-sm text-bad">{{ error.message }}</p>
+          @if (error.hint) {
+            <p class="text-xs text-dim">{{ error.hint }}</p>
+          }
+        } @else if (discover.terms.length === 0) {
+          <app-state-display mode="empty" description="El feed no ha devuelto terminos en este momento." />
+        } @else {
+          @for (term of discover.terms; track term.title) {
+            <div class="rising-term">
+              <strong class="text-sm">{{ term.title }}</strong>
+              @if (term.traffic) {
+                <span class="chip chip--neutral">{{ term.traffic }} busquedas</span>
+              }
+              @if (term.newsSource) {
+                <span class="text-xs text-dim">{{ term.newsSource }}</span>
+              }
+              @if (term.newsTitles.length > 0) {
+                <span class="text-xs text-faint truncate">{{ term.newsTitles[0] }}</span>
+              }
+            </div>
+          }
+        }
+
+        @if (discover.caveat) {
+          <p class="text-xs text-warn">{{ discover.caveat }}</p>
+        }
+      </div>
+    </article>
+  }
+
+  <!-- Formulario del estudio -->
+  @if (scanOpen()) {
+    <article class="panel panel--notched">
+      <header class="panel__header">
+        <span class="panel__title">
+          <app-pixel-icon name="opportunity" [size]="14" accent="amber" />
+          Estudio de oportunidad
+          <span class="panel__subtitle">Yanca consulta las fuentes y registra las candidatas en la cola</span>
+        </span>
+      </header>
+
+      <div class="panel__body stack stack--sm">
+        <div class="grid grid--sidebar-left">
+          <label class="field">
+            <span class="field__label">Terminos a estudiar (uno por linea o separados por comas)</span>
+            <textarea class="input terms-input" [value]="termsInput()" (input)="onTermsInput($event)"></textarea>
+            <span class="text-xs text-dim">{{ parsedTerms().length }} termino(s) · maximo 8 por estudio</span>
+          </label>
+
+          <div class="stack stack--sm">
+            <label class="field">
+              <span class="field__label">Margen minimo exigido (%)</span>
+              <input class="input" type="number" min="0" max="100" [value]="minMargin()" (input)="onNumberInput('minMargin', $event)" />
+            </label>
+            <label class="field">
+              <span class="field__label">Coste maximo por unidad (EUR, opcional)</span>
+              <input class="input" type="number" min="0" [value]="maxCost() ?? ''" (input)="onNumberInput('maxCost', $event)" />
+            </label>
+            <label class="field">
+              <span class="field__label">Maximo de ofertas comparables (opcional)</span>
+              <input class="input" type="number" min="1" [value]="maxCompetition() ?? ''" (input)="onNumberInput('maxCompetition', $event)" />
+            </label>
+            <label class="field">
+              <span class="field__label">Fuentes</span>
+              <select class="select" (change)="onModeChange($event)">
+                <option value="auto" [selected]="mode() === 'auto'">auto · reales + demostracion marcada</option>
+                <option value="live" [selected]="mode() === 'live'">live · solo fuentes reales</option>
+                <option value="simulated" [selected]="mode() === 'simulated'">simulated · sin salir a la red</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div class="row row--wrap">
+          <button type="button" class="btn btn--primary" [disabled]="scanning() || parsedTerms().length === 0" (click)="runScan()">
+            <app-pixel-icon name="play" [size]="12" accent="#4fd6ff" />
+            {{ scanning() ? 'Estudiando...' : 'Ejecutar estudio y registrar' }}
+          </button>
+          <span class="text-xs text-dim">
+            El estudio consulta fuentes externas y puede tardar unos segundos. Aprobar o descartar se hace despues, en la cola.
+          </span>
+        </div>
+
+        @if (scanError(); as error) {
+          <p class="text-sm text-bad">{{ error }}</p>
+        }
+      </div>
+    </article>
+  }
+
+  <!-- Resultado del estudio -->
+  @if (scanResult(); as result) {
+    <article class="panel panel--notched">
+      <header class="panel__header">
+        <span class="panel__title">
+          <app-pixel-icon name="check" [size]="14" accent="lime" />
+          Resultado del estudio
+          <span class="panel__subtitle">
+            modo {{ result.mode }} · {{ result.geo }} · {{ result.collectedAt | timeAgo }}
+          </span>
+        </span>
+      </header>
+
+      <div class="panel__body stack stack--sm">
+        <div class="row row--wrap">
+          @for (source of result.sources; track source.id) {
+            <span class="chip" [class]="source.mode === 'live' ? 'chip--good' : source.mode === 'simulated' ? 'chip--warning' : 'chip--neutral'">
+              {{ source.name }}: {{ source.mode }} · {{ source.signals }} señales
+            </span>
+          }
+        </div>
+
+        @if (result.registered.length > 0) {
+          <p class="text-sm">
+            Registradas en la cola:
+            @for (item of result.registered; track item.id) {
+              <a class="text-mono" style="margin-left: 6px" href="javascript:void(0)" (click)="select(item.id)">
+                {{ item.id }} ({{ item.keyword }})
+              </a>
+            }
+          </p>
+        }
+
+        @for (note of result.notes; track note.message) {
+          <p class="text-xs" [class]="note.level === 'error' ? 'text-bad' : note.level === 'warning' ? 'text-warn' : 'text-dim'">
+            [{{ note.level }}] {{ note.message }}
+          </p>
+          @if (note.hint) {
+            <p class="text-xs text-faint">{{ note.hint }}</p>
+          }
+        }
+      </div>
+    </article>
+  }
+
+  <!-- Cola y detalle -->
+  <section class="grid grid--sidebar">
+    <article class="panel panel--notched">
+      <header class="panel__header">
+        <span class="panel__title">
+          <app-pixel-icon name="opportunity" [size]="14" accent="amber" />
+          Cola de oportunidades
+        </span>
+        @if (queue.data(); as page) {
+          <span class="panel__subtitle">{{ page.meta.total }} registradas</span>
+        }
+      </header>
+
+      <div class="panel__body panel__body--flush">
+        @if (queue.loading() && !queue.data()) {
+          <div class="panel__body"><app-state-display mode="loading" /></div>
+        } @else if (queue.error(); as error) {
+          <div class="panel__body"><app-state-display mode="error" [error]="error" (retry)="load()" /></div>
+        } @else if (queue.data(); as page) {
+          @if (page.items.length === 0) {
+            <div class="panel__body">
+              <app-state-display
+                mode="empty"
+                description="No hay oportunidades con estos filtros. Lanza un estudio para que Yanca registre candidatas."
+              />
+            </div>
+          } @else {
+            <div class="table-wrap">
+              <table class="table table--compact">
+                <thead>
+                  <tr>
+                    <th scope="col">Termino</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col" class="num">Puntuacion</th>
+                    <th scope="col" class="num">Cobertura</th>
+                    <th scope="col">Veredicto</th>
+                    <th scope="col" class="num">Margen</th>
+                    <th scope="col">Origen</th>
+                    <th scope="col" class="num">Rev.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of page.items; track item.id) {
+                    <tr class="queue-row" [class.queue-row--active]="selectedId() === item.id" (click)="select(item.id)">
+                      <th scope="row">
+                        <span class="text-mono text-xs">{{ item.id }}</span><br />
+                        {{ item.keyword }}
+                      </th>
+                      <td><app-status-chip [status]="item.status" kind="opportunity" /></td>
+                      <td class="num num--strong" [style.color]="scoreColor(item.latest.score)">
+                        {{ item.latest.score === null ? '—' : item.latest.score }}
+                      </td>
+                      <td class="num">
+                        {{ item.latest.coverage | rate: 0 }}
+                        @if (item.latest.missing.length > 0) {
+                          <br /><span class="text-xs text-warn">{{ item.latest.missing.length }} dato(s) ausente(s)</span>
+                        }
+                      </td>
+                      <td><span class="chip" [class]="verdictTone(item.latest.verdict)">{{ item.latest.verdict }}</span></td>
+                      <td class="num">{{ item.latest.economics.margin === null ? '—' : (item.latest.economics.margin | rate) }}</td>
+                      <td class="text-xs text-dim">{{ item.origin }}</td>
+                      <td class="num text-xs">{{ item.revision }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        }
+      </div>
+    </article>
+
+    <!-- Detalle de la oportunidad seleccionada -->
+    @if (selected(); as opportunity) {
+      <div class="stack">
+        <article class="panel panel--notched">
+          <header class="panel__header">
+            <span class="panel__title">
+              <app-pixel-icon name="opportunity" [size]="14" accent="amber" />
+              {{ opportunity.keyword }}
+            </span>
+            <button type="button" class="btn btn--ghost btn--sm" (click)="closeDetail()">Cerrar</button>
+          </header>
+
+          <div class="panel__body stack stack--sm">
+            <div class="row row--wrap">
+              <app-status-chip [status]="opportunity.status" kind="opportunity" />
+              <span class="chip" [class]="verdictTone(opportunity.latest.verdict)">{{ opportunity.latest.verdict }}</span>
+              <span class="chip chip--neutral">{{ opportunity.revision }} estudio(s)</span>
+            </div>
+
+            <dl class="kv">
+              <dt class="kv__key">Puntuacion</dt>
+              <dd class="kv__value" [style.color]="scoreColor(opportunity.latest.score)">
+                <strong>{{ opportunity.latest.score === null ? '—' : opportunity.latest.score }}</strong>
+                <span class="text-xs text-dim"> · cobertura {{ opportunity.latest.coverage | rate: 0 }}</span>
+              </dd>
+              <dt class="kv__key">Confianza</dt>
+              <dd class="kv__value">{{ opportunity.latest.confidence | rate: 0 }}</dd>
+              <dt class="kv__key">Coste observado</dt>
+              <dd class="kv__value">{{ opportunity.latest.economics.cost === null ? 'sin dato' : (opportunity.latest.economics.cost | eur) }}</dd>
+              <dt class="kv__key">Margen estimado</dt>
+              <dd class="kv__value">
+                {{ opportunity.latest.economics.margin === null ? 'no calculable' : (opportunity.latest.economics.margin | rate) }}
+                @if (opportunity.latest.economics.marginAssumed) {
+                  <span class="text-xs text-warn"> (con precio indicado por ti)</span>
+                }
+              </dd>
+              <dt class="kv__key">Origen</dt>
+              <dd class="kv__value">{{ opportunity.origin }} · primera vez {{ opportunity.firstSeenAt | timeAgo }}</dd>
+              <dt class="kv__key">Ultimo estudio</dt>
+              <dd class="kv__value">
+                {{ opportunity.latest.sourceMode }} · {{ opportunity.latest.collectedAt | timeAgo }}
+                @if (opportunity.latest.geo) {
+                  · {{ opportunity.latest.geo }}
+                }
+              </dd>
+            </dl>
+
+            <!-- Cada cifra con su fuente -->
+            <div>
+              <p class="field__label">Evidencia (cada dato con su fuente)</p>
+              @for (component of opportunity.latest.components; track component.metric) {
+                <div class="component-row">
+                  <div>
+                    <span class="text-sm">{{ component.metricLabel }}: <strong>{{ component.value }} {{ component.unit }}</strong></span>
+                    <span class="component-source">
+                      <app-pixel-icon
+                        [name]="component.source.mode === 'live' ? 'research' : 'warning'"
+                        [size]="10"
+                        [accent]="component.source.mode === 'live' ? '#5b9bff' : '#ffc44d'"
+                      />
+                      {{ component.source.name }} · {{ modeText(component.source.mode) }} · confianza {{ component.confidence | rate: 0 }}
+                    </span>
+                    @if (component.evidence.note) {
+                      <span class="text-xs text-faint">{{ component.evidence.note }}</span>
+                    }
+                    @if (component.evidence.topics?.length) {
+                      <span class="text-xs text-faint">
+                        Temas de Trends:
+                        @for (topic of component.evidence.topics; track topic.mid) {
+                          {{ topic.title }}{{ topic.exact ? ' (coincidencia exacta)' : '' }}{{ $last ? '' : ' · ' }}
+                        }
+                      </span>
+                    }
+                  </div>
+                  <app-progress-bar [value]="component.normalized" size="sm" [showLabel]="false" color="var(--series-1)" />
+                  <span class="text-xs text-dim text-right">peso {{ component.weight | rate: 0 }}</span>
+                </div>
+              }
+            </div>
+
+            <!-- Lo que falta, y por que -->
+            @if (opportunity.latest.missing.length > 0) {
+              <div class="decision-box">
+                <p class="field__label">Datos ausentes</p>
+                @for (missing of opportunity.latest.missing; track missing.metric) {
+                  <p class="text-xs text-dim">{{ missing.label }}: {{ missing.reason }}</p>
+                }
+              </div>
+            }
+
+            <!-- Restricciones del operador -->
+            @if (opportunity.latest.checks.length > 0) {
+              <div>
+                <p class="field__label">Comprobaciones</p>
+                @for (check of opportunity.latest.checks; track check.constraint) {
+                  <p class="text-xs" [class]="check.passed === true ? 'text-good' : check.passed === false ? 'text-bad' : 'text-dim'">
+                    {{ check.passed === true ? 'CUMPLE' : check.passed === false ? 'NO CUMPLE' : 'SIN DATOS' }} ·
+                    {{ check.detail }}
+                  </p>
+                }
+              </div>
+            }
+
+            <!-- Decision del operador -->
+            <div class="decision-box stack stack--sm">
+              <p class="field__label">Decision</p>
+              <p class="text-xs text-dim">
+                Aprobar habilita la oportunidad para entrar al flujo. Al lanzarlo, cada etapa produce
+                <strong>sus</strong> cifras y sus artefactos, no el caso de demostracion.
+              </p>
+
+              @if (opportunity.decidedAt) {
+                <p class="text-xs text-dim">
+                  {{ opportunity.status === 'approved' ? 'Aprobada' : 'Descartada' }} por {{ opportunity.decidedBy }}
+                  · {{ opportunity.decidedAt | timeAgo }}
+                </p>
+                @if (opportunity.decisionReason) {
+                  <p class="text-xs">{{ opportunity.decisionReason }}</p>
+                }
+              }
+
+              <label class="field">
+                <span class="field__label">Motivo (opcional, se guarda)</span>
+                <input class="input" [value]="decisionReason()" (input)="onReasonInput($event)" placeholder="Por que apruebas o descartas" />
+              </label>
+
+              <div class="row row--wrap">
+                <button
+                  type="button"
+                  class="btn btn--success btn--sm"
+                  [disabled]="deciding() || opportunity.status === 'approved'"
+                  (click)="decide('approve')"
+                >
+                  <app-pixel-icon name="check" [size]="12" accent="#5ce08a" />
+                  Aprobar
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--danger btn--sm"
+                  [disabled]="deciding() || opportunity.status === 'discarded'"
+                  (click)="decide('discard')"
+                >
+                  <app-pixel-icon name="cross" [size]="12" accent="#ff6b78" />
+                  Descartar
+                </button>
+              </div>
+
+              @if (decisionError(); as error) {
+                <p class="text-xs text-bad">{{ error }}</p>
+              }
+            </div>
+
+            <!-- Lanzamiento del flujo: la aprobacion habilita, esto ejecuta -->
+            <div class="decision-box stack stack--sm">
+              <p class="field__label">Lanzar el flujo con esta oportunidad</p>
+              @if (opportunity.status === 'approved') {
+                <p class="text-xs text-dim">
+                  Cada etapa producira artefactos de «{{ opportunity.keyword }}»: sus metricas salen de este
+                  estudio
+                  @if (opportunity.catalogLink?.productId) {
+                    y la cadena comercial referencia el producto real
+                    <strong>{{ opportunity.catalogLink?.productName }}</strong>.
+                  } @else {
+                    y, al no existir un producto para este termino, los artefactos se marcan como
+                    <strong>propuestos</strong>.
+                  }
+                </p>
+                <button type="button" class="btn btn--primary btn--sm" [disabled]="launching()" (click)="launchFlow()">
+                  <app-pixel-icon name="play" [size]="12" accent="#4fd6ff" />
+                  {{ launching() ? 'Lanzando...' : 'Lanzar el flujo' }}
+                </button>
+              } @else {
+                <p class="text-xs text-dim">
+                  Aprueba la oportunidad para poder lanzar el flujo: solo las aprobadas se ejecutan.
+                </p>
+                <a class="btn btn--ghost btn--sm" routerLink="/workflows">Ver el flujo de demostracion</a>
+              }
+
+              @if (launchError(); as error) {
+                <p class="text-xs text-bad">{{ error }}</p>
+              }
+            </div>
+
+            <!-- Historial de estudios -->
+            @if (opportunity.revisions.length > 1) {
+              <div>
+                <p class="field__label">Historial de estudios</p>
+                <div class="table-wrap">
+                  <table class="table table--compact">
+                    <thead>
+                      <tr>
+                        <th scope="col" class="num">Rev.</th>
+                        <th scope="col">Cuando</th>
+                        <th scope="col" class="num">Puntuacion</th>
+                        <th scope="col" class="num">Cobertura</th>
+                        <th scope="col" class="num">Margen</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (revision of opportunity.revisions; track revision.revision) {
+                        <tr>
+                          <td class="num">{{ revision.revision }}</td>
+                          <td class="text-xs text-dim">{{ revision.at | timeAgo }}</td>
+                          <td class="num">{{ revision.score === null ? '—' : revision.score }}</td>
+                          <td class="num">{{ revision.coverage | rate: 0 }}</td>
+                          <td class="num">{{ revision.margin === null ? '—' : (revision.margin | rate) }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            }
+          </div>
+        </article>
+      </div>
+    }
+  </section>
+</div>

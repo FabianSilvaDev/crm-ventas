@@ -1,6 +1,0 @@
-/* La raíz no pinta nada por sí sola: su contenido lo pone la ruta activa (el shell o, en
-   `/entrar`, la pantalla de acceso). La altura mínima y el grid viven en `shell/layout.css`,
-   porque son del shell y no de la aplicación. */
-:host {
-  display: block;
-}

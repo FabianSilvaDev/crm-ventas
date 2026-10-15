@@ -1,0 +1,638 @@
+@if (summaryState.loading() && !summaryState.data()) {
+  <app-state-display mode="loading" description="Consultando inversion, ranking y canales de la API simulada..." />
+} @else if (summaryState.error(); as error) {
+  <app-state-display mode="error" [error]="error" (retry)="refreshAll()" />
+} @else {
+  <div class="stack stack--lg">
+    <header class="page-header">
+      <div>
+        <h1 class="page-header__title">
+          <app-pixel-icon name="campaigns" [size]="18" accent="orange" />
+          Campanas
+        </h1>
+        <p class="page-header__description">
+          Inversion, retorno y ritmo de gasto del conjunto de campanas simuladas. Selecciona una campana de la tabla para
+          ver su oferta, su producto, su landing, los agentes que la llevan y la muestra de leads captados.
+        </p>
+      </div>
+      <div class="page-header__actions">
+        <button
+          type="button"
+          class="btn btn--ghost"
+          (click)="refreshAll()"
+          [disabled]="summaryState.loading() || listState.loading()"
+        >
+          <app-pixel-icon name="reset" [size]="12" accent="#4fd6ff" />
+          {{ listState.loading() ? 'Actualizando' : 'Actualizar' }}
+        </button>
+      </div>
+    </header>
+
+    <aside class="demo-banner">
+      <app-pixel-icon class="demo-banner__glyph" name="demo" [size]="14" accent="#ffc44d" />
+      <span>
+        <strong>Datos de demostracion.</strong>
+        Gasto e ingreso simulados con fecha de referencia {{ referenceDate() | dateEs: 'datetime' }}.
+      </span>
+    </aside>
+
+    <!-- Cabecera publicitaria -->
+    @if (totals(); as data) {
+      <section class="grid grid--4" aria-label="Resumen de campanas">
+        <app-stat-tile
+          label="Inversion"
+          [value]="data.budget | eur"
+          icon="campaigns"
+          accent="amber"
+          [hint]="data.total + ' campanas planificadas'"
+        />
+        <app-stat-tile
+          label="Gasto"
+          [value]="data.spend | eur"
+          icon="analytics"
+          accent="orange"
+          [hint]="data.active + ' activas · ' + data.paused + ' pausadas'"
+        />
+        <app-stat-tile
+          label="Ingreso"
+          [value]="data.revenue | eur"
+          icon="leads"
+          accent="lime"
+          hint="Venta simulada atribuida"
+        />
+        <app-stat-tile
+          label="ROAS"
+          [value]="data.roas | num: 2"
+          unit="x"
+          icon="check"
+          accent="green"
+          [hint]="'CTR agregado ' + (data.ctr | rate) + ' · CPC ' + (data.cpc | eur) + ' por clic'"
+        />
+        <app-stat-tile
+          label="Conversiones"
+          [value]="data.conversions | num"
+          icon="check"
+          accent="cyan"
+          [hint]="data.clicks | compact"
+          unit="clics"
+        />
+        <app-stat-tile
+          label="CPA"
+          [value]="data.cpa | eur"
+          icon="analytics"
+          accent="violet"
+          hint="Coste por conversion"
+        />
+        <app-stat-tile
+          label="CPL"
+          [value]="data.cpl | eur"
+          icon="leads"
+          accent="pink"
+          [hint]="data.leads | num"
+          unit="leads"
+        />
+
+        <!-- Ritmo de presupuesto: cifra, barra y aviso textual -->
+        <article class="stat">
+          <header class="stat__label">
+            <app-pixel-icon name="campaigns" [size]="12" accent="amber" />
+            Ritmo de gasto
+          </header>
+          <p class="stat__value">{{ data.budgetPacing | rate }}</p>
+          <app-progress-bar
+            [value]="data.budgetPacing"
+            [color]="pacingColor(data.budgetPacing)"
+            [showLabel]="false"
+            label="Presupuesto consumido"
+          />
+          <p class="stat__meta">
+            {{ pacingLabel(data.budgetPacing) }} · {{ data.spend | eur }} de {{ data.budget | eur }}
+          </p>
+        </article>
+      </section>
+    }
+
+    <!-- Ingresos por canal y ranking de campanas -->
+    <section class="grid grid--2">
+      <article class="panel panel--notched">
+        <header class="panel__header">
+          <span class="panel__title">
+            <app-pixel-icon name="analytics" [size]="14" accent="amber" />
+            Ingresos por canal
+            <span class="panel__subtitle">Una sola medida y un unico tono por barra</span>
+          </span>
+        </header>
+        <div class="panel__body">
+          @if (byChannelRows().length > 0) {
+            <app-bar-chart [rows]="byChannelRows()" valueFormat="currency" />
+          } @else {
+            <app-state-display mode="empty" description="Sin ingresos atribuidos a ningun canal." />
+          }
+        </div>
+      </article>
+
+      <article class="panel panel--notched">
+        <header class="panel__header">
+          <span class="panel__title">
+            <app-pixel-icon name="campaigns" [size]="14" accent="orange" />
+            Ranking por retorno
+            <span class="panel__subtitle">Las campañas con mejor ROAS</span>
+          </span>
+        </header>
+        <div class="panel__body panel__body--flush">
+          @if (ranking().length > 0) {
+            <div class="table-wrap">
+              <table class="table table--compact">
+                <thead>
+                  <tr>
+                    <th scope="col">Campana</th>
+                    <th scope="col">Canal</th>
+                    <th scope="col" class="num">Gasto</th>
+                    <th scope="col" class="num">Ingreso</th>
+                    <th scope="col" class="num">ROAS</th>
+                    <th scope="col" class="num">Conv.</th>
+                    <th scope="col" class="num">CPA</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of ranking(); track row.id) {
+                    <tr>
+                      <th scope="row">
+                        <button type="button" class="name-btn" (click)="selectCampaign(row.id)">{{ row.name }}</button>
+                      </th>
+                      <td class="text-dim">{{ channelLabel(row.channel) }}</td>
+                      <td class="num">{{ row.spend | eur }}</td>
+                      <td class="num">{{ row.revenue | eur }}</td>
+                      <td class="num num--strong">{{ row.roas | num: 2 }}x</td>
+                      <td class="num">{{ row.conversions | num }}</td>
+                      <td class="num">{{ row.cpa | eur }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <div class="panel__body">
+              <app-state-display mode="empty" description="Ninguna campana ha registrado gasto todavia." />
+            </div>
+          }
+        </div>
+      </article>
+    </section>
+
+    <!-- Filtros del listado -->
+    <div class="toolbar" role="search">
+      <div class="field">
+        <label class="field__label" for="campaign-status">Estado</label>
+        <select id="campaign-status" class="select" [value]="status()" (change)="onStatus($event)">
+          <option value="">Cualquier estado</option>
+          @for (option of statusOptions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="campaign-channel">Canal</label>
+        <select id="campaign-channel" class="select" [value]="channel()" (change)="onChannel($event)">
+          <option value="">Todos los canales</option>
+          @for (option of channelOptions(); track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="campaign-search">Buscar</label>
+        <input
+          id="campaign-search"
+          class="input"
+          type="search"
+          placeholder="Nombre u objetivo"
+          [value]="search()"
+          (input)="onSearch($event)"
+        />
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="campaign-sort">Orden</label>
+        <select id="campaign-sort" class="select" [value]="sort()" (change)="onSort($event)">
+          @for (option of sorts; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+
+      <span class="spacer"></span>
+      <span class="text-xs text-dim">
+        {{ listState.loading() ? 'Actualizando...' : campaigns().length + ' de ' + campaignTotal() + ' campanas' }}
+      </span>
+    </div>
+
+    <!-- Listado de campanas -->
+    <article class="panel panel--notched">
+      <header class="panel__header">
+        <span class="panel__title">
+          <app-pixel-icon name="campaigns" [size]="14" accent="orange" />
+          Campanas
+          <span class="panel__subtitle">Pulsa el nombre para abrir el detalle</span>
+        </span>
+      </header>
+
+      <div class="panel__body panel__body--flush">
+        @if (listState.loading() && !listState.data()) {
+          <div class="panel__body">
+            <app-state-display mode="loading" description="Cargando las campanas..." />
+          </div>
+        } @else if (listState.error(); as error) {
+          <div class="panel__body">
+            <app-state-display mode="error" [error]="error" (retry)="loadList(false)" />
+          </div>
+        } @else if (campaigns().length === 0) {
+          <div class="panel__body">
+            <app-state-display
+              mode="empty"
+              [description]="
+                hasActiveFilters()
+                  ? 'Ninguna campana coincide con los filtros aplicados.'
+                  : 'Todavia no se ha planificado ninguna campana en esta sesion del servidor.'
+              "
+            />
+          </div>
+        } @else {
+          <div class="table-wrap">
+            <table class="table table--compact">
+              <thead>
+                <tr>
+                  <th scope="col">Campana</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col">Canales</th>
+                  <th scope="col" class="num">Presupuesto</th>
+                  <th scope="col" class="num">Gasto y ritmo</th>
+                  <th scope="col" class="num">Impresiones</th>
+                  <th scope="col" class="num">Clics</th>
+                  <th scope="col" class="num">CTR</th>
+                  <th scope="col" class="num">Leads</th>
+                  <th scope="col" class="num">CPL</th>
+                  <th scope="col" class="num">Conv.</th>
+                  <th scope="col" class="num">CPA</th>
+                  <th scope="col" class="num">Ingreso</th>
+                  <th scope="col" class="num">ROAS</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (campaign of campaigns(); track campaign.id) {
+                  <tr [class.is-selected]="campaign.id === selectedId()">
+                    <th scope="row">
+                      <button type="button" class="name-btn" (click)="selectCampaign(campaign.id)">
+                        {{ campaign.name }}
+                      </button>
+                      <span class="cell-note text-xs text-dim">{{ objectiveLabel(campaign.objective) }}</span>
+                    </th>
+                    <td><app-status-chip [status]="campaign.status" kind="campaign" /></td>
+                    <td class="text-dim text-sm">{{ channelList(campaign.channels) }}</td>
+                    <td class="num">{{ campaign.budget.total | eur }}</td>
+                    <td>
+                      <div class="pacing">
+                        <span class="pacing__value">{{ campaign.metrics.spend | eur }}</span>
+                        <app-progress-bar
+                          [value]="campaign.pacing"
+                          [color]="pacingColor(campaign.pacing)"
+                          size="sm"
+                          [showLabel]="false"
+                          [label]="pacingLabel(campaign.pacing)"
+                        />
+                        <span class="text-xs text-dim">{{ campaign.pacing | rate }} del presupuesto</span>
+                      </div>
+                    </td>
+                    <td class="num">{{ campaign.metrics.impressions | compact }}</td>
+                    <td class="num">{{ campaign.metrics.clicks | compact }}</td>
+                    <td class="num">{{ campaign.metrics.ctr | rate }}</td>
+                    <td class="num">{{ campaign.metrics.leads | num }}</td>
+                    <td class="num">{{ campaign.metrics.cpl | eur }}</td>
+                    <td class="num">{{ campaign.metrics.conversions | num }}</td>
+                    <td class="num">{{ campaign.metrics.cpa | eur }}</td>
+                    <td class="num">{{ campaign.metrics.revenue | eur }}</td>
+                    <td class="num num--strong">{{ campaign.metrics.roas | num: 2 }}x</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+
+      @if (campaigns().length > 0) {
+        <footer class="panel__footer">
+          El ritmo compara el gasto con el presupuesto total de la campana: por debajo del
+          {{ pacingWarn * 100 }}% va dentro de lo previsto, y a partir del 100% lo supera.
+        </footer>
+      }
+    </article>
+
+    <!-- Detalle de la campana seleccionada -->
+    @if (!selectedId()) {
+      <section class="panel panel--notched">
+        <div class="panel__body">
+          <app-state-display mode="empty" description="Selecciona una campana de la tabla para ver su detalle." />
+        </div>
+      </section>
+    } @else if (detailState.loading() && !detailState.data()) {
+      <app-state-display mode="loading" description="Cargando oferta, agentes, creatividades y leads de la campana..." />
+    } @else if (detailState.error(); as error) {
+      <app-state-display mode="error" [error]="error" (retry)="reloadDetail()" />
+    } @else if (detail(); as item) {
+      <article class="panel panel--notched">
+        <header class="panel__header">
+          <span class="panel__title">
+            <app-pixel-icon name="campaigns" [size]="14" accent="orange" />
+            {{ item.name }}
+            <span class="panel__subtitle">{{ objectiveLabel(item.objective) }}</span>
+          </span>
+          <span class="row row--wrap">
+            <span class="text-xs text-dim">
+              {{ item.startDate | dateEs }} → {{ item.endDate | dateEs }} ({{ item.startDate | timeAgo: referenceDate() }})
+            </span>
+            <app-status-chip [status]="item.status" kind="campaign" />
+          </span>
+        </header>
+
+        <div class="panel__body">
+          <div class="grid grid--sidebar">
+            <div class="stack">
+              <!-- Oferta, producto y landing -->
+              <section class="grid grid--2">
+                <article class="panel panel--flush">
+                  <header class="panel__header">
+                    <span class="panel__title">
+                      <app-pixel-icon name="products" [size]="14" accent="amber" />
+                      Oferta y producto
+                    </span>
+                  </header>
+                  <div class="panel__body">
+                    <dl class="kv">
+                      <dt class="kv__key">Oferta</dt>
+                      <dd class="kv__value">
+                        @if (item.offer; as offer) {
+                          <span class="row row--wrap">
+                            {{ offer.name }}
+                            <app-status-chip [status]="offer.status" kind="offer" />
+                          </span>
+                        } @else {
+                          <span class="text-dim">Sin oferta asociada</span>
+                        }
+                      </dd>
+                      <dt class="kv__key">Precio oferta</dt>
+                      <dd class="kv__value">{{ item.offer?.price | eur }}</dd>
+                      <dt class="kv__key">Producto</dt>
+                      <dd class="kv__value">
+                        @if (item.product; as product) {
+                          {{ product.name }}
+                          <span class="text-mono text-xs text-dim">{{ product.sku }} · {{ product.category }}</span>
+                        } @else {
+                          <span class="text-dim">Sin producto asociado</span>
+                        }
+                      </dd>
+                      <dt class="kv__key">Precio producto</dt>
+                      <dd class="kv__value">{{ item.product?.price | eur }}</dd>
+                    </dl>
+                  </div>
+                </article>
+
+                <article class="panel panel--flush">
+                  <header class="panel__header">
+                    <span class="panel__title">
+                      <app-pixel-icon name="landing" [size]="14" accent="cyan" />
+                      Landing de destino
+                    </span>
+                  </header>
+                  <div class="panel__body">
+                    @if (item.landingPage; as landing) {
+                      <div class="stack stack--sm">
+                        <div class="row row--wrap">
+                          <span class="text-sm">{{ landing.title }}</span>
+                          <app-status-chip [status]="landing.status" kind="landing" />
+                        </div>
+                        <p class="text-mono text-xs text-dim">/{{ landing.slug }}</p>
+                        <dl class="kv">
+                          <dt class="kv__key">Conversion</dt>
+                          <dd class="kv__value num--strong">{{ landing.conversionRate | rate }}</dd>
+                          <dt class="kv__key">Canales</dt>
+                          <dd class="kv__value">{{ channelList(item.channels) }}</dd>
+                        </dl>
+                      </div>
+                    } @else {
+                      <p class="text-sm text-dim">Esta campana no apunta a ninguna landing.</p>
+                    }
+                  </div>
+                </article>
+              </section>
+
+              <!-- Agentes responsables -->
+              <article class="panel panel--flush">
+                <header class="panel__header">
+                  <span class="panel__title">
+                    <app-pixel-icon name="agents" [size]="14" accent="blue" />
+                    Agentes responsables
+                  </span>
+                </header>
+                <div class="panel__body">
+                  @if (item.agents.length > 0) {
+                    <div class="grid grid--3">
+                      @for (agent of item.agents; track agent.id) {
+                        <div class="row">
+                          <app-agent-avatar [avatar]="agent.avatar" [size]="38" [status]="agent.status" [label]="agent.name" />
+                          <span class="truncate">
+                            <span class="cell-note text-sm">{{ agent.name }}</span>
+                            <span class="cell-note text-xs text-dim">{{ agent.role }}</span>
+                            @if (agent.department; as department) {
+                              <span class="cell-note text-xs" [class]="'accent-' + department.accent">
+                                {{ department.shortName }}
+                              </span>
+                            }
+                          </span>
+                        </div>
+                      }
+                    </div>
+                  } @else {
+                    <p class="text-sm text-dim">Sin agentes asignados a esta campana.</p>
+                  }
+                </div>
+              </article>
+
+              <!-- Creatividades con su rendimiento -->
+              <article class="panel panel--flush">
+                <header class="panel__header">
+                  <span class="panel__title">
+                    <app-pixel-icon name="content" [size]="14" accent="violet" />
+                    Creatividades
+                  </span>
+                </header>
+                <div class="panel__body panel__body--flush">
+                  @if (item.creatives && item.creatives.length > 0) {
+                    <div class="table-wrap">
+                      <table class="table table--compact">
+                        <thead>
+                          <tr>
+                            <th scope="col">Creatividad</th>
+                            <th scope="col">Formato</th>
+                            <th scope="col">Medidas</th>
+                            <th scope="col">Estado</th>
+                            <th scope="col" class="num">Impresiones</th>
+                            <th scope="col" class="num">Clics</th>
+                            <th scope="col" class="num">CTR</th>
+                            <th scope="col" class="num">Conv.</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (creative of item.creatives; track creative.id) {
+                            <tr>
+                              <th scope="row">
+                                <span class="row">
+                                  <app-pixel-icon name="content" [size]="12" [accent]="creative.palette" />
+                                  {{ creative.name }}
+                                </span>
+                              </th>
+                              <td>{{ creative.format }}</td>
+                              <td class="text-mono text-xs text-dim">
+                                {{ creative.dimensions.width }}x{{ creative.dimensions.height }} px
+                              </td>
+                              <td><app-status-chip [status]="creative.status" kind="creative" /></td>
+                              <td class="num">{{ creative.performance.impressions | compact }}</td>
+                              <td class="num">{{ creative.performance.clicks | compact }}</td>
+                              <td class="num">{{ creative.performance.ctr | rate }}</td>
+                              <td class="num num--strong">{{ creative.performance.conversions | num }}</td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  } @else {
+                    <div class="panel__body">
+                      <app-state-display mode="empty" description="Esta campana no tiene creatividades asociadas." />
+                    </div>
+                  }
+                </div>
+              </article>
+            </div>
+
+            <div class="stack">
+              <!-- Metricas completas -->
+              <article class="panel panel--flush">
+                <header class="panel__header">
+                  <span class="panel__title">
+                    <app-pixel-icon name="analytics" [size]="14" accent="amber" />
+                    Rendimiento
+                  </span>
+                </header>
+                <div class="panel__body">
+                  <dl class="kv">
+                    <dt class="kv__key">Presupuesto</dt>
+                    <dd class="kv__value">{{ item.budget.total | eur }}</dd>
+                    <dt class="kv__key">Gasto</dt>
+                    <dd class="kv__value">{{ item.metrics.spend | eur }}</dd>
+                    <dt class="kv__key">Ritmo</dt>
+                    <dd class="kv__value">
+                      <span [class]="item.pacing > 1 ? 'text-bad' : 'text-good'">{{ item.pacing | rate }}</span>
+                      · {{ pacingLabel(item.pacing) }}
+                    </dd>
+                    <dt class="kv__key">Impresiones</dt>
+                    <dd class="kv__value">{{ item.metrics.impressions | num }}</dd>
+                    <dt class="kv__key">Clics</dt>
+                    <dd class="kv__value">{{ item.metrics.clicks | num }}</dd>
+                    <dt class="kv__key">CTR</dt>
+                    <dd class="kv__value">{{ item.metrics.ctr | rate }}</dd>
+                    <dt class="kv__key">CPC</dt>
+                    <dd class="kv__value">{{ item.metrics.cpc | eur: 2 }}</dd>
+                    <dt class="kv__key">Leads</dt>
+                    <dd class="kv__value">{{ item.metrics.leads | num }}</dd>
+                    <dt class="kv__key">CPL</dt>
+                    <dd class="kv__value">{{ item.metrics.cpl | eur }}</dd>
+                    <dt class="kv__key">Tasa de conversion</dt>
+                    <dd class="kv__value">{{ item.metrics.conversionRate | rate }}</dd>
+                    <dt class="kv__key">Conversiones</dt>
+                    <dd class="kv__value">{{ item.metrics.conversions | num }}</dd>
+                    <dt class="kv__key">CPA</dt>
+                    <dd class="kv__value">{{ item.metrics.cpa | eur }}</dd>
+                    <dt class="kv__key">Ingreso</dt>
+                    <dd class="kv__value">{{ item.metrics.revenue | eur }}</dd>
+                    <dt class="kv__key">ROAS</dt>
+                    <dd class="kv__value num--strong">{{ item.metrics.roas | num: 2 }}x</dd>
+                  </dl>
+                </div>
+              </article>
+
+              <!-- Muestra de leads -->
+              <article class="panel panel--flush">
+                <header class="panel__header">
+                  <span class="panel__title">
+                    <app-pixel-icon name="leads" [size]="14" accent="pink" />
+                    Leads
+                  </span>
+                </header>
+                <div class="panel__body panel__body--flush">
+                  @if (item.leads; as leads) {
+                    <div class="panel__body stack stack--sm">
+                      <div class="row row--between">
+                        <span class="text-xs text-dim">Captados</span>
+                        <span class="text-mono">{{ leads.total | num }}</span>
+                      </div>
+                      <div class="row row--between">
+                        <span class="text-xs text-dim">Cualificados</span>
+                        <span class="text-mono">{{ leads.qualified | num }}</span>
+                      </div>
+                      <div class="row row--between">
+                        <span class="text-xs text-dim">Ganados</span>
+                        <span class="text-mono">{{ leads.won | num }}</span>
+                      </div>
+                      <div class="row row--between">
+                        <span class="text-xs text-dim">Puntuacion media</span>
+                        <span class="text-mono">{{ leads.averageScore | num: 1 }}</span>
+                      </div>
+                    </div>
+
+                    @if (leads.sample.length > 0) {
+                      <div class="table-wrap">
+                        <table class="table table--compact">
+                          <thead>
+                            <tr>
+                              <th scope="col">Contacto</th>
+                              <th scope="col">Estado</th>
+                              <th scope="col" class="num">Score</th>
+                              <th scope="col" class="num">Valor</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @for (lead of leads.sample; track lead.id) {
+                              <tr>
+                                <th scope="row">
+                                  {{ lead.contact }}
+                                  <span class="cell-note text-xs text-dim">{{ lead.company }}</span>
+                                </th>
+                                <td><app-status-chip [status]="lead.status" kind="lead" /></td>
+                                <td class="num">{{ lead.score | num }}</td>
+                                <td class="num num--strong">{{ lead.value | eur }}</td>
+                              </tr>
+                            }
+                          </tbody>
+                        </table>
+                      </div>
+                    } @else {
+                      <div class="panel__body">
+                        <app-state-display mode="empty" description="La campana todavia no ha captado leads." />
+                      </div>
+                    }
+                  } @else {
+                    <div class="panel__body">
+                      <p class="text-sm text-dim">Sin datos de leads para esta campana.</p>
+                    </div>
+                  }
+                </div>
+              </article>
+            </div>
+          </div>
+        </div>
+      </article>
+    }
+  </div>
+}

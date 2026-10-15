@@ -1,0 +1,493 @@
+<div class="stack">
+  <!-- Control de la demostracion -->
+  <div class="toolbar">
+    <label class="field">
+      <span class="field__label">Flujo</span>
+      <select class="select" (change)="selectWorkflow($event)" [disabled]="busy()">
+        @for (item of state.data() ?? []; track item.id) {
+          <option [value]="item.id" [selected]="workflow()?.id === item.id">{{ item.name }}</option>
+        }
+      </select>
+    </label>
+
+    <button type="button" class="btn btn--primary" [disabled]="busy() || run()?.status === 'running'" (click)="start()">
+      <app-pixel-icon name="play" [size]="12" accent="#4fd6ff" />
+      Iniciar demostracion
+    </button>
+
+    <button
+      type="button"
+      class="btn"
+      [disabled]="busy() || run()?.status !== 'running'"
+      (click)="pause()"
+    >
+      <app-pixel-icon name="pause" [size]="12" accent="#ffc44d" />
+      Pausar
+    </button>
+
+    <button
+      type="button"
+      class="btn btn--success"
+      [disabled]="busy() || (run()?.status !== 'paused' && run()?.status !== 'failed')"
+      (click)="resume()"
+    >
+      <app-pixel-icon name="play" [size]="12" accent="#5ce08a" />
+      {{ run()?.status === 'failed' ? 'Reintentar etapa' : 'Reanudar' }}
+    </button>
+
+    <button type="button" class="btn btn--ghost" [disabled]="busy() || !hasRun()" (click)="reset()">
+      <app-pixel-icon name="reset" [size]="12" accent="#7a8fa3" />
+      Reiniciar
+    </button>
+
+    <span class="spacer"></span>
+
+    <div class="stack stack--sm" style="min-width: 240px">
+      <div class="row row--between">
+        <app-status-chip [status]="run()?.status ?? 'ready'" kind="run" [textOverride]="runStatusLabel()" />
+        @if (run(); as current) {
+          <span class="text-xs text-dim text-mono">
+            {{ current.summary.completed }}/{{ current.summary.totalStages }} etapas ·
+            {{ current.summary.elapsedMs | duration }}
+          </span>
+        }
+      </div>
+      @if (run()) {
+        <app-progress-bar [value]="completionRate()" size="sm" [label]="'Progreso del flujo'" />
+      }
+    </div>
+  </div>
+
+  @if (run()?.context; as context) {
+    <aside class="demo-banner" style="border-color: var(--px-cyan); background: #10262e">
+      <app-pixel-icon name="opportunity" [size]="14" accent="#4fd6ff" />
+      <span>
+        <strong>Ejecucion de {{ context.opportunityId }}:</strong> «{{ context.keyword }}».
+        @if (context.catalogLink?.productName) {
+          La cadena comercial referencia el producto real
+          <strong>{{ context.catalogLink?.productName }}</strong>, y cada etapa usa las cifras de este estudio.
+        } @else {
+          No existe un producto de catalogo para este termino, asi que los artefactos de las etapas se marcan
+          como <strong>propuestos</strong> y las cifras salen de este estudio.
+        }
+      </span>
+      <span class="spacer"></span>
+      <a class="text-xs" routerLink="/opportunities">Ver la oportunidad</a>
+    </aside>
+  } @else if (run()) {
+    <aside class="demo-banner">
+      <app-pixel-icon class="demo-banner__glyph" name="demo" [size]="14" accent="#ffc44d" />
+      <span>
+        Ejecucion <strong>de demostracion</strong>: recorre el caso previsto del flujo (Soporte de monitor doble).
+        Para que el flujo trabaje sobre tu oportunidad, apruebala y lanzalo desde la cola.
+      </span>
+      <span class="spacer"></span>
+      <a class="text-xs" routerLink="/opportunities">Ir a la cola</a>
+    </aside>
+  }
+
+  <!-- Puerta de decision abierta: el flujo espera al operador -->
+  @if (run()?.gate; as gate) {
+    <article class="panel panel--notched gate-panel">
+      <header class="panel__header">
+        <span class="panel__title">
+          <app-pixel-icon name="warning" [size]="14" accent="#ffc44d" />
+          Decision pendiente en {{ gate.stageName }}
+          <span class="panel__subtitle">{{ gate.kind }}</span>
+        </span>
+        <span class="chip chip--warning">El flujo esta detenido</span>
+      </header>
+
+      <div class="panel__body stack stack--sm">
+        <p class="text-sm"><strong>{{ gate.question }}</strong></p>
+        <p class="text-xs text-dim">{{ gate.detail }}</p>
+
+        @if (gate.preview; as preview) {
+          <div class="stage-result">
+            <p class="field__label">Lo que produciria esta etapa</p>
+            <p class="text-sm">{{ preview.summary }}</p>
+            @if (preview.metrics.length > 0) {
+              <dl class="kv" style="margin-top: 6px">
+                @for (metric of preview.metrics; track metric.label) {
+                  <dt class="kv__key">{{ metric.label }}</dt>
+                  <dd class="kv__value">{{ metric.value }}</dd>
+                }
+              </dl>
+            }
+          </div>
+        }
+
+        <label class="field">
+          <span class="field__label">Motivo (opcional al aprobar; se guarda para la trazabilidad)</span>
+          <input
+            class="input"
+            [value]="gateReason()"
+            (input)="onGateReasonInput($event)"
+            placeholder="Por que apruebas o por que lo detienes"
+          />
+        </label>
+
+        <div class="row row--wrap">
+          <button type="button" class="btn btn--success" [disabled]="gateDeciding()" (click)="approveGate()">
+            <app-pixel-icon name="check" [size]="12" accent="#5ce08a" />
+            {{ gate.approveLabel }}
+          </button>
+          <button type="button" class="btn btn--danger" [disabled]="gateDeciding()" (click)="rejectGate()">
+            <app-pixel-icon name="cross" [size]="12" accent="#ff6b78" />
+            {{ gate.rejectLabel }}
+          </button>
+          <span class="text-xs text-dim">
+            Si rechazas, el ciclo termina aqui
+            @if (run()?.context) {
+              y la oportunidad {{ run()?.context?.opportunityId }} se descarta con tu motivo.
+            }
+          </span>
+        </div>
+
+        @if (gateError(); as error) {
+          <p class="text-sm text-bad">{{ error }}</p>
+        }
+      </div>
+    </article>
+  }
+
+  <!-- Resultado de un rechazo: el ciclo se detuvo a proposito -->
+  @if (run()?.rejection; as rejection) {
+    <aside class="demo-banner" style="border-color: var(--status-critical); background: #2a1416">
+      <app-pixel-icon name="cross" [size]="14" accent="#ff6b78" />
+      <span>
+        <strong>Ciclo detenido en {{ rejection.stageName }}</strong> ({{ rejection.kind }}).
+        @if (rejection.reason) {
+          Motivo: «{{ rejection.reason }}».
+        }
+        Las etapas que ya estaban hechas se conservan; el resto quedan omitidas.
+      </span>
+      @if (gateOutcome(); as outcome) {
+        <span class="spacer"></span>
+        <span class="text-xs">{{ outcome }}</span>
+      }
+    </aside>
+  }
+
+  @if (actionError(); as error) {
+    <div class="state state--error">
+      <p class="state__title">La operacion no se ha podido completar</p>
+      <p class="state__text">{{ error }}</p>
+    </div>
+  }
+
+  @if (state.loading() && !state.data()) {
+    <app-state-display mode="loading" description="Cargando el catalogo de flujos..." />
+  } @else if (state.error(); as error) {
+    <app-state-display mode="error" [error]="error" (retry)="state.load(() => reloadFlows())" />
+  } @else {
+    <!-- Banda de etapas: izquierda a derecha, con las dependencias dibujadas -->
+    <div class="flow">
+      <div class="flow__inner" [style.width.px]="flowWidth()">
+        <svg
+          class="flow__deps"
+          [attr.width]="flowWidth()"
+          height="300"
+          [attr.viewBox]="'0 0 ' + flowWidth() + ' 300'"
+          aria-hidden="true"
+        >
+          @for (line of adjacentLines(); track line.key) {
+            <path [attr.d]="line.d" fill="none" stroke="#3d5568" stroke-width="2" />
+          }
+          @for (line of jumpLines(); track line.key) {
+            <path
+              [attr.d]="line.d"
+              fill="none"
+              stroke="#2b3d4d"
+              stroke-width="2"
+              stroke-dasharray="5 4"
+              opacity="0.7"
+            />
+          }
+        </svg>
+
+        @for (stage of displayStages(); track stage.key) {
+          <button
+            type="button"
+            class="flow__node flow-node"
+            [class.flow__node--running]="stage.status === 'running'"
+            [class.flow__node--completed]="stage.status === 'completed'"
+            [class.flow__node--failed]="stage.status === 'failed'"
+            [class.flow__node--blocked]="stage.status === 'blocked'"
+            [class.flow__node--selected]="selectedStageView()?.key === stage.key"
+            (click)="selectedStageKey.set(stage.key)"
+          >
+            <span class="flow__node-head">
+              <span class="flow__index">#{{ stage.order }}</span>
+              <span class="row" style="gap: 4px">
+                @if (stage.gate) {
+                  <span
+                    class="chip chip--warning"
+                    [title]="stage.gate.question"
+                  >
+                    <app-pixel-icon name="warning" [size]="10" accent="#ffc44d" />
+                    puerta
+                  </span>
+                }
+                <app-status-chip [status]="stage.status" kind="stage" />
+              </span>
+            </span>
+
+            <span class="flow__name">{{ stage.name }}</span>
+            <span class="text-xs text-dim">{{ stage.spanishName }}</span>
+
+            <span class="flow__summary">{{ stage.summary }}</span>
+
+            @if (stage.status === 'running' || stage.status === 'completed') {
+              <app-progress-bar
+                [value]="stage.progress"
+                size="sm"
+                [color]="stageColor(stage.status)"
+                [showLabel]="false"
+              />
+            } @else if (stage.planned) {
+              <span class="text-xs text-faint">{{ stage.estimatedMinutes | minutes }} estimados</span>
+            } @else if (blockingDependencies(stage).length > 0) {
+              <span class="text-xs text-faint">Esperando a: {{ blockingDependencies(stage).join(', ') }}</span>
+            } @else if (stage.status === 'pending') {
+              <span class="text-xs text-dim">Siguiente en ejecutarse</span>
+            }
+
+            @if (stage.dependsOn.length > 0) {
+              <span class="flow__dep">
+                <app-pixel-icon name="flow" [size]="10" accent="#566a7c" />
+                Depende de:
+                @for (dependency of stage.dependsOn; track dependency) {
+                  <span>{{ dependencyLabel(dependency) }}{{ $last ? '' : ',' }}</span>
+                }
+              </span>
+            }
+
+            <span class="flow__agents">
+              @for (agent of stage.agents; track agent.id) {
+                <span class="flow__agent">
+                  <span class="flow__agent-dot" [style.background]="statusColor[agent.status]"></span>
+                  {{ agent.name }}
+                </span>
+              }
+            </span>
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Detalle de la etapa y registro de eventos -->
+    <section class="grid grid--sidebar">
+      @if (selectedStageView(); as stage) {
+        <article class="panel panel--notched">
+          <header class="panel__header">
+            <span class="panel__title">
+              <app-pixel-icon name="flow" [size]="14" accent="green" />
+              Etapa {{ stage.order }}: {{ stage.name }}
+              <span class="panel__subtitle">{{ stage.spanishName }}</span>
+            </span>
+            <app-status-chip [status]="stage.status" kind="stage" />
+          </header>
+
+          <div class="panel__body stack stack--sm">
+            <p class="text-sm">{{ stage.description }}</p>
+
+            <dl class="kv">
+              <dt class="kv__key">Departamento</dt>
+              <dd class="kv__value">
+                @if (stage.department; as department) {
+                  <span class="tag" [class]="'accent-' + department.accent">
+                    <span class="tag__dot"></span>
+                    {{ department.name }}
+                  </span>
+                } @else {
+                  —
+                }
+              </dd>
+              <dt class="kv__key">Duracion estimada</dt>
+              <dd class="kv__value">{{ stage.estimatedMinutes | minutes }}</dd>
+              @if (stage.startedAt) {
+                <dt class="kv__key">Inicio</dt>
+                <dd class="kv__value">{{ stage.startedAt | dateEs: 'datetime' }}</dd>
+              }
+              @if (stage.finishedAt) {
+                <dt class="kv__key">Fin</dt>
+                <dd class="kv__value">
+                  {{ stage.finishedAt | dateEs: 'datetime' }} · {{ stage.durationMs | duration }}
+                </dd>
+              }
+            </dl>
+
+            <div class="grid grid--2">
+              <div>
+                <p class="field__label">Entradas</p>
+                <ul class="text-sm text-dim">
+                  @for (input of stage.inputs; track input) {
+                    <li>{{ input }}</li>
+                  }
+                </ul>
+              </div>
+              <div>
+                <p class="field__label">Entregables</p>
+                <ul class="text-sm text-dim">
+                  @for (deliverable of stage.deliverables; track deliverable) {
+                    <li>{{ deliverable }}</li>
+                  }
+                </ul>
+              </div>
+            </div>
+
+            @if (stage.dependsOn.length > 0) {
+              <div>
+                <p class="field__label">Dependencias (deben completarse antes)</p>
+                <div class="row row--wrap">
+                  @for (dependency of stage.dependsOn; track dependency) {
+                    <span class="flow__agent">
+                      <span
+                        class="flow__agent-dot"
+                        [style.background]="stageColor(dependencyRef(dependency).status)"
+                      ></span>
+                      {{ dependencyRef(dependency).label }}
+                      <span class="text-faint">· {{ stageStatusLabel(dependencyRef(dependency).status) }}</span>
+                    </span>
+                  }
+                </div>
+                @if (blockingDependencies(stage).length > 0) {
+                  <p class="text-xs text-dim" style="margin-top: 6px">
+                    La simulacion avanza en orden: esta etapa se ejecutara cuando el flujo llegue a ella, despues de
+                    {{ blockingDependencies(stage).join(' y ') }}.
+                  </p>
+                }
+              </div>
+            }
+
+            <div>
+              <p class="field__label">Agentes responsables</p>
+              <div class="row row--wrap">
+                @for (agent of stage.agents; track agent.id) {
+                  <span class="row" style="gap: 6px">
+                    <app-agent-avatar [avatar]="agent.avatar" [size]="28" [status]="agent.status" [showStatus]="false" />
+                    <span class="text-xs">
+                      <strong>{{ agent.name }}</strong><br />
+                      <span class="text-dim">{{ agent.specialty }}</span>
+                    </span>
+                  </span>
+                }
+              </div>
+            </div>
+
+            @if (stage.error) {
+              <div class="stage-result" style="border-color: var(--status-critical)">
+                <p class="field__label text-bad">Error simulado</p>
+                <p class="text-sm">{{ stage.error }}</p>
+                <p class="text-xs text-dim">
+                  Pulsa "Reintentar etapa" para volver a ejecutarla; el backend reintenta desde esta misma etapa.
+                </p>
+              </div>
+            }
+
+            @if (stage.result; as result) {
+              <div class="stage-result">
+                <p class="field__label">{{ stage.planned ? 'Resultado previsto' : 'Resultado de la etapa' }}</p>
+                <p class="text-sm">{{ result.summary }}</p>
+
+                @if (result.metrics.length > 0) {
+                  <dl class="kv" style="margin-top: 8px">
+                    @for (metric of result.metrics; track metric.label) {
+                      <dt class="kv__key">{{ metric.label }}</dt>
+                      <dd class="kv__value">{{ metric.value }}</dd>
+                    }
+                  </dl>
+                }
+
+                @if (result.artifacts.length > 0) {
+                  <div class="row row--wrap" style="margin-top: 8px">
+                    @for (artifact of result.artifacts; track artifact.id) {
+                      @if (artifact.derived) {
+                        <span class="artifact" title="Propuesto por la simulacion: no existe como registro en el catalogo">
+                          <app-pixel-icon name="opportunity" [size]="10" accent="#ffc44d" />
+                          {{ artifact.label ?? artifact.id }}
+                          <span class="text-faint">· propuesto</span>
+                        </span>
+                      } @else {
+                        <a class="artifact" [routerLink]="routeForArtifact(artifact.type)">
+                          <app-pixel-icon name="products" [size]="10" accent="#ffc44d" />
+                          {{ artifact.label ?? artifact.id }}
+                        </a>
+                      }
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </article>
+      }
+
+      <div class="stack">
+        <article class="panel panel--notched">
+          <header class="panel__header">
+            <span class="panel__title">
+              <app-pixel-icon name="check" [size]="14" accent="lime" />
+              Resultado de la ejecucion
+            </span>
+          </header>
+          <div class="panel__body">
+            @if (run(); as current) {
+              <dl class="kv">
+                <dt class="kv__key">Estado</dt>
+                <dd class="kv__value">{{ runStatusLabel() }}</dd>
+                <dt class="kv__key">Etapas completadas</dt>
+                <dd class="kv__value">{{ current.summary.completed }} de {{ current.summary.totalStages }}</dd>
+                <dt class="kv__key">Etapas en error</dt>
+                <dd class="kv__value">{{ current.summary.failed }}</dd>
+                <dt class="kv__key">Tiempo transcurrido</dt>
+                <dd class="kv__value">{{ current.summary.elapsedMs | duration }}</dd>
+                <dt class="kv__key">Restante estimado</dt>
+                <dd class="kv__value">{{ current.summary.estimatedRemainingMs | duration }}</dd>
+                <dt class="kv__key">Duracion por etapa</dt>
+                <dd class="kv__value">{{ current.stepMs }} ms</dd>
+              </dl>
+            } @else {
+              <p class="text-sm text-dim">
+                Sin ejecucion activa. Pulsa <strong>Iniciar demostracion</strong> para que el backend recorra las
+                {{ plannedCount() }} etapas del flujo y esta vista las siga por polling.
+              </p>
+            }
+          </div>
+        </article>
+
+        <article class="panel panel--notched">
+          <header class="panel__header">
+            <span class="panel__title">
+              <app-pixel-icon name="flow" [size]="14" accent="cyan" />
+              Registro del flujo
+            </span>
+          </header>
+          <div class="panel__body panel__body--flush">
+            @if (events().length > 0) {
+              <div class="feed">
+                @for (event of events(); track event.id) {
+                  <div class="feed__item">
+                    <span class="feed__marker" [class]="'feed__marker--' + severityOf(event.type)"></span>
+                    <span>
+                      <span class="feed__message">{{ event.message }}</span>
+                      @if (event.stageKey) {
+                        <span class="feed__meta">{{ stageLabel(event.stageKey) }}</span>
+                      }
+                    </span>
+                    <span class="feed__time">{{ event.at | timeAgo: referenceDate() }}</span>
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="panel__body">
+                <app-state-display mode="empty" description="El registro se llena a medida que el backend avanza." />
+              </div>
+            }
+          </div>
+        </article>
+      </div>
+    </section>
+  }
+</div>
