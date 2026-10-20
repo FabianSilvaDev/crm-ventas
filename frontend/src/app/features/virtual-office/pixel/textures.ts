@@ -8,7 +8,13 @@
  */
 import { Texture } from 'pixi.js';
 import type { AgentAvatar, AgentStatus } from '../../../core/models/agents.model';
-import { STATUS_COLOR, buildAgentSprite, furnitureSprite, statusGlyph } from '../../../shared/pixel/agent-sprites';
+import {
+  type FurnitureName,
+  STATUS_COLOR,
+  buildAgentSprite,
+  furnitureSprite,
+  statusGlyph,
+} from '../../../shared/pixel/agent-sprites';
 import { toCanvas } from '../../../shared/pixel/pixel-art';
 import { ICONS, type PixelIconName } from '../../../shared/pixel/icons';
 
@@ -38,7 +44,7 @@ export const statusTexture = (status: AgentStatus): Texture =>
   remember(`status:${status}`, toCanvas(statusGlyph(status), { accent: STATUS_COLOR[status] }));
 
 /** Textura de un mueble del escenario. */
-export const furnitureTexture = (name: 'monitor' | 'chair' | 'plant' | 'whiteboard' | 'server' | 'crate' | 'coffee'): Texture =>
+export const furnitureTexture = (name: FurnitureName): Texture =>
   remember(`furniture:${name}`, toCanvas(furnitureSprite(name)));
 
 /** Textura de un icono de la interfaz, por si la oficina necesita dibujarlos dentro del lienzo. */

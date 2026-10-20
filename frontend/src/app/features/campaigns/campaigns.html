@@ -441,7 +441,7 @@
                     <div class="grid grid--3">
                       @for (agent of item.agents; track agent.id) {
                         <div class="row">
-                          <app-agent-avatar [avatar]="agent.avatar" [size]="38" [status]="agent.status" [label]="agent.name" />
+                          <app-agent-avatar [avatar]="agent.avatar" [agentId]="agent.id" [size]="38" [status]="agent.status" [label]="agent.name" />
                           <span class="truncate">
                             <span class="cell-note text-sm">{{ agent.name }}</span>
                             <span class="cell-note text-xs text-dim">{{ agent.role }}</span>

@@ -26,6 +26,7 @@ import { forkJoin, interval, map, take, type Subscription } from 'rxjs';
 import type { Agent, AgentStatus, Department, OfficeGrid } from '../../core/models/agents.model';
 import { AGENT_STATUS_LABEL, labelOf } from '../../core/models/labels';
 import { AgentsService } from '../../core/services/agents.service';
+import { CustomSpriteService } from '../../core/services/custom-sprites.service';
 import { DepartmentsService } from '../../core/services/departments.service';
 import { HealthService } from '../../core/services/health.service';
 import { AsyncState } from '../../core/util/async-state';
@@ -136,6 +137,7 @@ export class OfficePage implements AfterViewInit {
   private readonly agentsService = inject(AgentsService);
   private readonly departmentsService = inject(DepartmentsService);
   private readonly health = inject(HealthService);
+  private readonly customSprites = inject(CustomSpriteService);
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly canvasHost = viewChild.required<ElementRef<HTMLElement>>('canvasHost');
@@ -211,6 +213,7 @@ export class OfficePage implements AfterViewInit {
 
       if (data) this.scene.setDepartments(data.departments, data.grid);
       this.scene.applyAgents(agents);
+      this.scene.setCustomSprites(this.customSprites.spriteSets());
       this.scene.setFilter(filter);
       this.scene.select(selected);
     });
@@ -333,11 +336,17 @@ export class OfficePage implements AfterViewInit {
     this.departmentFilter.set(value || null);
   }
 
-  /** Filtra por departamento desde las tarjetas inferiores. */
+  /** Filtra por departamento desde las tarjetas inferiores y centra la camara en su sala. */
   protected focusDepartment(departmentId: string): void {
     const next = this.departmentFilter() === departmentId ? null : departmentId;
     this.departmentFilter.set(next);
-    if (next) this.scene?.select(null);
+
+    if (next) {
+      this.scene?.select(null);
+      this.scene?.focusRoom(next);
+      return;
+    }
+
     this.scene?.fitAll();
   }
 

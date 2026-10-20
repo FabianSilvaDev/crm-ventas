@@ -61,6 +61,18 @@ export class OpportunitiesService {
     return this.api.postData<Opportunity>(`/opportunities/${opportunityId}/approve`, reason ? { reason } : {});
   }
 
+  /**
+   * Aclara que producto es, sin aprobar: el paso previo del primer filtro.
+   * Con `productId` se enlaza la cadena real del catalogo; con `productName` se acepta un
+   * producto que no esta en el catalogo; con `asCategory` se decide que basta la categoria.
+   */
+  setProduct(
+    opportunityId: string,
+    payload: { productId?: string; productName?: string; asCategory?: boolean; reason?: string },
+  ): Observable<Opportunity> {
+    return this.api.postData<Opportunity>(`/opportunities/${opportunityId}/product`, payload);
+  }
+
   discard(opportunityId: string, reason?: string): Observable<Opportunity> {
     return this.api.postData<Opportunity>(`/opportunities/${opportunityId}/discard`, reason ? { reason } : {});
   }

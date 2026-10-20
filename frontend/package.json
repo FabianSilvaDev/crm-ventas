@@ -7,7 +7,11 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "check:sprites": "node tools/check-sprites.mjs"
+    "check:sprites": "node tools/check-sprites.mjs",
+    "sprites:sync": "node tools/sync-agent-sprites.mjs",
+    "sprites:compose": "node tools/compose-lpc-sprite.mjs",
+    "sprites:lineup": "node tools/compose-agent-lineup.mjs",
+    "preview": "node tools/render-preview.mjs"
   },
   "private": true,
   "packageManager": "npm@11.17.0",

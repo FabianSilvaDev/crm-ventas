@@ -259,6 +259,52 @@ describe('Estudio de oportunidad', () => {
   });
 });
 
+describe('Sin datos no se inventa nada', () => {
+  it('en modo auto no rellena con la fuente simulada', async () => {
+    const realFetch = globalThis.fetch;
+    // Ninguna fuente responde: es el peor caso y el que no debe rellenarse.
+    globalThis.fetch = async () => new Response('Error 429 (Too Many Requests)', { status: 429 });
+
+    try {
+      const collection = await collectSignals({ keywords: ['teclado'], mode: 'auto' });
+
+      assert.equal(collection.signals.length, 0, 'no debe inventar señales');
+      assert.ok(
+        collection.sources.every((source) => source.mode !== 'simulated'),
+        'la fuente simulada no debe usarse si no se pide expresamente',
+      );
+      assert.ok(collection.notes.length > 0, 'debe explicar por que no hay datos');
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
+  it('sin ninguna fuente, las metricas quedan a 0 y no puntuan', () => {
+    const candidate = buildCandidate('teclado', new Map(), {
+      minMargin: 0.3,
+      maxCost: null,
+      maxCompetition: null,
+      expectedSalePrice: null,
+    });
+
+    assert.equal(candidate.score, null, 'sin datos no hay puntuacion');
+    assert.equal(candidate.coverage, 0);
+    assert.equal(candidate.confidence, 0);
+    assert.equal(candidate.verdict, 'sin datos suficientes');
+
+    // Las metricas se muestran, a 0, y marcadas como no disponibles.
+    assert.ok(candidate.components.length > 0);
+    assert.ok(candidate.components.every((component) => component.available === false));
+    assert.ok(candidate.components.every((component) => component.value === 0));
+    assert.ok(candidate.components.every((component) => component.source.id === 'none'));
+
+    const demand = candidate.components.find((component) => component.metric === 'demand');
+    assert.equal(demand.value, 0);
+    assert.equal(demand.weight, 0, 'una metrica sin dato no debe pesar en la puntuacion');
+    assert.ok(candidate.missing.some((entry) => entry.metric === 'demand'));
+  });
+});
+
 describe('API del estudio de oportunidad', () => {
   it('GET /sources describe cada fuente y el modo vigente', async () => {
     const { status, body } = await api.get('/sources');

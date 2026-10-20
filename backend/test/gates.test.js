@@ -104,7 +104,10 @@ describe('Puertas de decision', () => {
     // Se prepara una oportunidad aprobada y se lanza su ciclo.
     const scan = await api.post('/intake/scan', { keywords: ['cosedora de papel'], mode: 'simulated' });
     const opportunityId = scan.body.data.registered[0].id;
-    await api.post(`/opportunities/${opportunityId}/approve`, { reason: 'Prueba de puertas.' });
+    await api.post(`/opportunities/${opportunityId}/approve`, {
+      reason: 'Prueba de puertas.',
+      productName: 'Cosedora de papel',
+    });
 
     const launched = await api.post(`/opportunities/${opportunityId}/run`);
     const runId = launched.body.data.runId;

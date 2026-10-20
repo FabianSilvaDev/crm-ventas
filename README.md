@@ -88,6 +88,7 @@ mueves la API.
 | `npm run build` | Compila el frontend en `frontend/dist`. |
 | `npm test` | Pruebas de la API (health, agentes y flujos). |
 | `npm --prefix frontend run check:sprites` | Valida las matrices de pixel art. |
+| `npm --prefix frontend run preview` | Genera un PNG de los personajes, el mobiliario y la planta de una sala. |
 
 ## Variables de entorno
 
@@ -115,10 +116,21 @@ La URL de la API en el frontend se configura en
 
 - **Dashboard**: indicadores, salud de la operación, series temporales, embudo,
   actividad reciente y últimas tareas.
-- **Oficina virtual** (`/office`): escenario pixel art con 8 salas y 20 agentes.
-  Arrastra para mover la vista, usa la rueda para acercar, filtra por departamento,
-  estado o nombre, y pulsa un agente para ver su ficha y **ejecutar una tarea
-  simulada** cuyo avance se sigue por polling.
+- **Oficina virtual** (`/office`): una sola oficina open-plan con 20 agentes repartidos
+  en **8 áreas** por departamento. Cada área tiene **cuatro puestos de trabajo** (mesa,
+  portátil y silla), una **zona de descanso** con sofá y mesa baja y el mobiliario propio
+  del departamento: servidores, estantería, cafetera, fotocopiadora, nevera de agua,
+  papeleras... Las áreas se separan con **divisiones bajas de cristal** y un **letrero
+  pequeño** con su nombre. Toda la oficina comparte **una única paleta** (suelo, pared y
+  acento cian) y una pared perimetral con el rótulo central; los **suelos, paredes y
+  mesas** son tiles y sprites de los packs **LPC Revised: The Office** (Eliza Wyatt y
+  Lanea Zimmerman; OGA-BY 3.0) y **Pixel Art Lab/Office Tiles** (The Leafy Lemur;
+  CC-BY 3.0), en `frontend/public/assets/office/`. Los agentes aparecen **sentados tras
+  su escritorio** y los puestos libres muestran la silla vacía. Los agentes **inactivos
+  con sprite animado pasean** por su área hasta la zona de descanso y vuelven. Arrastra
+  para mover la vista, usa la rueda para acercar, filtra por departamento, estado o
+  nombre (al filtrar por departamento la cámara se centra en su área) y pulsa un agente
+  para ver su ficha y **ejecutar una tarea simulada**.
 - **Flujo de agentes** (`/workflows`): las 17 etapas de izquierda a derecha con sus
   dependencias dibujadas. **Iniciar demostración** hace que el backend recorra el
   flujo; se puede **pausar**, **reanudar**, **reiniciar** y consultar el resultado y
@@ -163,14 +175,25 @@ endpoints en [docs/api.md](docs/api.md).
 
 ## Fuentes de datos (estudio de oportunidad)
 
-El intake puede trabajar con fuentes reales o sólo con la demo. Lo controla
-`SOURCES_MODE` (`auto` por defecto) y el estado se consulta en `GET /api/v1/sources`.
+El intake puede trabajar con fuentes reales o con datos de demostración, y **nunca mezcla
+unas con otras sin decirlo**. Lo controla `SOURCES_MODE` (`auto` por defecto) y el estado se
+consulta en `GET /api/v1/sources`.
+
+| Modo | Comportamiento |
+| --- | --- |
+| `auto` (por defecto) | **Solo fuentes reales.** Si ninguna aporta un dato, no hay dato: las métricas se muestran a **0** y marcadas como *sin datos*. No se rellena con cifras simuladas. |
+| `live` | Igual que `auto` (se mantiene por compatibilidad). |
+| `simulated` | Datos de demostración, **solo si se piden expresamente**. Van marcados uno a uno como `simulated`. |
+
+Un **0 declarado** es un dato; un número inventado presentado como medición, no. Por eso las
+métricas sin fuente aparecen con valor 0, `available: false`, peso 0 y una nota que dice por
+qué — sin puntuar y sin contar para la cobertura.
 
 ```powershell
 # Que fuentes hay y cuales estan configuradas
 Invoke-RestMethod http://localhost:3000/api/v1/sources | ConvertTo-Json -Depth 4
 
-# Un estudio, sin salir a la red (funciona siempre)
+# Un estudio con datos de demostracion (hay que pedirlo: mode=simulated)
 Invoke-RestMethod -Method Post http://localhost:3000/api/v1/intake/scan `
   -ContentType 'application/json' `
   -Body '{"keywords":["teclado mecanico","soporte de monitor"],"mode":"simulated","constraints":{"minMargin":0.25}}'
@@ -192,6 +215,10 @@ Para trabajar con datos reales: copia `.env.example` a `backend/.env`, rellena l
 claves y pon `SOURCES_MODE=live`. Detalles y límites en
 [docs/architecture.md](docs/architecture.md#5-fuentes-de-datos-estudio-de-oportunidad).
 
+Los informes de **investigación** siguen la misma regla: la etapa Research consulta las
+fuentes y, si no obtiene datos, deja las métricas a **0** con sus limitaciones escritas, en
+lugar de estimarlas.
+
 ## Oportunidades: cómo se elige qué perseguir
 
 La sección **Oportunidades** es donde arranca todo. El recorrido es el de un caso real:
@@ -205,7 +232,16 @@ La sección **Oportunidades** es donde arranca todo. El recorrido es el de un ca
    del estudio se pudo completar) y sus **datos ausentes**: un 75 sobre dos métricas no es
    lo mismo que un 75 sobre seis. Al abrir una, ves **cada cifra con su fuente**, las
    comprobaciones de tus restricciones y el historial de estudios.
-4. **Aprobar** la oportunidad, con motivo. Solo las aprobadas se pueden ejecutar.
+4. **Aclarar el producto.** Esto es lo primero que debes mirar: la cola tiene una columna
+   **Producto** y el detalle dice qué producto ha reconocido Yanca y **en qué se basa**.
+   Si solo ha reconocido una categoría ("periféricos gamer"), lo dice claramente y no te
+   deja aprobar a ciegas: eliges el producto del catálogo, escribes uno que no esté, o
+   decides explícitamente que por ahora basta la categoría.
+5. **Aprobar o descartar**, con motivo. Aprobar abre una confirmación —
+   *"¿Apruebas «periféricos gamer» con «Teclado Aurora 75%»?"* — y el backend rechaza la
+   aprobación (409) si el producto sigue sin resolverse. Aprobar habilita la oportunidad
+   para entrar al flujo; descartar guarda el porqué, y un estudio posterior **no revierte
+   tu decisión** ni tu producto.
 5. **Lanzar el flujo con ella.** Desde la ficha, *Lanzar el flujo* arranca la ejecución
    atada a esa oportunidad y te lleva al flujo a seguirla. Y ahí está la diferencia:
 
@@ -257,6 +293,78 @@ ejecución, el panel de la puerta te da la pregunta, el contexto y los dos boton
   la cola, en lugar de dejarla ahí para que alguien la reintente.
 
 Para demostraciones desatendidas: `SIMULATION_GATES=off` en `backend/.env`.
+
+## Tus propios sprites de agente
+
+Los 20 agentes ya tienen una hoja LPC generada desde la **librería oficial** de LPC, a
+partir del avatar que define el backend (cuerpo, pelo, piel, color del departamento y
+gafas). Se regeneran con:
+
+```powershell
+npm --prefix frontend run sprites:compose   # Yanca (agt-020), personaje propio
+npm --prefix frontend run sprites:lineup    # los otros 19, desde el avatar del backend
+npm --prefix frontend run sprites:sync      # actualiza el manifiesto
+```
+
+También puedes sustituir cualquiera por un sprite modelado a mano:
+
+1. Dibuja el personaje en **24×32 px**, PNG con transparencia, a escala 1×, con los pies en
+   el borde inferior. (También valen otras alturas: la escena alinea por los pies.)
+2. Guárdalo en `frontend/public/assets/agents/` con el **id del agente** como nombre
+   (`agt-020.png`).
+3. Regenera el manifiesto y recarga:
+
+   ```powershell
+   npm --prefix frontend run sprites:sync
+   ```
+
+**Hojas de LPC**: guarda la hoja como `agt-020@lpc.png` y ejecuta el mismo comando. El
+manifiesto escribirá `{ src, cell: 64, row, frames: 9, fps: 8 }` y el navegador recortará
+esa celda. `row` depende del alto de la hoja: **10** en una hoja completa de 54 filas y
+**2** en una recortada de caminar de 4 filas; `sprites:sync` lo deduce del PNG. Para elegir
+la pose correcta, abre `http://localhost:4200/assets/agents/preview.html`, carga la hoja y
+lee el `row`/`frame` de la celda que quieras.
+
+Si el generador exporta la hoja **sin colorear** (pasa cuando el navegador bloquea la
+lectura de píxeles que hace el recolor), `sprites:compose` y `sprites:lineup` componen las
+hojas a color desde las capas originales de LPC, con las paletas elegidas. Ojo
+con la licencia: los assets de LPC son **OGA-BY / CC-BY-SA / GPL** (atribución y, en parte,
+compartir igual); la atribución de las capas usadas está en
+[`frontend/public/assets/agents/CREDITS.md`](frontend/public/assets/agents/CREDITS.md).
+Kenney es CC0.
+
+Se aplica en la **oficina** (incluido el panel del agente), en la lista y ficha de
+**Agentes** y en los avatares del resto de vistas. Los agentes sin PNG siguen con su sprite
+procedural, así que puedes sustituirlos de uno en uno. Detalles de formato y licencias en
+[`frontend/public/assets/agents/README.md`](frontend/public/assets/agents/README.md).
+
+Herramientas habituales para modelarlos: **Piskel** y **Pixilart** (web, gratis),
+**Aseprite** (escritorio, de pago) o **Pixelorama** (escritorio, libre).
+
+## ¿La investigación es real?
+
+Depende de qué informe mires, y ahora se distingue en la propia vista:
+
+| Origen | Qué es |
+| --- | --- |
+| **Dato de demostración** | Los 7 informes escritos a mano en `backend/src/mocks/research.js`. Ilustran el formato, no son mercado real. |
+| **Generado en una ejecución** | Al llegar la etapa **Research** de un flujo atado a una oportunidad, el backend **consulta las fuentes de verdad** (`Google Trends`; AliExpress/Alibaba cuando estén configuradas) y escribe un informe con las cifras que ha obtenido. |
+
+Un informe generado lleva, sin excepción:
+
+- **cada cifra con su fuente** y su modo (`live` o `simulated`);
+- **hallazgos derivados de esas cifras** (demanda, competencia, coste, precio, y los temas
+  que reconoce Trends);
+- **limitaciones explícitas**: qué fuente no respondió, si no hubo datos reales, o si sin
+  precio de mercado el margen no se puede contrastar;
+- su `opportunityId`, para poder rastrear de qué oportunidad salió.
+
+Si las fuentes no responden, el informe **no se rellena con números inventados**: se publica
+con sus limitaciones y el flujo lo deja dicho en el resultado de la etapa.
+
+Lo que esta versión **no** hace: rastrear competidores, estimar volúmenes de búsqueda ni
+leer catálogos de proveedores. Eso necesita las credenciales de AliExpress/Alibaba
+(ver más abajo) o un proveedor de pago para Trends.
 
 ## Datos y persistencia
 

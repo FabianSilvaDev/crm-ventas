@@ -19,17 +19,89 @@ import { createSignal } from './signal.js';
 
 export const id = 'simulated';
 
-/** Busca el producto de la demo que mejor encaja con el termino consultado. */
-export const matchProduct = (keyword) => {
-  const needle = keyword.trim().toLocaleLowerCase('es');
+/** Normaliza texto para comparar: minusculas, sin acentos ni signos. */
+const normalize = (text) =>
+  String(text ?? '')
+    .toLocaleLowerCase('es')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 
-  return (
-    products.find((product) => product.name.toLocaleLowerCase('es').includes(needle)) ??
-    products.find((product) => product.tags.some((tag) => needle.includes(tag))) ??
-    products.find((product) => product.category.toLocaleLowerCase('es').includes(needle)) ??
-    null
-  );
+/** Palabras con contenido (se descartan articulos y preposiciones cortas). */
+const significantWords = (text) => [...new Set(normalize(text).split(' ').filter((word) => word.length > 2))];
+
+/**
+ * Propone un producto del catalogo para un termino, y **dice en que se basa**.
+ *
+ * No basta con "se parece": el operador necesita distinguir entre
+ *   - un producto concreto identificado (confianza alta), y
+ *   - un simple ejemplo de la categoria (confianza baja), porque en ese caso elegir el
+ *     producto es una decision suya, no del sistema.
+ *
+ * @returns {{product: object, basis: string, confidence: 'alta'|'baja', note: string}|null}
+ */
+export const proposeProduct = (keyword) => {
+  const needle = normalize(keyword);
+  if (!needle) return null;
+
+  // 1) Coincidencia por nombre: la mas fiable.
+  for (const product of products) {
+    const name = normalize(product.name);
+    if (name && (name.includes(needle) || needle.includes(name))) {
+      return {
+        product,
+        basis: 'nombre del catalogo',
+        confidence: 'alta',
+        note: 'El termino coincide con el nombre del producto.',
+      };
+    }
+  }
+
+  // 2) Varias palabras del termino en el nombre del producto.
+  const needleWords = significantWords(keyword);
+  let best = null;
+
+  for (const product of products) {
+    const nameWords = new Set(significantWords(product.name));
+    const shared = needleWords.filter((word) => nameWords.has(word));
+    if (shared.length >= 2 && (!best || shared.length > best.shared)) best = { product, shared: shared.length };
+  }
+
+  if (best && needleWords.length > 0 && best.shared / needleWords.length >= 0.6) {
+    return {
+      product: best.product,
+      basis: 'palabras en comun',
+      confidence: 'alta',
+      note: `Comparte ${best.shared} palabra(s) con el nombre del producto.`,
+    };
+  }
+
+  // 3) Es una categoria, no un producto: se propone un ejemplo y se dice sin rodeos.
+  const inCategory = products.filter((product) => {
+    const category = normalize(product.category);
+    return category && (needle === category || needle.startsWith(`${category} `) || needle.includes(category));
+  });
+
+  if (inCategory.length > 0) {
+    const candidate = inCategory[0];
+    return {
+      product: candidate,
+      basis: 'categoria',
+      confidence: 'baja',
+      note: `«${keyword}» es una categoria (${candidate.category}) con ${inCategory.length} producto(s) en el catalogo. El propuesto es solo un ejemplo: confirma cual quieres antes de aprobar.`,
+    };
+  }
+
+  return null;
 };
+
+/**
+ * Producto del catalogo que mejor encaja con el termino, si hay una propuesta.
+ * Lo usan los datos simulados para tomar sus cifras.
+ */
+export const matchProduct = (keyword) => proposeProduct(keyword)?.product ?? null;
 
 /** Numero de competidores del informe que respalda al producto, si se encontro. */
 const competitorsOf = (product) => {

@@ -24,6 +24,7 @@ import { conflict, notFound } from '../errors.js';
 import { createRandom, seedFrom } from '../utils/random.js';
 import { makeId, nowIso, shortId } from '../utils/time.js';
 import { agentRefs, departmentRef } from './enrich.js';
+import { conductResearch } from './research.service.js';
 import { resolveOutcome } from './stage-outcomes.js';
 import { clearTimer, scheduleInterval } from './timers.js';
 
@@ -288,6 +289,27 @@ const startStage = (run) => {
   stage.startedAtMs = nowMs();
   stage.willFail = shouldFail(run, stage);
 
+  // La etapa de investigacion consulta las fuentes DE VERDAD mientras la simulacion
+  // avanza. Si la consulta termina antes que la etapa, el resultado usa sus datos; si no,
+  // la etapa se completa con lo que ya sabiamos y el informe queda registrado igualmente.
+  if (stage.key === 'research' && run.context) {
+    run.researchResult = null;
+    run.researchError = null;
+    conductResearch({
+      opportunityId: run.context.opportunityId,
+      keyword: run.context.keyword,
+      mode: run.context.opportunity?.latest?.sourceMode ?? 'auto',
+      geo: run.context.opportunity?.latest?.geo ?? config.trends.geo,
+      timeframe: run.context.opportunity?.latest?.timeframe ?? config.trends.timeframe,
+    })
+      .then((report) => {
+        run.researchResult = report;
+      })
+      .catch((error) => {
+        run.researchError = error.message;
+      });
+  }
+
   logEvent(run, 'stage_started', `Etapa "${stage.name}" en curso (${stage.agentIds.length} agente/s).`, stage.key);
   pushActivity({
     type: 'workflow_stage',
@@ -340,8 +362,12 @@ const finishStage = (run) => {
   stage.durationMs = nowMs() - (stage.startedAtMs ?? nowMs());
 
   // El resultado se resuelve AQUI, no se copia de la plantilla: con una oportunidad en
-  // el contexto, sus cifras y sus artefactos son los de esa oportunidad.
-  const outcome = resolveOutcome(stage.key, run.context);
+  // el contexto, sus cifras y sus artefactos son los de esa oportunidad. Y si la etapa de
+  // investigacion ha consultado las fuentes, su informe real viaja en el contexto.
+  const outcome = resolveOutcome(
+    stage.key,
+    run.context ? { ...run.context, research: run.researchResult, researchError: run.researchError } : null,
+  );
 
   stage.result = {
     summary: outcome.summary,
@@ -444,6 +470,9 @@ export const createRun = (workflow, { stepMsOverride, context = null } = {}) => 
     gate: null,
     /** Etapas cuya puerta ha aprobado ya el operador. */
     approvedGates: [],
+    /** Informe real de la etapa de investigacion, cuando la consulta ha terminado. */
+    researchResult: null,
+    researchError: null,
     status: 'running',
     ordinal,
     eventCounter: 0,
@@ -581,6 +610,8 @@ export const resetRun = (runId) => {
   run.gate = null;
   run.approvedGates = [];
   run.rejection = null;
+  run.researchResult = null;
+  run.researchError = null;
 
   for (const stage of run.stages) {
     stage.status = 'pending';

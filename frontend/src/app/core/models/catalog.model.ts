@@ -295,11 +295,21 @@ export interface ResearchReport {
   product: ProductRef | null;
   findingCount: number;
   sourceCount: number;
+  /** `demo` (escrito a mano) o `run` (generado consultando las fuentes en una ejecucion). */
+  origin: 'demo' | 'run';
+  /** Lo que no se pudo conseguir, dicho sin rodeos. */
+  limitations: string[];
+  /** Oportunidad que origino el informe, si se genero en una ejecucion. */
+  opportunityId: string | null;
+  sourceMode: string | null;
   /** Solo en el detalle. */
   findings?: string[];
   sources?: { title: string; type: string }[];
   competitors?: Competitor[];
   series?: { label: string; value: number }[];
+  /** Procedencia completa de cada cifra (informes generados). */
+  signals?: unknown[];
+  collectedAt?: string;
 }
 
 /** Referencias que devuelve el backend para enlazar desde otros modulos. */

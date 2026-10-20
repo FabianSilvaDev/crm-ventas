@@ -1,0 +1,144 @@
+{
+  "sprites": {
+    "agt-001": {
+      "src": "assets/agents/agt-001@lpc.png",
+      "cell": 64,
+      "row": 2,
+      "frames": 9,
+      "fps": 8
+    },
+    "agt-002": {
+      "src": "assets/agents/agt-002@lpc.png",
+      "cell": 64,
+      "row": 2,
+      "frames": 9,
+      "fps": 8
+    },
+    "agt-003": {
+      "src": "assets/agents/agt-003@lpc.png",
+      "cell": 64,
+      "row": 2,
+      "frames": 9,
+      "fps": 8
+    },
+    "agt-004": {
+      "src": "assets/agents/agt-004@lpc.png",
+      "cell": 64,
+      "row": 2,
+      "frames": 9,
+      "fps": 8
+    },
+    "agt-005": {
+      "src": "assets/agents/agt-005@lpc.png",
+      "cell": 64,
+      "row": 2,
+      "frames": 9,
+      "fps": 8
+    },
+    "agt-006": {
+      "src": "assets/agents/agt-006@lpc.png",
+      "cell": 64,
+      "row": 2,
+      "frames": 9,
+      "fps": 8
+    },
+    "agt-007": {
+      "src": "assets/agents/agt-007@lpc.png",
+      "cell": 64,
+      "row": 2,
+      "frames": 9,
+      "fps": 8
+    },
+    "agt-008": {
+      "src": "assets/agents/agt-008@lpc.png",
+      "cell": 64,
+      "row": 2,
+      "frames": 9,
+      "fps": 8
+    },
+    "agt-009": {
+      "src": "assets/agents/agt-009@lpc.png",
+      "cell": 64,
+      "row": 2,
+      "frames": 9,
+      "fps": 8
+    },
+    "agt-010": {
+      "src": "assets/agents/agt-010@lpc.png",
+      "cell": 64,
+      "row": 2,
+      "frames": 9,
+      "fps": 8
+    },
+    "agt-011": {
+      "src": "assets/agents/agt-011@lpc.png",
+      "cell": 64,
+      "row": 2,
+      "frames": 9,
+      "fps": 8
+    },
+    "agt-012": {
+      "src": "assets/agents/agt-012@lpc.png",
+      "cell": 64,
+      "row": 2,
+      "frames": 9,
+      "fps": 8
+    },
+    "agt-013": {
+      "src": "assets/agents/agt-013@lpc.png",
+      "cell": 64,
+      "row": 2,
+      "frames": 9,
+      "fps": 8
+    },
+    "agt-014": {
+      "src": "assets/agents/agt-014@lpc.png",
+      "cell": 64,
+      "row": 2,
+      "frames": 9,
+      "fps": 8
+    },
+    "agt-015": {
+      "src": "assets/agents/agt-015@lpc.png",
+      "cell": 64,
+      "row": 2,
+      "frames": 9,
+      "fps": 8
+    },
+    "agt-016": {
+      "src": "assets/agents/agt-016@lpc.png",
+      "cell": 64,
+      "row": 2,
+      "frames": 9,
+      "fps": 8
+    },
+    "agt-017": {
+      "src": "assets/agents/agt-017@lpc.png",
+      "cell": 64,
+      "row": 2,
+      "frames": 9,
+      "fps": 8
+    },
+    "agt-018": {
+      "src": "assets/agents/agt-018@lpc.png",
+      "cell": 64,
+      "row": 2,
+      "frames": 9,
+      "fps": 8
+    },
+    "agt-019": {
+      "src": "assets/agents/agt-019@lpc.png",
+      "cell": 64,
+      "row": 2,
+      "frames": 9,
+      "fps": 8
+    },
+    "agt-020": {
+      "src": "assets/agents/agt-020@lpc.png",
+      "cell": 64,
+      "row": 2,
+      "frames": 9,
+      "fps": 8
+    }
+  }
+}

@@ -12,7 +12,8 @@
  *   'o'  contorno          'n'  sombra profunda     'k'  tela oscura
  *   'g'  metal / cristal   'w'  brillo             'y'  luz calida
  *   'A'  acento (color del departamento)  'a'  acento en sombra
- *   's'  piel              'd'  piel en sombra     'h'  pelo
+ *   's'  piel              'd'  piel en sombra     'e'  piel en penumbra
+ *   'h'  pelo              'j'  pelo en sombra
  */
 
 export type PixelMatrix = readonly string[];
@@ -98,6 +99,7 @@ export const resolvePalette = (theme: SpriteTheme = {}): PixelPalette => {
     ? { base: requested, dark: shadeHex(requested, 0.68) }
     : (ACCENT_COLORS[requested] ?? ACCENT_COLORS['cyan']);
   const skin = SKIN_TONES[theme.skin ?? 'medium'] ?? SKIN_TONES['medium'];
+  const hair = theme.hair ?? HAIR_COLORS['dark'];
 
   return {
     ...BASE_TOKENS,
@@ -105,7 +107,10 @@ export const resolvePalette = (theme: SpriteTheme = {}): PixelPalette => {
     a: theme.accentDark ?? accent.dark,
     s: skin.base,
     d: skin.shade,
-    h: theme.hair ?? HAIR_COLORS['dark'],
+    // Tercer tono de piel y sombra del pelo: lo que da volumen al personaje.
+    e: shadeHex(skin.shade, 0.86),
+    h: hair,
+    j: shadeHex(hair, 0.62),
   };
 };
 

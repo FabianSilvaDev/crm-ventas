@@ -70,10 +70,10 @@ export const config = {
    * Fuentes externas de datos para el estudio de oportunidad.
    *
    * `mode` decide que se puede usar:
-   *  - `auto`      usa las fuentes reales disponibles y, si ninguna responde o esta
-   *                configurada, completa con datos simulados marcados como tales.
-   *  - `live`      solo fuentes reales: si no hay ninguna, no devuelve datos.
-   *  - `simulated` no sale a la red; trabaja solo con datos de demostracion.
+   *  - `auto`      solo fuentes reales. Si ninguna aporta un dato, no hay dato: **no se
+   *                rellena con cifras simuladas**; las metricas se muestran a 0.
+   *  - `live`      igual que `auto` (se mantiene por compatibilidad).
+   *  - `simulated` datos de demostracion, solo si se piden expresamente.
    */
   sources: {
     mode: ['auto', 'live', 'simulated'].includes(process.env.SOURCES_MODE)

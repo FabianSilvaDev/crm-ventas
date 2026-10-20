@@ -147,19 +147,39 @@ No hay imágenes: los sprites son **matrices de texto** en `shared/pixel/` donde
 carácter es un píxel y su color sale de una paleta resuelta en tiempo de ejecución.
 
 ```text
-'...ohhhhhhhho...'   o = contorno   h = pelo   s = piel
-'...ohssssssho...'   A = acento del departamento   k = tela oscura
+'.....ohhsnssssnshho.....'   o = contorno   h = pelo (j su sombra)
+'.....ohhdssssssdhho.....'   s = piel (d y e sus sombras)   n = sombra profunda
+'....oaaAAAAAAAAAAaao....'   A = acento del departamento (a su sombra)   k = tela oscura
 ```
 
-- `PixelIcon` convierte una matriz en un SVG en línea (iconos de la interfaz).
+- **Los personajes miden 24x32** (el lienzo; el cuerpo ocupa unos 16 píxeles de ancho),
+  con la proporción de los simuladores de personajes de consola: cabeza en torno a un
+  tercio de la altura y tres tonos de piel y dos de pelo, que es lo que da volumen sin
+  salirse del pixel art. La referencia es la *estructura* de esa escuela de sprites, no
+  ningún personaje concreto: todo está dibujado para este proyecto.
 - `agent-sprites.ts` compone al personaje en tres capas: **cuerpo + peinado + accesorio**,
-  de modo que 2 cuerpos × 3 peinados × 3 accesorios × 8 acentos × 4 pieles dan variedad
+  de modo que 2 cuerpos × 4 peinados × 5 accesorios × 8 acentos × 4 pieles dan variedad
   suficiente para toda la plantilla sin dibujar un personaje por agente.
-- `features/virtual-office/pixel/textures.ts` convierte esas mismas matrices en
-  texturas de PixiJS (canvas de 1 píxel por celda, muestreo `nearest`), cacheadas por
-  clave y liberadas al desmontar la vista.
-- `assertMatrix` valida al cargar que ninguna matriz esté descuadrada; el
-  comportamiento se puede revisar sin navegador con `npm --prefix frontend run check:sprites`.
+- `features/virtual-office/pixel/office-room.ts` monta **una sola oficina open-plan**.
+  `buildOfficeShell` dibuja el suelo continuo, la pared perimetral con ventanales y el
+  rótulo central; `buildRoom` dibuja cada **área** con cuatro puestos (mesa, portátil y
+  silla), zona de descanso y mobiliario propio, separada de las demás por divisiones
+  bajas de cristal y un letrero pequeño. Toda la oficina comparte una única paleta
+  (`OFFICE_TONES` + `OFFICE_ACCENT`).
+- `office-props.ts` carga con `Assets` los tiles de suelo/pared y los props de los packs
+  de OpenGameArt; si faltan, `office-room.ts` cae al mobiliario procedural.
+- El escenario usa **cuatro capas** —suelo/áreas, agentes, puestos y paseantes— y ese
+  orden es lo que hace que cada agente aparezca **sentado tras su escritorio**, con las
+  piernas tapadas por la mesa. Los puestos libres muestran la silla vacía.
+- `textures.ts` convierte esas matrices en texturas de PixiJS (canvas de 1 píxel por
+  celda, muestreo `nearest`), cacheadas por clave y liberadas al desmontar la vista.
+
+Dos herramientas permiten revisar el pixel art sin abrir el navegador:
+
+| Comando | Qué hace |
+| --- | --- |
+| `npm --prefix frontend run check:sprites` | Valida que ninguna matriz esté descuadrada y las imprime en ASCII. |
+| `npm --prefix frontend run preview` | Genera un **PNG** con los personajes compuestos, el mobiliario y la planta de una sala. |
 
 La oficina usa **una sola instancia de `Application`** por vista y una única vista
 (cenital para el suelo, frontal para personajes y muebles), mantenida en todo el

@@ -162,7 +162,7 @@
 
                 <span class="report__meta">
                   @if (report.author; as author) {
-                    <app-agent-avatar [avatar]="author.avatar" [size]="22" [status]="author.status" [label]="author.name" />
+                    <app-agent-avatar [avatar]="author.avatar" [agentId]="author.id" [size]="22" [status]="author.status" [label]="author.name" />
                     <span class="report__author">
                       <span class="text-xs">{{ author.name }}</span>
                       <span class="text-xs text-dim">{{ author.role }}</span>
@@ -175,8 +175,14 @@
                 </span>
 
                 <span class="row row--between">
-                  <span class="text-xs text-dim">
-                    {{ report.findingCount | num }} hallazgos · {{ report.sourceCount | num }} fuentes
+                  <span class="row" style="gap: 8px">
+                    <!-- Origen: un informe generado por una ejecucion no es un dato de ejemplo -->
+                    <span class="chip" [class]="report.origin === 'run' ? 'chip--info' : 'chip--neutral'">
+                      {{ report.origin === 'run' ? 'generado en una ejecucion' : 'dato de demostracion' }}
+                    </span>
+                    <span class="text-xs text-dim">
+                      {{ report.findingCount | num }} hallazgos · {{ report.sourceCount | num }} fuentes
+                    </span>
                   </span>
                   @if (report.product; as product) {
                     <span class="tag accent-amber">
@@ -242,7 +248,7 @@
 
               @if (report.author; as author) {
                 <div class="report__meta">
-                  <app-agent-avatar [avatar]="author.avatar" [size]="30" [status]="author.status" [label]="author.name" />
+                  <app-agent-avatar [avatar]="author.avatar" [agentId]="author.id" [size]="30" [status]="author.status" [label]="author.name" />
                   <span class="report__author">
                     <span class="text-sm">{{ author.name }}</span>
                     <span class="text-xs text-dim">{{ author.role }}</span>

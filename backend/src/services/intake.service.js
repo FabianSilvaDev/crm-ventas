@@ -11,9 +11,9 @@
  *    lo mismo que un 80 sobre seis, y eso se ve en `coverage` y en `missing`.
  */
 import { config } from '../config.js';
-import { campaigns, landingPages, offers } from '../mocks/index.js';
+import { campaigns, landingPages, offers, products } from '../mocks/index.js';
 import { collectSignals, listSources } from '../sources/index.js';
-import { matchProduct } from '../sources/simulated.source.js';
+import { proposeProduct } from '../sources/simulated.source.js';
 import { metricDefinition, round2 } from '../sources/signal.js';
 
 /** Peso de cada metrica en la puntuacion, antes de normalizar por disponibilidad. */
@@ -91,12 +91,42 @@ const expectedSalePriceFor = (constraints, keyword) => {
 };
 
 /**
- * Enlace de la oportunidad con el catalogo, si el termino corresponde a un producto
- * que ya existe. Sirve para que el flujo pueda referenciar los registros REALES
- * (producto, oferta, landing, campana) en lugar de proponer artefactos derivados.
+ * Hipotesis de producto para un termino.
+ *
+ * Es lo que responde a "vale, acepto la oportunidad... pero ¿que producto es?".
+ * `confidence: 'baja'` significa que el sistema solo ha reconocido una CATEGORIA (o
+ * nada): en ese caso el producto es una propuesta de ejemplo y debe confirmarlo el
+ * operador antes de aprobar.
  */
-export const catalogLinkFor = (keyword) => {
-  const product = matchProduct(keyword);
+export const productHypothesisFor = (keyword) => {
+  const proposal = proposeProduct(keyword);
+
+  if (!proposal) {
+    return {
+      status: 'none',
+      productId: null,
+      name: null,
+      basis: null,
+      confidence: null,
+      note: 'No se ha identificado ningun producto del catalogo para este termino: hay que indicar cual es antes de aprobar.',
+    };
+  }
+
+  return {
+    status: 'proposed',
+    productId: proposal.product.id,
+    name: proposal.product.name,
+    basis: proposal.basis,
+    confidence: proposal.confidence,
+    note: proposal.note,
+  };
+};
+
+/**
+ * Enlace con la cadena comercial de un producto concreto del catalogo.
+ */
+export const catalogLinkForProduct = (productId) => {
+  const product = products.find((item) => item.id === productId);
   if (!product) return null;
 
   const offer = offers.find((item) => item.id === product.offerId) ?? null;
@@ -115,7 +145,39 @@ export const catalogLinkFor = (keyword) => {
   };
 };
 
-/** Construye la ficha de una candidata a partir de sus señales. */
+/**
+ * Enlace con el catalogo a partir del termino, SOLO cuando la propuesta es fiable.
+ *
+ * Con una coincidencia por categoria (`confidence: 'baja'`) no se enlaza nada: si se
+ * enlazara, el flujo acabaria produciendo los artefactos reales de un producto que el
+ * operador no ha elegido.
+ */
+export const catalogLinkFor = (keyword) => {
+  const proposal = proposeProduct(keyword);
+  if (!proposal || proposal.confidence !== 'alta') return null;
+  return catalogLinkForProduct(proposal.product.id);
+};
+
+/** Metrica sin dato: se muestra 0 y se marca como tal; no puntua ni cuenta para la cobertura. */
+const unavailableComponent = (keyword, metric, reason) => {
+  const definition = metricDefinition(metric);
+
+  return {
+    keyword,
+    metric,
+    metricLabel: definition.label,
+    value: 0,
+    unit: definition.unit,
+    better: definition.better,
+    confidence: 0,
+    available: false,
+    normalized: null,
+    weight: 0,
+    source: { id: 'none', name: 'Sin datos', kind: 'none', mode: 'none' },
+    collectedAt: null,
+    evidence: { note: `${reason} Se muestra 0, no una estimacion.` },
+  };
+};
 export const buildCandidate = (keyword, metricSignals, constraints) => {
   const cost = metricSignals.get('cost')?.value ?? null;
   const marketPrice = metricSignals.get('price')?.value ?? null;
@@ -132,19 +194,18 @@ export const buildCandidate = (keyword, metricSignals, constraints) => {
   for (const metric of [...EXPECTED_METRICS, 'margin']) {
     if (metric === 'margin') {
       if (margin === null) {
-        missing.push({
-          metric,
-          label: 'Margen',
-          reason: cost === null ? 'Falta el coste de compra.' : 'Falta un precio de venta de referencia.',
-        });
+        const reason = cost === null ? 'Falta el coste de compra.' : 'Falta un precio de venta de referencia.';
+        missing.push({ metric, label: 'Margen', reason });
+        components.push(unavailableComponent(keyword, 'margin', reason));
         continue;
       }
 
       components.push({
         metric,
-        label: 'Margen estimado',
+        metricLabel: 'Margen estimado',
         value: round2(margin),
         unit: '%',
+        available: true,
         normalized: normalize('margin', margin, constraints),
         weight: WEIGHTS.margin,
         confidence: marginAssumed ? 0.4 : 0.65,
@@ -161,24 +222,39 @@ export const buildCandidate = (keyword, metricSignals, constraints) => {
 
     const signal = metricSignals.get(metric);
     if (!signal) {
-      missing.push({ metric, label: metricDefinition(metric).label, reason: 'Ninguna fuente ha aportado este dato.' });
+      const reason = 'Ninguna fuente ha aportado este dato.';
+      missing.push({ metric, label: metricDefinition(metric).label, reason });
+      // Se muestra a 0 en la ficha, pero SIN contarlo como valor: no puntua ni cubre.
+      components.push(unavailableComponent(keyword, metric, reason));
       continue;
     }
 
     const normalized = normalize(metric, signal.value, constraints);
     if (normalized === null) {
-      missing.push({
-        metric,
-        label: metricDefinition(metric).label,
-        reason: 'Sin referencia para puntuarla (indica un maximo en las restricciones).',
+      // El dato EXISTE, pero sin una referencia no se puede puntuar. Se muestra con su
+      // valor y su fuente, y no pesa en la puntuacion: es distinto de "no hay dato".
+      const reason = 'Sin referencia para puntuarla (indica un maximo en las restricciones).';
+      missing.push({ metric, label: metricDefinition(metric).label, reason });
+      components.push({
+        ...signal,
+        available: true,
+        normalized: null,
+        weight: 0,
+        evidence: {
+          ...signal.evidence,
+          note: [signal.evidence?.note, 'No puntua: falta una referencia con la que compararla.']
+            .filter(Boolean)
+            .join(' '),
+        },
       });
       continue;
     }
 
-    components.push({ ...signal, normalized, weight: WEIGHTS[metric] ?? 0.05 });
+    components.push({ ...signal, available: true, normalized, weight: WEIGHTS[metric] ?? 0.05 });
   }
 
   const availableWeight = components.reduce((total, component) => total + component.weight, 0);
+  const availableComponents = components.filter((component) => component.available);
   const totalWeight = Object.values(WEIGHTS).reduce((total, weight) => total + weight, 0);
   const score =
     availableWeight === 0
@@ -220,12 +296,17 @@ export const buildCandidate = (keyword, metricSignals, constraints) => {
     score,
     coverage,
     /** Confianza media de los datos usados: a mas fuentes reales, mas alta. */
-    confidence: components.length === 0 ? 0 : round2(components.reduce((t, c) => t + c.confidence, 0) / components.length),
+    confidence:
+      availableComponents.length === 0
+        ? 0
+        : round2(availableComponents.reduce((total, component) => total + component.confidence, 0) / availableComponents.length),
     verdict: failed.length > 0 ? 'no cumple' : unknown.length === checks.length ? 'sin datos suficientes' : 'cumple',
     components,
     missing,
     /** Producto del catalogo al que corresponde el termino, si existe. */
     catalogLink: catalogLinkFor(keyword),
+    /** Que producto propone el sistema y en que se basa (o por que no propone ninguno). */
+    productHypothesis: productHypothesisFor(keyword),
     economics: {
       cost,
       marketPrice,

@@ -26,6 +26,7 @@ import {
 } from '../../core/models/opportunities.model';
 import { OPPORTUNITY_STATUS_LABEL, labelOf } from '../../core/models/labels';
 import { OpportunitiesService } from '../../core/services/opportunities.service';
+import { ProductsService } from '../../core/services/products.service';
 import { AsyncState } from '../../core/util/async-state';
 import { BarChart } from '../../shared/components/bar-chart/bar-chart';
 import { PixelIcon } from '../../shared/components/pixel-icon/pixel-icon';
@@ -123,6 +124,7 @@ const SORTS = ['score', 'recent', 'coverage', 'keyword', 'status'] as const;
 })
 export class OpportunitiesPage {
   private readonly opportunities = inject(OpportunitiesService);
+  private readonly productsService = inject(ProductsService);
   private readonly router = inject(Router);
 
   protected readonly queue = new AsyncState<QueuePage>();
@@ -158,6 +160,16 @@ export class OpportunitiesPage {
   protected readonly deciding = signal(false);
   protected readonly decisionError = signal<string | null>(null);
 
+  /** Aclaracion del producto (el paso que pide el primer filtro). */
+  protected readonly products = signal<{ id: string; name: string }[]>([]);
+  protected readonly selectedProductId = signal('');
+  protected readonly productNameInput = signal('');
+  protected readonly clarifying = signal(false);
+  protected readonly productError = signal<string | null>(null);
+
+  /** Confirmacion explicita antes de aprobar. */
+  protected readonly approvalOpen = signal(false);
+
   /** Lanzamiento del flujo atado a la oportunidad aprobada. */
   protected readonly launching = signal(false);
   protected readonly launchError = signal<string | null>(null);
@@ -168,6 +180,43 @@ export class OpportunitiesPage {
 
   protected readonly selected = computed(() => this.detail.data());
   protected readonly candidates = computed(() => this.scanResult()?.candidates ?? []);
+
+  /** Situacion del producto de la oportunidad abierta. */
+  protected readonly hypothesis = computed(() => this.detail.data()?.productHypothesis ?? null);
+
+  protected readonly productLabel = computed(() => this.hypothesis()?.name ?? null);
+
+  /**
+   * `true` cuando el sistema solo ha reconocido una categoria (o nada): el producto es
+   * una propuesta de ejemplo y hay que confirmarlo antes de aprobar.
+   */
+  protected readonly needsClarification = computed(() => {
+    const hypothesis = this.hypothesis();
+    if (!hypothesis) return false;
+    return hypothesis.status === 'none' || (hypothesis.status === 'proposed' && hypothesis.confidence !== 'alta');
+  });
+
+  protected readonly productTone = computed(() => {
+    switch (this.hypothesis()?.status) {
+      case 'confirmed':
+        return 'chip--good';
+      case 'category':
+        return 'chip--warning';
+      case 'proposed':
+        return this.hypothesis()?.confidence === 'alta' ? 'chip--info' : 'chip--warning';
+      default:
+        return 'chip--critical';
+    }
+  });
+
+  protected readonly productStatusText = computed(() => {
+    const hypothesis = this.hypothesis();
+    if (!hypothesis) return 'Sin producto';
+    if (hypothesis.status === 'confirmed') return 'Producto confirmado';
+    if (hypothesis.status === 'category') return 'Aprobada como categoria';
+    if (hypothesis.confidence === 'alta') return 'Producto identificado';
+    return 'Solo una categoria';
+  });
 
   /** Fuentes reales configuradas: si son cero, todo lo que se vea sera de demostracion. */
   protected readonly liveSources = computed(
@@ -190,6 +239,11 @@ export class OpportunitiesPage {
   constructor() {
     this.load();
     this.sourcesState.load(() => this.opportunities.sources());
+    // Catalogo para poder elegir el producto al aclarar una oportunidad.
+    this.productsService.list({ pageSize: 50 }).subscribe({
+      next: (response) => this.products.set(response.data.map((product) => ({ id: product.id, name: product.name }))),
+      error: () => this.products.set([]),
+    });
   }
 
   protected load(): void {
@@ -247,7 +301,28 @@ export class OpportunitiesPage {
     this.selectedId.set(opportunityId);
     this.decisionReason.set('');
     this.decisionError.set(null);
+    this.approvalOpen.set(false);
+    this.productError.set(null);
+    this.selectedProductId.set('');
+    this.productNameInput.set('');
     this.detail.load(() => this.opportunities.get(opportunityId));
+  }
+
+  /** Etiqueta del producto para la tabla de la cola. */
+  protected productLabelOf(opportunity: Opportunity): string {
+    const hypothesis = opportunity.productHypothesis;
+    if (!hypothesis) return 'sin producto';
+    if (hypothesis.status === 'category') return 'categoria';
+    if (hypothesis.status === 'confirmed') return hypothesis.name ?? 'producto indicado';
+    if (hypothesis.confidence === 'alta') return hypothesis.name ?? 'producto identificado';
+    return hypothesis.name ? `${hypothesis.name} (ejemplo)` : 'sin producto';
+  }
+
+  /** `true` cuando esa oportunidad de la cola necesita que se aclare el producto. */
+  protected rowNeedsClarification(opportunity: Opportunity): boolean {
+    const hypothesis = opportunity.productHypothesis;
+    if (!hypothesis) return true;
+    return hypothesis.status === 'none' || (hypothesis.status === 'proposed' && hypothesis.confidence !== 'alta');
   }
 
   protected closeDetail(): void {
@@ -345,23 +420,128 @@ export class OpportunitiesPage {
     this.decisionReason.set((event.target as HTMLInputElement).value);
   }
 
-  protected decide(action: 'approve' | 'discard'): void {
+  // --- Producto: la aclaracion del primer filtro ----------------------------
+
+  protected onProductSelect(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    this.selectedProductId.set(value);
+    if (value) this.productNameInput.set('');
+  }
+
+  protected onProductNameInput(event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.productNameInput.set(value);
+    if (value) this.selectedProductId.set('');
+  }
+
+  /** Guarda el producto indicado, sin aprobar todavia. */
+  protected clarifyProduct(): void {
+    const opportunity = this.selected();
+    if (!opportunity || this.clarifying()) return;
+
+    const productId = this.selectedProductId();
+    const productName = this.productNameInput().trim();
+    if (!productId && productName.length === 0) {
+      this.productError.set('Elige un producto del catalogo o escribe cual es.');
+      return;
+    }
+
+    this.clarifying.set(true);
+    this.productError.set(null);
+
+    this.opportunities
+      .setProduct(opportunity.id, {
+        productId: productId || undefined,
+        productName: productName || undefined,
+        reason: 'Producto aclarado por el operador antes de aprobar.',
+      })
+      .subscribe({
+        next: (updated) => {
+          this.clarifying.set(false);
+          this.detail.set(updated);
+          this.selectedProductId.set('');
+          this.productNameInput.set('');
+          this.refreshQueue();
+        },
+        error: (error: { message: string }) => {
+          this.clarifying.set(false);
+          this.productError.set(error.message);
+        },
+      });
+  }
+
+  /** Decide que basta la categoria: es una decision explicita, no un descuido. */
+  protected clarifyAsCategory(): void {
+    const opportunity = this.selected();
+    if (!opportunity || this.clarifying()) return;
+
+    this.clarifying.set(true);
+    this.productError.set(null);
+
+    this.opportunities
+      .setProduct(opportunity.id, {
+        asCategory: true,
+        reason: 'El operador decide que por ahora basta la categoria.',
+      })
+      .subscribe({
+        next: (updated) => {
+          this.clarifying.set(false);
+          this.detail.set(updated);
+          this.refreshQueue();
+        },
+        error: (error: { message: string }) => {
+          this.clarifying.set(false);
+          this.productError.set(error.message);
+        },
+      });
+  }
+
+  // --- Aprobacion (con confirmacion explicita) ------------------------------
+
+  protected openApproval(): void {
+    this.approvalOpen.set(true);
+    this.decisionError.set(null);
+  }
+
+  protected closeApproval(): void {
+    this.approvalOpen.set(false);
+  }
+
+  protected confirmApprove(): void {
     const opportunity = this.selected();
     if (!opportunity || this.deciding()) return;
 
     this.deciding.set(true);
     this.decisionError.set(null);
 
-    const request =
-      action === 'approve'
-        ? this.opportunities.approve(opportunity.id, this.decisionReason() || undefined)
-        : this.opportunities.discard(opportunity.id, this.decisionReason() || undefined);
-
-    request.subscribe({
+    this.opportunities.approve(opportunity.id, this.decisionReason() || undefined).subscribe({
       next: (updated) => {
         this.deciding.set(false);
-        this.detail.set(updated);
+        this.approvalOpen.set(false);
         this.decisionReason.set('');
+        this.detail.set(updated);
+        this.refreshQueue();
+      },
+      error: (error: { message: string }) => {
+        this.deciding.set(false);
+        this.decisionError.set(error.message);
+      },
+    });
+  }
+
+  protected discard(): void {
+    const opportunity = this.selected();
+    if (!opportunity || this.deciding()) return;
+
+    this.deciding.set(true);
+    this.decisionError.set(null);
+
+    this.opportunities.discard(opportunity.id, this.decisionReason() || undefined).subscribe({
+      next: (updated) => {
+        this.deciding.set(false);
+        this.approvalOpen.set(false);
+        this.decisionReason.set('');
+        this.detail.set(updated);
         this.refreshQueue();
       },
       error: (error: { message: string }) => {
@@ -421,7 +601,9 @@ export class OpportunitiesPage {
   }
 
   protected modeText(mode: string): string {
-    return mode === 'live' ? 'dato real' : 'demostracion';
+    if (mode === 'live') return 'dato real';
+    if (mode === 'none') return 'sin fuente';
+    return 'demostracion';
   }
 
   protected candidateOf(keyword: string): ScanCandidate | undefined {

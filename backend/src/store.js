@@ -28,13 +28,22 @@ export const store = {
    * estudio y el historial de revisiones, para poder ver como cambio la valoracion.
    */
   opportunities: [],
+  /**
+   * Informes de investigacion GENERADOS por una ejecucion real (no los de la demo).
+   * Se guardan aparte de los mocks para poder distinguir siempre su origen.
+   */
+  researchReports: [],
 };
 
 let activityCounter = store.activity.length;
 let taskCounter = 1000;
 let opportunityCounter = 0;
+let researchCounter = 1000;
 
 export const nextTaskId = () => makeId('tsk', (taskCounter += 1));
+
+/** Identificador de un informe generado: `rsc-1001`. Los de la demo son rsc-000X. */
+export const nextResearchId = () => makeId('rsc', (researchCounter += 1));
 
 /** Identificador estable de oportunidad: `opp-0001`. */
 export const nextOpportunityId = () => makeId('opp', (opportunityCounter += 1));

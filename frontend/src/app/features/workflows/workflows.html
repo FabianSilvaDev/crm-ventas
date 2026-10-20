@@ -366,7 +366,7 @@
               <div class="row row--wrap">
                 @for (agent of stage.agents; track agent.id) {
                   <span class="row" style="gap: 6px">
-                    <app-agent-avatar [avatar]="agent.avatar" [size]="28" [status]="agent.status" [showStatus]="false" />
+                    <app-agent-avatar [avatar]="agent.avatar" [agentId]="agent.id" [size]="28" [status]="agent.status" [showStatus]="false" />
                     <span class="text-xs">
                       <strong>{{ agent.name }}</strong><br />
                       <span class="text-dim">{{ agent.specialty }}</span>

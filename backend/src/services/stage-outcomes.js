@@ -48,15 +48,32 @@ const DERIVED_OUTCOMES = {
     artifact: { type: 'opportunity', id: context.opportunityId, label: context.keyword, real: true },
   }),
 
-  research: (context) => ({
-    summary: `Informe de mercado de «${context.keyword}» a partir de ${sourceLabel(context.opportunity)}.`,
-    metrics: [
-      metric('Demanda', valueOf(context.opportunity, 'demand')),
-      metric('Competencia (ofertas)', valueOf(context.opportunity, 'competition')),
-      metric('Muestra de mercado', valueOf(context.opportunity, 'salesVolume')),
-    ],
-    artifact: { type: 'research', label: `Informe de mercado: ${context.keyword}` },
-  }),
+  research: (context) => {
+    // Si la etapa ha consultado las fuentes, manda el informe real: sus cifras, sus
+    // hallazgos y su identificador (que existe en /research). Si no, se dice por que.
+    const report = context.research;
+    if (report) {
+      return {
+        summary: report.summary,
+        metrics: (report.metrics ?? []).slice(0, 4).map((metric) => ({ label: metric.label, value: metric.value })),
+        artifact: { type: 'research', id: report.id, label: report.title, real: true },
+      };
+    }
+
+    const failure = context.researchError
+      ? ` No se pudo consultar las fuentes a tiempo: ${context.researchError}`
+      : ' La consulta a fuentes no habia terminado cuando la etapa se completo.';
+
+    return {
+      summary: `Informe de mercado de «${context.keyword}» a partir de ${sourceLabel(context.opportunity)}.${failure}`,
+      metrics: [
+        metric('Demanda', valueOf(context.opportunity, 'demand')),
+        metric('Competencia (ofertas)', valueOf(context.opportunity, 'competition')),
+        metric('Muestra de mercado', valueOf(context.opportunity, 'salesVolume')),
+      ],
+      artifact: { type: 'research', label: `Informe de mercado: ${context.keyword}` },
+    };
+  },
 
   'market-intelligence': (context) => ({
     summary: `Inteligencia de mercado de «${context.keyword}»: se cruza la tendencia con el margen para decidir el angulo de entrada.`,

@@ -299,9 +299,14 @@ Al abrirse una puerta, la ejecución queda así:
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/research` | Filtros: `type` (`market`,`trends`,`competitors`,`validation`), `status`, `productId`, `search`. |
-| GET | `/research/summary` | Totales y productos pendientes de decisión. |
-| GET | `/research/:id` | Detalle: hallazgos, fuentes, competidores y series para gráficos. |
+| GET | `/research` | Filtros: `type` (`market`,`trends`,`competitors`,`validation`), `status`, `productId`, `search`. Cada informe declara su `origin`: `demo` o `run`. |
+| GET | `/research/summary` | Totales (incluye cuántos son `generated`), reparto por tipo y productos pendientes de decisión. |
+| GET | `/research/:id` | Detalle: hallazgos, fuentes, competidores, series y —en los generados— **la procedencia completa de cada señal** (`signals`). |
+
+Los informes con `origin: "run"` los crea la **etapa Research** de un flujo atado a una
+oportunidad: consulta las fuentes (`conductResearch`) y registra el informe con sus
+métricas, hallazgos, fuentes y `limitations`. Su identificador empieza por `rsc-1` para no
+confundirlo con los de la demo (`rsc-000X`).
 
 ## Estudio de oportunidad y fuentes de datos
 
@@ -365,7 +370,7 @@ Ejecuta un estudio. Consulta fuentes externas, así que es una operación superv
 | Campo | Notas |
 | --- | --- |
 | `keywords` | 1 a 8 términos; se deduplican. |
-| `mode` | `auto` (real + demo marcada), `live` (solo real), `simulated` (sin red). |
+| `mode` | `auto` (solo fuentes reales, **sin relleno**), `live` (igual) o `simulated` (datos de demostración, solo si se piden). |
 | `constraints.minMargin` | Proporción 0-1. |
 | `constraints.expectedSalePrice` | Número o mapa por término. Es la forma de calcular margen cuando ninguna fuente aporta el precio de venta de tu mercado. |
 
@@ -455,9 +460,45 @@ Lo que Yanca registra, con su evidencia y la decisión del operador.
 | GET | `/opportunities` | Cola ordenada por puntuación. Filtros: `status`, `origin`, `minScore`, `search`, `sort` (`score`,`recent`,`coverage`,`keyword`,`status`). |
 | GET | `/opportunities/summary` | Totales por estado, puntuación media, reparto por cobertura y últimas decisiones. |
 | GET | `/opportunities/:id` | Detalle: componentes con su fuente, datos ausentes, comprobaciones e historial de estudios. |
-| POST | `/opportunities/:id/approve` | Aprueba (cuerpo opcional `{ "reason": "..." }`). Es lo que la habilita para el flujo. |
+| POST | `/opportunities/:id/product` | Aclara **qué producto es** sin aprobar (`productId`, `productName` o `asCategory`). Es el paso previo del filtro. |
+| POST | `/opportunities/:id/approve` | Aprueba (cuerpo opcional `{ "reason": "...", "productId": ..., "productName": ..., "asCategory": ... }`). **No se puede aprobar sin producto resuelto:** si solo se reconoció una categoría, responde 409 con la situación. |
 | POST | `/opportunities/:id/discard` | Descarta, guardando el motivo. |
 | POST | `/opportunities/:id/run` | **202** Lanza el flujo atado a la oportunidad (cuerpo opcional `{ "workflowId": "..." }`). **Solo funciona si está aprobada**: si no, responde 409 con su estado. |
+
+### Producto de la oportunidad
+
+Aprobar una oportunidad sin saber **qué producto es** no es una decisión. Por eso cada
+oportunidad lleva su hipótesis de producto:
+
+```json
+{
+  "productHypothesis": {
+    "status": "proposed",
+    "productId": "prd-002",
+    "name": "Teclado mecanico Aurora 75%",
+    "basis": "categoria",
+    "confidence": "baja",
+    "note": "«perifericos gamer» es una categoria (Perifericos) con 2 producto(s) en el catalogo. El propuesto es solo un ejemplo: confirma cual quieres antes de aprobar."
+  }
+}
+```
+
+| Campo | Significado |
+| --- | --- |
+| `status` | `proposed` (lo propone el sistema), `confirmed` (lo ha decidido el operador), `category` (se aprueba la categoría a propósito) o `none`. |
+| `basis` | En qué se basa: `nombre del catalogo`, `palabras en comun`, `categoria` u `operador`. |
+| `confidence` | `alta` solo cuando hay un producto concreto identificado. Con `baja` el producto es un ejemplo de la categoría. |
+
+**Reglas**
+
+- Con `confidence: "baja"` o `status: "none"`, `approve` responde **409** con
+  `details.field = "productHypothesis"` y `details.situation` explicando el caso. Hay que
+  indicar el producto (`productId`/`productName`) o aprobar la categoría (`asCategory: true`).
+- El enlace con el catálogo (`catalogLink`) **solo** se crea con confianza alta o con un
+  producto confirmado por el operador: si el sistema solo reconoció una categoría, no se
+  enlaza la cadena comercial de un producto que nadie ha elegido (el flujo producirá
+  artefactos derivados).
+- Un estudio posterior **no pisa** un producto ya confirmado por el operador.
 
 ### Ejecuciones ligadas a una oportunidad
 

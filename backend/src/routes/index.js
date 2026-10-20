@@ -125,6 +125,7 @@ opportunitiesRouter.get('/', opportunities.readOpportunities);
 opportunitiesRouter.get('/summary', opportunities.readOpportunitySummary);
 opportunitiesRouter.get('/:id', opportunities.readOpportunity);
 opportunitiesRouter.post('/:id/approve', opportunities.approve);
+opportunitiesRouter.post('/:id/product', opportunities.setProduct);
 opportunitiesRouter.post('/:id/discard', opportunities.discard);
 opportunitiesRouter.post('/:id/run', opportunities.launch);
 

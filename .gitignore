@@ -32,3 +32,12 @@ Thumbs.db
 # Test / cobertura
 coverage/
 .nyc_output/
+
+# Artefactos de las herramientas de pixel art (se regeneran con los scripts `sprites:*`)
+frontend/agent-frame.png
+frontend/agent-sheet-row.png
+frontend/agents-lineup.png
+frontend/office-props-preview.png
+frontend/office-room-preview.png
+frontend/office-plan.png
+frontend/sprites-preview.png

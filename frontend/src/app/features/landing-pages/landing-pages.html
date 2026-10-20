@@ -403,7 +403,7 @@
                   <span class="text-xs text-upper text-dim">Responsable y contexto</span>
                   @if (page.owner; as owner) {
                     <div class="row">
-                      <app-agent-avatar [avatar]="owner.avatar" [size]="34" [status]="owner.status" [label]="owner.name" />
+                      <app-agent-avatar [avatar]="owner.avatar" [agentId]="owner.id" [size]="34" [status]="owner.status" [label]="owner.name" />
                       <span class="truncate">
                         <span class="cell-note text-sm">{{ owner.name }}</span>
                         <span class="cell-note text-xs text-dim">{{ owner.role }}</span>

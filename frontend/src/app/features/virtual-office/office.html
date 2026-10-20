@@ -93,7 +93,8 @@
 
     <div class="office__hud office__hud--bottom">
       <span class="text-xs text-dim">
-        Arrastra para mover la vista · rueda del raton para acercar · clic en un agente para ver su ficha
+        Arrastra para mover la vista · rueda para acercar · clic en un agente para ver su ficha ·
+        los agentes ociosos con sprite animado pasean por su área
       </span>
     </div>
 
@@ -113,7 +114,13 @@
 
         <div class="office-panel__scroll stack stack--sm">
           <div class="row row--wrap">
-            <app-agent-avatar [avatar]="agent.avatar" [size]="76" [status]="agent.status" [label]="agent.name" />
+            <app-agent-avatar
+              [avatar]="agent.avatar"
+              [agentId]="agent.id"
+              [size]="76"
+              [status]="agent.status"
+              [label]="agent.name"
+            />
             <div class="stack stack--sm" style="flex: 1 1 auto; min-width: 160px">
               <app-status-chip [status]="agent.status" kind="agent" />
               <p class="text-sm">{{ agent.role }}</p>
@@ -243,7 +250,13 @@
 
         @if (department.lead; as lead) {
           <span class="row" style="gap: 8px">
-            <app-agent-avatar [avatar]="lead.avatar" [size]="28" [status]="lead.status" [showStatus]="false" />
+            <app-agent-avatar
+              [avatar]="lead.avatar"
+              [agentId]="lead.id"
+              [size]="28"
+              [status]="lead.status"
+              [showStatus]="false"
+            />
             <span class="text-xs text-dim">Responsable: <strong>{{ lead.name }}</strong></span>
           </span>
         }

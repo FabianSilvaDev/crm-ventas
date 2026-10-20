@@ -146,7 +146,8 @@ export const listSources = () => {
  * @param {string[]} options.keywords Terminos a estudiar.
  * @param {string} [options.geo]
  * @param {string} [options.timeframe]
- * @param {'auto'|'live'|'simulated'} [options.mode]
+ * @param {'auto'|'live'|'simulated'} [options.mode] `auto`/`live`: solo fuentes reales,
+ *   sin relleno. `simulated`: datos de demostracion, solo si se piden expresamente.
  * @returns {Promise<{signals: object[], notes: object[], sources: object[], collectedAt: string}>}
  */
 export const collectSignals = async ({ keywords = [], geo, timeframe, mode = config.sources.mode } = {}) => {
@@ -197,9 +198,11 @@ export const collectSignals = async ({ keywords = [], geo, timeframe, mode = con
     }
   }
 
-  // Sin datos reales, y si el modo lo permite, se completa con la demo (marcada).
-  const realSignals = signals.filter((signal) => signal.source.mode === 'live');
-  if (realSignals.length === 0 && mode !== 'live') {
+  // Los datos de demostracion **solo** se usan si el operador los pide expresamente
+  // (`mode: 'simulated'`). En `auto` y `live` no se rellena ningun hueco: si una fuente no
+  // aporta un dato, no hay dato. Inventar una cifra para que la vista no quede vacia es
+  // exactamente lo que no debe hacer un sistema de decision.
+  if (mode === 'simulated') {
     const adapter = simulatedAdapter();
     const result = await adapter.run({ keywords });
     const stamped = stamp(result.signals, adapter.meta, collectedAt);

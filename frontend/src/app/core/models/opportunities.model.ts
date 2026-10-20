@@ -4,6 +4,31 @@ import type { Metric, ResourceRef, Severity } from './api.model';
 export type OpportunityStatus = 'candidate' | 'approved' | 'discarded';
 
 /**
+ * Hipotesis de producto: lo que responde a "acepto la oportunidad, pero ¿que producto es?".
+ *
+ * `confidence: 'baja'` significa que el sistema solo ha reconocido una CATEGORIA, asi que
+ * el producto propuesto es un ejemplo y hay que confirmarlo antes de aprobar.
+ */
+export type ProductHypothesisStatus = 'proposed' | 'confirmed' | 'category' | 'none';
+
+export interface ProductHypothesis {
+  status: ProductHypothesisStatus;
+  productId: string | null;
+  name: string | null;
+  /** En que se basa la propuesta: nombre, palabras en comun, categoria u operador. */
+  basis: string | null;
+  confidence: 'alta' | 'baja' | null;
+  note: string | null;
+  decidedAt?: string | null;
+}
+
+/** Situacion del producto, en palabras, para preguntarla antes de aprobar. */
+export interface ProductSituation {
+  level: 'clear' | 'proposed' | 'ambiguous' | 'category' | 'missing';
+  text: string;
+}
+
+/**
  * Enlace de una oportunidad con el catalogo.
  * Cuando existe, el flujo puede referenciar los registros reales (producto, oferta,
  * landing, campana) en lugar de proponer artefactos derivados.
@@ -23,10 +48,10 @@ export interface CatalogLink {
 export interface SignalSource {
   id: string;
   name: string;
-  /** `public` (datos abiertos), `marketplace`, `supplier` o `simulated`. */
+  /** `public` (datos abiertos), `marketplace`, `supplier`, `simulated` o `none`. */
   kind: string;
-  /** `live` cuando es un dato real; `simulated` cuando es de demostracion. */
-  mode: 'live' | 'simulated';
+  /** `live` cuando es un dato real; `simulated` si es de demostracion; `none` si no hay. */
+  mode: 'live' | 'simulated' | 'none';
 }
 
 /** Un componente de la puntuacion: una metrica con su valor normalizado y su fuente. */
@@ -38,11 +63,13 @@ export interface ScoreComponent {
   unit: string;
   better: 'higher' | 'lower' | 'neutral';
   confidence: number;
+  /** `false` cuando ninguna fuente aporto el dato: el valor es 0 y no puntua. */
+  available?: boolean;
   evidence: { note?: string; source?: string; topics?: TopicMatch[]; sample?: unknown[] };
   source: SignalSource;
-  collectedAt: string;
+  collectedAt: string | null;
   /** Valor llevado a 0-1 para poder comparar metricas de escalas distintas. */
-  normalized: number;
+  normalized: number | null;
   weight: number;
 }
 
@@ -107,6 +134,8 @@ export interface Opportunity {
   origin: string;
   /** Producto del catalogo al que corresponde el termino, si existe. */
   catalogLink: CatalogLink | null;
+  /** Que producto propone el sistema y en que se basa. */
+  productHypothesis: ProductHypothesis;
   firstSeenAt: string;
   lastScanAt: string;
   revision: number;
@@ -159,6 +188,7 @@ export interface ScanCandidate {
   components: ScoreComponent[];
   missing: MissingMetric[];
   catalogLink: CatalogLink | null;
+  productHypothesis: ProductHypothesis;
   economics: OpportunitySnapshot['economics'];
   checks: ConstraintCheck[];
   opportunityId?: string | null;

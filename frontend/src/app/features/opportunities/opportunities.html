@@ -157,9 +157,9 @@
             <label class="field">
               <span class="field__label">Fuentes</span>
               <select class="select" (change)="onModeChange($event)">
-                <option value="auto" [selected]="mode() === 'auto'">auto · reales + demostracion marcada</option>
+                <option value="auto" [selected]="mode() === 'auto'">auto · solo fuentes reales, sin relleno</option>
                 <option value="live" [selected]="mode() === 'live'">live · solo fuentes reales</option>
-                <option value="simulated" [selected]="mode() === 'simulated'">simulated · sin salir a la red</option>
+                <option value="simulated" [selected]="mode() === 'simulated'">simulated · datos de demostracion (marcados)</option>
               </select>
             </label>
           </div>
@@ -259,6 +259,7 @@
                 <thead>
                   <tr>
                     <th scope="col">Termino</th>
+                    <th scope="col">Producto</th>
                     <th scope="col">Estado</th>
                     <th scope="col" class="num">Puntuacion</th>
                     <th scope="col" class="num">Cobertura</th>
@@ -275,6 +276,14 @@
                         <span class="text-mono text-xs">{{ item.id }}</span><br />
                         {{ item.keyword }}
                       </th>
+                      <td>
+                        <span class="text-xs" [class.text-warn]="rowNeedsClarification(item)">
+                          {{ productLabelOf(item) }}
+                        </span>
+                        @if (rowNeedsClarification(item)) {
+                          <br /><span class="text-xs text-warn">aclarar producto</span>
+                        }
+                      </td>
                       <td><app-status-chip [status]="item.status" kind="opportunity" /></td>
                       <td class="num num--strong" [style.color]="scoreColor(item.latest.score)">
                         {{ item.latest.score === null ? '—' : item.latest.score }}
@@ -346,18 +355,94 @@
               </dd>
             </dl>
 
+            <!-- Producto: la aclaracion que pide el primer filtro -->
+            <div class="decision-box stack stack--sm">
+              <p class="field__label">Producto de la oportunidad</p>
+
+              <div class="row row--wrap">
+                <span class="chip" [class]="productTone()">{{ productStatusText() }}</span>
+                @if (hypothesis()?.productId) {
+                  <span class="chip chip--neutral">{{ hypothesis()?.productId }}</span>
+                }
+                @if (hypothesis()?.basis) {
+                  <span class="text-xs text-faint">segun: {{ hypothesis()?.basis }}</span>
+                }
+              </div>
+
+              <p class="text-sm">
+                @if (productLabel()) {
+                  <strong>{{ productLabel() }}</strong>
+                } @else {
+                  <span class="text-warn">Sin producto concreto</span>
+                }
+              </p>
+
+              @if (hypothesis()?.note) {
+                <p class="text-xs text-dim">{{ hypothesis()?.note }}</p>
+              }
+
+              @if (needsClarification()) {
+                <p class="text-xs text-warn">
+                  Antes de aprobar: confirma que producto es, o decide que por ahora basta la categoria.
+                </p>
+
+                <label class="field">
+                  <span class="field__label">Elegir producto del catalogo</span>
+                  <select class="select" (change)="onProductSelect($event)">
+                    <option value="">— elegir —</option>
+                    @for (product of products(); track product.id) {
+                      <option [value]="product.id">{{ product.name }} · {{ product.id }}</option>
+                    }
+                  </select>
+                </label>
+
+                <label class="field">
+                  <span class="field__label">…o escribelo (si no esta en el catalogo)</span>
+                  <input
+                    class="input"
+                    [value]="productNameInput()"
+                    (input)="onProductNameInput($event)"
+                    placeholder="Ej. Teclado mecanico inalambrico 75%"
+                  />
+                </label>
+
+                <div class="row row--wrap">
+                  <button type="button" class="btn btn--sm" [disabled]="clarifying()" (click)="clarifyProduct()">
+                    Guardar producto
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    [disabled]="clarifying()"
+                    (click)="clarifyAsCategory()"
+                  >
+                    Es una categoria, por ahora
+                  </button>
+                </div>
+
+                @if (productError(); as error) {
+                  <p class="text-xs text-bad">{{ error }}</p>
+                }
+              }
+            </div>
+
             <!-- Cada cifra con su fuente -->
             <div>
               <p class="field__label">Evidencia (cada dato con su fuente)</p>
               @for (component of opportunity.latest.components; track component.metric) {
                 <div class="component-row">
                   <div>
-                    <span class="text-sm">{{ component.metricLabel }}: <strong>{{ component.value }} {{ component.unit }}</strong></span>
+                    <span class="text-sm">
+                      {{ component.metricLabel }}: <strong>{{ component.value }} {{ component.unit }}</strong>
+                    </span>
+                    @if (component.available === false) {
+                      <span class="chip chip--neutral" style="margin-left: 6px">sin datos · 0</span>
+                    }
                     <span class="component-source">
                       <app-pixel-icon
                         [name]="component.source.mode === 'live' ? 'research' : 'warning'"
                         [size]="10"
-                        [accent]="component.source.mode === 'live' ? '#5b9bff' : '#ffc44d'"
+                        [accent]="component.source.mode === 'live' ? '#5b9bff' : component.source.mode === 'none' ? '#7a8fa3' : '#ffc44d'"
                       />
                       {{ component.source.name }} · {{ modeText(component.source.mode) }} · confianza {{ component.confidence | rate: 0 }}
                     </span>
@@ -373,7 +458,16 @@
                       </span>
                     }
                   </div>
-                  <app-progress-bar [value]="component.normalized" size="sm" [showLabel]="false" color="var(--series-1)" />
+                  @if (component.available === false) {
+                    <span class="text-xs text-faint text-right">no puntua</span>
+                  } @else {
+                    <app-progress-bar
+                      [value]="component.normalized ?? 0"
+                      size="sm"
+                      [showLabel]="false"
+                      color="var(--series-1)"
+                    />
+                  }
                   <span class="text-xs text-dim text-right">peso {{ component.weight | rate: 0 }}</span>
                 </div>
               }
@@ -402,13 +496,9 @@
               </div>
             }
 
-            <!-- Decision del operador -->
+            <!-- Decision del operador: se pregunta QUE se esta aprobando -->
             <div class="decision-box stack stack--sm">
               <p class="field__label">Decision</p>
-              <p class="text-xs text-dim">
-                Aprobar habilita la oportunidad para entrar al flujo. Al lanzarlo, cada etapa produce
-                <strong>sus</strong> cifras y sus artefactos, no el caso de demostracion.
-              </p>
 
               @if (opportunity.decidedAt) {
                 <p class="text-xs text-dim">
@@ -420,31 +510,73 @@
                 }
               }
 
-              <label class="field">
-                <span class="field__label">Motivo (opcional, se guarda)</span>
-                <input class="input" [value]="decisionReason()" (input)="onReasonInput($event)" placeholder="Por que apruebas o descartas" />
-              </label>
+              @if (!approvalOpen()) {
+                <p class="text-xs text-dim">
+                  Vas a aprobar <strong>«{{ opportunity.keyword }}»</strong>
+                  @if (productLabel()) {
+                    con el producto <strong>{{ productLabel() }}</strong>.
+                  } @else {
+                    <span class="text-warn">sin un producto concreto</span>.
+                  }
+                </p>
 
-              <div class="row row--wrap">
-                <button
-                  type="button"
-                  class="btn btn--success btn--sm"
-                  [disabled]="deciding() || opportunity.status === 'approved'"
-                  (click)="decide('approve')"
-                >
-                  <app-pixel-icon name="check" [size]="12" accent="#5ce08a" />
-                  Aprobar
-                </button>
-                <button
-                  type="button"
-                  class="btn btn--danger btn--sm"
-                  [disabled]="deciding() || opportunity.status === 'discarded'"
-                  (click)="decide('discard')"
-                >
-                  <app-pixel-icon name="cross" [size]="12" accent="#ff6b78" />
-                  Descartar
-                </button>
-              </div>
+                <div class="row row--wrap">
+                  <button
+                    type="button"
+                    class="btn btn--success btn--sm"
+                    [disabled]="deciding() || opportunity.status === 'approved'"
+                    (click)="openApproval()"
+                  >
+                    <app-pixel-icon name="check" [size]="12" accent="#5ce08a" />
+                    Aprobar…
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn--danger btn--sm"
+                    [disabled]="deciding() || opportunity.status === 'discarded'"
+                    (click)="discard()"
+                  >
+                    <app-pixel-icon name="cross" [size]="12" accent="#ff6b78" />
+                    Descartar
+                  </button>
+                </div>
+              } @else {
+                <p class="text-sm">
+                  ¿Apruebas «{{ opportunity.keyword }}»
+                  @if (productLabel()) {
+                    con «{{ productLabel() }}»
+                  }
+                  ?
+                </p>
+
+                @if (needsClarification()) {
+                  <p class="text-xs text-warn">
+                    No has aclarado el producto: el sistema rechazara la aprobacion hasta que lo indiques
+                    o decidas que basta la categoria.
+                  </p>
+                } @else {
+                  <p class="text-xs text-dim">
+                    Al aprobar, la oportunidad queda lista para lanzar el flujo con su propio producto.
+                  </p>
+                }
+
+                <label class="field">
+                  <span class="field__label">Motivo (opcional, se guarda)</span>
+                  <input
+                    class="input"
+                    [value]="decisionReason()"
+                    (input)="onReasonInput($event)"
+                    placeholder="Por que apruebas"
+                  />
+                </label>
+
+                <div class="row row--wrap">
+                  <button type="button" class="btn btn--success btn--sm" [disabled]="deciding()" (click)="confirmApprove()">
+                    Si, aprobar
+                  </button>
+                  <button type="button" class="btn btn--ghost btn--sm" (click)="closeApproval()">Cancelar</button>
+                </div>
+              }
 
               @if (decisionError(); as error) {
                 <p class="text-xs text-bad">{{ error }}</p>

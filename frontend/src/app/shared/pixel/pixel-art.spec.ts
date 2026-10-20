@@ -9,7 +9,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { matrixWidth, overlay, resolvePalette, toSvg } from './pixel-art';
-import { BODY_SLIM, HAIR_SHORT, buildAgentSprite, statusGlyph } from './agent-sprites';
+import { BODY_BROAD, BODY_SLIM, HAIR_SHORT, buildAgentSprite, statusGlyph } from './agent-sprites';
 import { ICONS } from './icons';
 
 describe('matrices de pixeles', () => {
@@ -18,9 +18,12 @@ describe('matrices de pixeles', () => {
     expect(matrixWidth(matriz)).toBe(6);
   });
 
-  it('el cuerpo del agente es cuadrado y de 16x16', () => {
-    expect(matrixWidth(BODY_SLIM)).toBe(16);
-    expect(BODY_SLIM).toHaveLength(16);
+  it('el cuerpo del agente mide 24x32 (formato de personaje de simulador)', () => {
+    expect(matrixWidth(BODY_SLIM)).toBe(24);
+    expect(BODY_SLIM).toHaveLength(32);
+    // El cuerpo ancho ocupa mas: tiene que caber en el mismo lienzo.
+    expect(matrixWidth(BODY_BROAD)).toBe(24);
+    expect(BODY_BROAD).toHaveLength(32);
   });
 
   it('compone cuerpo, peinado y accesorio sin descuadrar el resultado', () => {
@@ -32,8 +35,19 @@ describe('matrices de pixeles', () => {
       accessory: 'glasses',
     });
 
-    expect(sprite).toHaveLength(16);
+    expect(sprite).toHaveLength(32);
     expect(new Set(sprite.map((row) => row.length)).size).toBe(1);
+    expect(matrixWidth(sprite)).toBe(24);
+  });
+
+  it('todos los peinados y accesorios caben en el lienzo del personaje', () => {
+    for (const hair of ['dark', 'brown', 'blond', 'red', 'gray', 'violet'] as const) {
+      for (const accessory of ['glasses', 'headset', 'tablet', 'mug', 'none'] as const) {
+        const sprite = buildAgentSprite({ body: 'c', palette: 'amber', hair, skin: 'deep', accessory });
+        expect(new Set(sprite.map((row) => row.length)).size, `${hair}/${accessory}`).toBe(1);
+        expect(matrixWidth(sprite), `${hair}/${accessory}`).toBe(24);
+      }
+    }
   });
 
   it('la capa respeta el token transparente de la base', () => {

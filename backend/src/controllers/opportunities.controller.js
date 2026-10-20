@@ -12,6 +12,7 @@ import {
   launchRunForOpportunity,
   listOpportunities,
   listOrigins,
+  setProductHypothesis,
 } from '../services/opportunities.service.js';
 import { discoverRisingTerms } from '../sources/index.js';
 import { asyncHandler, accepted, ok, paginated } from '../utils/http.js';
@@ -50,10 +51,43 @@ export const readOpportunity = asyncHandler(async (req, res) => {
   ok(res, getOpportunity(req.params.id));
 });
 
-/** Aprobar es lo que habilita una oportunidad para entrar al flujo. */
+/**
+ * Aprobar es lo que habilita una oportunidad para entrar al flujo.
+ *
+ * El cuerpo puede aclarar el producto en el mismo paso:
+ * `{ productId, productName, asCategory, reason }`.
+ */
 export const approve = asyncHandler(async (req, res) => {
-  const reason = req.body?.reason === undefined ? undefined : requireString(req.body.reason, 'reason', { maxLength: 240 });
-  ok(res, approveOpportunity(req.params.id, { reason }));
+  const body = req.body ?? {};
+
+  ok(
+    res,
+    approveOpportunity(req.params.id, {
+      reason: body.reason === undefined ? undefined : requireString(body.reason, 'reason', { maxLength: 240 }),
+      productId: body.productId === undefined ? undefined : requireString(body.productId, 'productId', { maxLength: 40 }),
+      productName:
+        body.productName === undefined ? undefined : requireString(body.productName, 'productName', { maxLength: 120 }),
+      asCategory: body.asCategory === true,
+    }),
+  );
+});
+
+/**
+ * Aclara (sin aprobar) que producto es. Es el paso previo del filtro de oportunidad.
+ */
+export const setProduct = asyncHandler(async (req, res) => {
+  const body = req.body ?? {};
+
+  ok(
+    res,
+    setProductHypothesis(req.params.id, {
+      reason: body.reason === undefined ? undefined : requireString(body.reason, 'reason', { maxLength: 240 }),
+      productId: body.productId === undefined ? undefined : requireString(body.productId, 'productId', { maxLength: 40 }),
+      productName:
+        body.productName === undefined ? undefined : requireString(body.productName, 'productName', { maxLength: 120 }),
+      asCategory: body.asCategory === true,
+    }),
+  );
 });
 
 /** Descartar guarda el motivo: es informacion para el siguiente ciclo. */

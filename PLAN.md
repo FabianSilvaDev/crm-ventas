@@ -20,8 +20,8 @@ Estado: **las seis fases estan terminadas y verificadas**.
 
 - [x] **Fase 1: Scaffold.** Estructura `backend/`, `frontend/`, `docs/` y `package.json` raiz
       con scripts de instalacion y ejecucion. Dependencias instaladas en los tres proyectos.
-- [x] **Fase 2: Backend.** Express 5, 13 modulos de datos simulados, 58 endpoints bajo
-      `/api/v1`, simulador de flujos con temporizadores y 64 pruebas automatizadas.
+- [x] **Fase 2: Backend.** Express 5, 13 modulos de datos simulados, 61 endpoints bajo
+      `/api/v1`, simulador de flujos con temporizadores y 81 pruebas automatizadas.
       Comprobada la API antes de conectar el frontend.
 - [x] **Fase 3: CMS.** Layout (sidebar + header), 12 secciones con carga diferida,
       dashboard, agentes, investigacion, productos y ofertas, contenido y creatividades,
@@ -40,11 +40,11 @@ Estado: **las seis fases estan terminadas y verificadas**.
 
 | Comprobacion | Resultado |
 | --- | --- |
-| `npm --prefix backend test` | 64/64 correctas |
-| `npm --prefix frontend test` | 15/15 correctas |
+| `npm --prefix backend test` | 81/81 correctas |
+| `npm --prefix frontend test` | 16/16 correctas |
 | `npm run build` | exit 0 · inicial 331 kB · chunk diferido `office` de 375 kB (PixiJS) |
 | `npm --prefix frontend run check:sprites` | 44 matrices revisadas, 0 descuadradas |
-| API `:3000` | health, los 58 endpoints y ciclo completo de ejecucion verificados |
+| API `:3000` | health, los 61 endpoints y ciclo completo de ejecucion verificados |
 | Frontend `:4300` | `index.html` y `main.js` servidos correctamente |
 | CORS | origen permitido → 200; origen ajeno → 403 `CORS_REJECTED` |
 | Contratos de error | 400 / 403 / 404 / 409 verificados con el `code` esperado |
@@ -78,6 +78,56 @@ Ordenado por peticion del usuario, paso a paso:
 La hoja de ruta por pasos esta completa. Siguientes pasos naturales, cuando toque:
 persistencia real (hoy todo vive en memoria), credenciales de AliExpress/Alibaba para
 datos de mercado reales, y un proveedor de pago para la serie de interes de Google Trends.
+
+## Aclaracion del producto en el primer filtro
+
+Detectado al usar la cola: se podia aprobar «perifericos gamer» sin saber que producto
+era, y el sistema lo enlazaba en silencio con un producto concreto (comparaba etiquetas
+sueltas). Ahora:
+
+- Cada oportunidad lleva `productHypothesis` (`proposed`/`confirmed`/`category`/`none`)
+  con su `basis` y su `confidence`.
+- La coincidencia se hace por nombre, por palabras en comun o por categoria, y **solo la
+  de nombre/palabras es fiable**. Con categoria, el producto es un ejemplo.
+- **Aprobar exige producto resuelto**: si no lo esta, 409 con la situacion explicada.
+  El operador indica el producto (del catalogo o escrito) o decide que aprueba la
+  categoria.
+- El `catalogLink` solo se crea con confianza alta o producto confirmado, asi que el flujo
+  nunca produce los artefactos reales de un producto que nadie eligio.
+- Un estudio posterior no pisa el producto confirmado.
+
+## Investigacion real en la etapa Research
+
+Antes: los informes de `/research` eran 7 documentos escritos a mano y la etapa Research
+del flujo solo copiaba cifras del estudio de la oportunidad. **No se investigaba nada.**
+
+Ahora, cuando un flujo atado a una oportunidad llega a Research:
+
+- el backend consulta las fuentes de verdad (`conductResearch` → registro de fuentes) y
+  escribe un informe con las cifras obtenidas, cada una con su fuente y su modo;
+- el informe lleva hallazgos derivados de esos datos y **limitaciones explicitas** (fuente
+  caida, sin datos reales, margen no contrastable);
+- se guarda en `store.researchReports` con identificador `rsc-1XXX` y `origin: 'run'`, y
+  aparece en `/research` con una etiqueta que lo distingue de los de demostracion;
+- la etapa del flujo enlaza el informe como artefacto **real** (existe y se puede abrir).
+
+La consulta corre en paralelo a la duracion simulada de la etapa: si no termina a tiempo, la
+etapa se completa con lo que ya se sabia y lo dice en su resumen, pero el informe queda
+registrado igualmente.
+
+## Revision del pixel art (posterior)
+
+- **Personajes de 24x32** (antes 16x16): proporcion de personaje de simulador, con tres
+  tonos de piel, dos de pelo, mangas marcadas, ojos y boca de un pixel, cuatro peinados y
+  cinco accesorios (incluida la taza de cafe).
+- **Salas con planta de oficina real**: cuatro puestos con cubiculo (panel lateral, mesa,
+  monitor de espaldas, teclado), zona de descanso con sofa, mesa baja y planta, ventanas en
+  la pared, y mobiliario propio de cada departamento.
+- **Los agentes se dibujan sentados tras su mesa** mediante el orden de capas
+  (sala -> agentes -> mesas); los puestos libres muestran la silla vacia.
+- **Herramienta nueva**: `npm --prefix frontend run preview` genera un PNG con los
+  personajes, el mobiliario y la planta de una sala, para revisar el pixel art sin
+  navegador. Fue lo que permitio ver y corregir los ojos, los brazos y el color de la planta.
 
 ### Estado de las fuentes externas (sondeado, no supuesto)
 

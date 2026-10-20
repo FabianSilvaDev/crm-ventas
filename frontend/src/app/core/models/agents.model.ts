@@ -23,7 +23,7 @@ export interface AgentAvatar {
   palette: AccentKey;
   hair: 'dark' | 'brown' | 'blond' | 'red' | 'gray' | 'violet';
   skin: 'light' | 'medium' | 'dark' | 'deep';
-  accessory: 'glasses' | 'headset' | 'tablet' | 'none';
+  accessory: 'glasses' | 'headset' | 'tablet' | 'mug' | 'none';
 }
 
 export interface DepartmentRef {

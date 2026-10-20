@@ -12,14 +12,44 @@
  * reescribe una decision humana**. Si tu descartaste una oportunidad, volver a
  * estudiarla actualiza los datos pero no la resucita en silencio.
  */
-import { conflict, notFound } from '../errors.js';
+import { badRequest, conflict, notFound } from '../errors.js';
 import { nextOpportunityId, pushActivity, store } from '../store.js';
 import { nowIso } from '../utils/time.js';
-import { scan } from './intake.service.js';
+import { catalogLinkForProduct, scan } from './intake.service.js';
 import { createRun, serializeRun } from './workflow-simulator.js';
 import { getWorkflowOrThrow } from './workflows.service.js';
 
 export const OPPORTUNITY_STATUSES = ['candidate', 'approved', 'discarded'];
+
+/** Estados en los que el producto ya lo ha decidido el operador. */
+const DECIDED_PRODUCT_STATUSES = ['confirmed', 'category'];
+
+const hasDecidedProduct = (hypothesis) => DECIDED_PRODUCT_STATUSES.includes(hypothesis?.status);
+
+/**
+ * Situacion del producto de una oportunidad, en palabras.
+ * La interfaz la usa para preguntar antes de aprobar: "¿es este el producto que esperas?".
+ */
+export const describeProductSituation = (opportunity) => {
+  const hypothesis = opportunity.productHypothesis ?? { status: 'none' };
+
+  if (hypothesis.status === 'confirmed') {
+    return { level: 'clear', text: `Producto confirmado: ${hypothesis.name ?? hypothesis.productId}.` };
+  }
+  if (hypothesis.status === 'category') {
+    return { level: 'category', text: 'Aprobada como categoria: no hay un producto concreto.' };
+  }
+  if (hypothesis.confidence === 'alta') {
+    return { level: 'proposed', text: `Producto identificado: ${hypothesis.name} (${hypothesis.basis}).` };
+  }
+  if (hypothesis.status === 'proposed') {
+    return {
+      level: 'ambiguous',
+      text: `Solo se ha reconocido una categoria. Propuesta de ejemplo: ${hypothesis.name}. Hay que confirmar cual es el producto.`,
+    };
+  }
+  return { level: 'missing', text: 'No se ha identificado ningun producto: hay que indicarlo antes de aprobar.' };
+};
 
 /** Flujo que se lanza por defecto al aprobar una oportunidad. */
 export const DEFAULT_WORKFLOW_ID = 'wf-full-cycle';
@@ -75,6 +105,11 @@ export const registerCandidate = (candidate, context = {}) => {
     existing.latest = snapshot;
     // El enlace con el catalogo puede cambiar entre estudios, asi que se refresca.
     existing.catalogLink = candidate.catalogLink ?? null;
+    // La propuesta del sistema se refresca en cada estudio, SALVO que el operador ya
+    // haya decidido el producto: su decision no se pisa.
+    existing.productHypothesis = hasDecidedProduct(existing.productHypothesis)
+      ? existing.productHypothesis
+      : (candidate.productHypothesis ?? existing.productHypothesis);
     existing.revisions.push({
       revision,
       at: nowIso(),
@@ -96,6 +131,15 @@ export const registerCandidate = (candidate, context = {}) => {
     origin: context.origin ?? 'estudio',
     /** Producto y cadena comercial del catalogo, si el termino corresponde a uno. */
     catalogLink: candidate.catalogLink ?? null,
+    /** Que producto propone el sistema y en que se basa. */
+    productHypothesis: candidate.productHypothesis ?? {
+      status: 'none',
+      productId: null,
+      name: null,
+      basis: null,
+      confidence: null,
+      note: 'Sin producto identificado.',
+    },
     firstSeenAt: nowIso(),
     lastScanAt: nowIso(),
     revision: 1,
@@ -147,13 +191,18 @@ export const ensureSeed = async () => {
         collectedAt: result.collectedAt,
       });
 
-      // La primera es la que el flujo de demostracion esta ejecutando: ya decidida.
+      // La primera es la que el flujo de demostracion esta ejecutando: se aprueba con su
+      // producto ya resuelto (el soporte de monitor doble), porque es el caso que
+      // recorre el ciclo completo.
       if (registered.id === 'opp-0001') {
-        const opportunity = store.opportunities.find((item) => item.id === registered.id);
-        opportunity.status = 'approved';
-        opportunity.decidedAt = nowIso();
-        opportunity.decidedBy = 'operadora de demostracion';
-        opportunity.decisionReason = 'Oportunidad con la que se ejecuta el ciclo de demostracion.';
+        setProductHypothesis('opp-0001', {
+          productId: 'prd-001',
+          reason: 'Caso de demostracion: el ciclo completo produce el soporte de monitor doble.',
+        });
+        approveOpportunity('opp-0001', {
+          reason: 'Oportunidad con la que se ejecuta el ciclo de demostracion.',
+          by: 'operadora de demostracion',
+        });
       }
     }
   })();
@@ -205,9 +254,114 @@ const decide = (opportunityId, status, { reason, by } = {}) => {
   return serialize(opportunity);
 };
 
-/** Aprueba una oportunidad: es el paso que la habilita para entrar al flujo. */
-export const approveOpportunity = (opportunityId, options) =>
-  decide(opportunityId, 'approved', { ...options, reason: options?.reason ?? 'Aprobada para entrar al flujo.' });
+/**
+ * Resuelve la situacion del producto a partir de lo que decida el operador.
+ * Si no indica nada, se mantiene la hipotesis que ya tuviera la oportunidad.
+ */
+const resolveProductHypothesis = (opportunity, { productId, productName, asCategory, reason } = {}) => {
+  const current = opportunity.productHypothesis ?? { status: 'none' };
+
+  if (productId) {
+    const link = catalogLinkForProduct(productId);
+    if (!link) throw badRequest(`No existe el producto "${productId}" en el catalogo.`, { field: 'productId' });
+
+    opportunity.catalogLink = link;
+    return {
+      status: 'confirmed',
+      productId: link.productId,
+      name: link.productName,
+      basis: 'operador',
+      confidence: 'alta',
+      note: reason ?? 'Producto confirmado por el operador.',
+      decidedAt: nowIso(),
+    };
+  }
+
+  if (productName) {
+    // Un producto que no esta en el catalogo es valido, pero sin enlace real: el flujo
+    // producira artefactos derivados, no los de otro producto.
+    opportunity.catalogLink = null;
+    return {
+      status: 'confirmed',
+      productId: null,
+      name: productName,
+      basis: 'operador',
+      confidence: 'alta',
+      note: reason ?? 'Producto indicado por el operador (no esta en el catalogo).',
+      decidedAt: nowIso(),
+    };
+  }
+
+  if (asCategory) {
+    opportunity.catalogLink = null;
+    return {
+      status: 'category',
+      productId: null,
+      name: null,
+      basis: 'categoria',
+      confidence: 'baja',
+      note: reason ?? 'El operador aprueba la categoria sin un producto concreto.',
+      decidedAt: nowIso(),
+    };
+  }
+
+  return current;
+};
+
+/**
+ * Fija el producto de una oportunidad sin aprobarla: el paso de aclaracion previo.
+ */
+export const setProductHypothesis = (opportunityId, options = {}) => {
+  const opportunity = store.opportunities.find((item) => item.id === opportunityId);
+  if (!opportunity) throw notFound(`No existe la oportunidad "${opportunityId}".`);
+
+  if (!options.productId && !options.productName && !options.asCategory) {
+    throw badRequest('Indica un productId, un productName o asCategory: true.', {
+      fields: ['productId', 'productName', 'asCategory'],
+    });
+  }
+
+  opportunity.productHypothesis = resolveProductHypothesis(opportunity, options);
+  opportunity.updatedAt = nowIso();
+
+  return serialize(opportunity);
+};
+
+/**
+ * Aprueba una oportunidad: es el paso que la habilita para entrar al flujo.
+ *
+ * **No se puede aprobar sin saber que producto es.** Si el sistema solo ha reconocido
+ * una categoria (o nada), el operador tiene que indicar el producto o decir
+ * explicitamente que aprueba la categoria. Es la aclaracion que pide el primer filtro:
+ * aprobar "perifericos gamer" sin saber si es un teclado, una webcam o un raton no es
+ * una decision, es un clic.
+ */
+export const approveOpportunity = (opportunityId, { reason, by, productId, productName, asCategory } = {}) => {
+  const opportunity = store.opportunities.find((item) => item.id === opportunityId);
+  if (!opportunity) throw notFound(`No existe la oportunidad "${opportunityId}".`);
+
+  const hypothesis = resolveProductHypothesis(opportunity, { productId, productName, asCategory, reason });
+  opportunity.productHypothesis = hypothesis;
+
+  const unresolved = hypothesis.status === 'none' || (hypothesis.status === 'proposed' && hypothesis.confidence !== 'alta');
+  if (unresolved) {
+    throw conflict(
+      `«${opportunity.keyword}» no tiene un producto concreto identificado. Indica cual es, o aprueba la categoria explicitamente.`,
+      {
+        field: 'productHypothesis',
+        situation: describeProductSituation(opportunity),
+        productHypothesis: hypothesis,
+      },
+    );
+  }
+
+  opportunity.status = 'approved';
+  opportunity.decidedAt = nowIso();
+  opportunity.decidedBy = by ?? 'operadora de demostracion';
+  opportunity.decisionReason = reason ?? 'Aprobada para entrar al flujo.';
+
+  return serialize(opportunity);
+};
 
 /** Descarta una oportunidad. El motivo se guarda: es informacion para el proximo ciclo. */
 export const discardOpportunity = (opportunityId, options) =>
